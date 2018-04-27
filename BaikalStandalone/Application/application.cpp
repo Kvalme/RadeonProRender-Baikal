@@ -809,7 +809,7 @@ namespace Baikal
                 update = true;
             }
 
-            auto gui_out_type = static_cast<Baikal::Renderer::OutputType>(output);
+            auto gui_out_type = static_cast<Baikal::OutputType>(output);
 
             if (gui_out_type != m_cl->GetOutputType())
             {

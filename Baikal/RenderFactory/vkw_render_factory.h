@@ -23,11 +23,8 @@
 #pragma once
 
 #include "render_factory.h"
-#include "radeon_rays_cl.h"
-#include "CLW.h"
 
-#include "SceneGraph/clwscene.h"
-#include "Utils/cl_program_manager.h"
+#include "SceneGraph/vkwscene.h"
 
 #include <memory>
 #include <string>
@@ -42,13 +39,13 @@ namespace Baikal
      each other since many of them might use either CPU or GPU implementation.
      Entities create via the same factory are known to be compatible.
      */
-    class ClwRenderFactory : public RenderFactory<ClwScene>
+    class VkwRenderFactory : public RenderFactory<VkwScene>
     {
     public:
-        ClwRenderFactory(CLWContext context, std::string const& cache_path="");
+        VkwRenderFactory(VkDevice device);
 
         // Create a renderer of specified type
-        std::unique_ptr<Renderer<ClwScene>> 
+        std::unique_ptr<Renderer<VkwScene>> 
             CreateRenderer(RendererType type) const override;
         // Create an output of specified type
         std::unique_ptr<Output> 
@@ -57,16 +54,10 @@ namespace Baikal
         std::unique_ptr<PostEffect> 
             CreatePostEffect(PostEffectType type) const override;
 
-        std::unique_ptr<SceneController<ClwScene>>
+        std::unique_ptr<SceneController<VkwScene>>
             CreateSceneController() const override;
 
     private:
-        CLWContext m_context;
-        std::string m_cache_path;
-        CLProgramManager m_program_manager;
-
-        using RadeonRaysInstanceDelete = decltype(RadeonRays::IntersectionApi::Delete);
-
-        std::shared_ptr<RadeonRays::IntersectionApi> m_intersector;
+        VkDevice m_device;
     };
 }

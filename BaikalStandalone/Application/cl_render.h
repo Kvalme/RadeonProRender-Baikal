@@ -91,10 +91,10 @@ namespace Baikal
         inline Baikal::Camera::Ptr GetCamera() { return m_camera; };
         inline Baikal::Scene1::Ptr GetScene() { return m_scene; };
         inline CLWDevice GetDevice(int i) { return m_cfgs[m_primary].context.GetDevice(i); };
-        inline Renderer::OutputType GetOutputType() { return m_output_type; };
+        inline OutputType GetOutputType() { return m_output_type; };
 
         void SetNumBounces(int num_bounces);
-        void SetOutputType(Renderer::OutputType type);
+        void SetOutputType(OutputType type);
 
         std::future<int> GetShapeId(std::uint32_t x, std::uint32_t y);
         Baikal::Shape::Ptr GetShapeById(int shape_id);
@@ -127,6 +127,6 @@ namespace Baikal
         CLWImage2D m_cl_interop_image;
         //save GL tex for no interop case
         GLuint m_tex;
-        Renderer::OutputType m_output_type;
+        OutputType m_output_type;
     };
 }

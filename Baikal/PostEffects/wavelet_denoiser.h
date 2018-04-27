@@ -61,7 +61,7 @@ namespace Baikal
 
     private:
         // Find required output
-        ClwOutput* FindOutput(InputSet const& input_set, Renderer::OutputType type);
+        ClwOutput* FindOutput(InputSet const& input_set, OutputType type);
 
         CLWProgram  m_program;
 
@@ -102,7 +102,7 @@ namespace Baikal
 
     inline WaveletDenoiser::WaveletDenoiser(CLWContext context, const CLProgramManager *program_manager)
 #ifdef BAIKAL_EMBED_KERNELS
-        : ClwPostEffect(context,
+        : ClwPostEffect(program_manager, context,
             g_wavelet_denoise_opencl,
             g_wavelet_denoise_opencl_inc,
             sizeof(g_wavelet_denoise_opencl_inc) / sizeof(*g_wavelet_denoise_opencl_inc))
@@ -184,7 +184,7 @@ namespace Baikal
         delete m_blending_weight_calculation;
     }
 
-    inline ClwOutput* WaveletDenoiser::FindOutput(InputSet const& input_set, Renderer::OutputType type)
+    inline ClwOutput* WaveletDenoiser::FindOutput(InputSet const& input_set, OutputType type)
     {
         auto iter = input_set.find(type);
 
@@ -204,11 +204,11 @@ namespace Baikal
         auto sigma_color = GetParameter("color_sensitivity").x;
         auto sigma_position = GetParameter("position_sensitivity").x;
 
-        auto color = FindOutput(input_set, Renderer::OutputType::kColor);
-        auto normal = FindOutput(input_set, Renderer::OutputType::kWorldShadingNormal);
-        auto position = FindOutput(input_set, Renderer::OutputType::kWorldPosition);
-        auto albedo = FindOutput(input_set, Renderer::OutputType::kAlbedo);
-        auto mesh_id = FindOutput(input_set, Renderer::OutputType::kMeshID);
+        auto color = FindOutput(input_set, OutputType::kColor);
+        auto normal = FindOutput(input_set, OutputType::kWorldShadingNormal);
+        auto position = FindOutput(input_set, OutputType::kWorldPosition);
+        auto albedo = FindOutput(input_set, OutputType::kAlbedo);
+        auto mesh_id = FindOutput(input_set, OutputType::kShapeId);
 
         auto out_color = static_cast<ClwOutput*>(&output);
 

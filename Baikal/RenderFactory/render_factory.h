@@ -21,14 +21,14 @@
  ********************************************************************/
 #pragma once
 
+
 #include <memory>
 
-#include "CLW.h"
 #include "Controllers/scene_controller.h"
+#include "Renderers/renderer.h"
 
 namespace Baikal
 {
-    class Renderer;
     class Output;
     class PostEffect;
     
@@ -45,7 +45,8 @@ namespace Baikal
     public:
         enum class RendererType
         {
-            kUnidirectionalPathTracer
+            kUnidirectionalPathTracer,
+            kHybrid
         };
         
         enum class PostEffectType
@@ -58,7 +59,7 @@ namespace Baikal
         virtual ~RenderFactory() = default;
 
         virtual 
-        std::unique_ptr<Renderer> CreateRenderer(RendererType type) const = 0;
+        std::unique_ptr<Renderer<Scene>> CreateRenderer(RendererType type) const = 0;
 
         virtual 
         std::unique_ptr<Output> CreateOutput(std::uint32_t w, std::uint32_t h) const = 0;

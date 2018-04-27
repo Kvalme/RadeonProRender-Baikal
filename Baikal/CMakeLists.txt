@@ -1,6 +1,8 @@
 set(CONTROLLERS_SOURCES
     Controllers/clw_scene_controller.cpp
     Controllers/clw_scene_controller.h
+    Controllers/vkw_scene_controller.cpp
+    Controllers/vkw_scene_controller.h
     Controllers/scene_controller.h
     Controllers/scene_controller.inl)
     
@@ -10,9 +12,10 @@ set(ESTIMATORS_SOURCES
     Estimators/path_tracing_estimator.h)
 
 set(OUTPUT_SOURCES
+    Output/vkwoutput.h
     Output/clwoutput.h
     Output/output.h)
-    
+
 set(POSTEFFECT_SOURCES
     PostEffects/clw_post_effect.h
     PostEffects/post_effect.h
@@ -27,6 +30,8 @@ set(RENDERERS_SOURCES
     Renderers/renderer.h)
 
 set(RENDERFACTORY_SOURCES
+    RenderFactory/vkw_render_factory.cpp
+    RenderFactory/vkw_render_factory.h
     RenderFactory/clw_render_factory.cpp
     RenderFactory/clw_render_factory.h
     RenderFactory/render_factory.h)
@@ -58,6 +63,7 @@ set(SCENEGRAPH_SOURCES
     SceneGraph/camera.cpp
     SceneGraph/camera.h
     SceneGraph/clwscene.h
+    SceneGraph/vkwscene.h
     SceneGraph/iterator.h
     SceneGraph/light.cpp
     SceneGraph/light.h
@@ -87,6 +93,8 @@ set(SCENEGRAPH_IO_SOURCES
     SceneGraph/IO/material_io.h
     SceneGraph/IO/scene_binary_io.cpp
     SceneGraph/IO/scene_binary_io.h
+    SceneGraph/IO/scene_fbx_io.cpp
+    SceneGraph/IO/scene_gltf_io.cpp
     SceneGraph/IO/scene_io.cpp
     SceneGraph/IO/scene_io.h
     SceneGraph/IO/scene_test_io.cpp
@@ -165,9 +173,9 @@ if (BAIKAL_ENABLE_UBERV2)
     target_compile_definitions(Baikal PUBLIC ENABLE_UBERV2)
 endif (BAIKAL_ENABLE_UBERV2)
 
+find_package(Vulkan)
 
 target_compile_features(Baikal PRIVATE cxx_std_14)
 target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/Baikal")
-target_link_libraries(Baikal PUBLIC RadeonRays OpenImageIO::OpenImageIO)
-
-    
+target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/RadeonRays/VKW")
+target_link_libraries(Baikal PUBLIC RadeonRays OpenImageIO::OpenImageIO Vulkan::Vulkan)

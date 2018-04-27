@@ -21,7 +21,12 @@ THE SOFTWARE.
 ********************************************************************/
 #include "config_manager.h"
 
-#include "CLW.h"
+#if HYBRID_RENDERER
+    #include "VKW.h"
+#else
+    #include "CLW.h"
+#endif
+
 #include "RenderFactory/render_factory.h"
 
 #ifndef APP_BENCHMARK
@@ -38,6 +43,9 @@ THE SOFTWARE.
 #include <GL/glew.h>
 #include <GL/glx.h>
 #endif
+
+
+vkw::RenderTargetAttachment rt_attachment;
 
 void ConfigManager::CreateConfigs(
     Mode mode,

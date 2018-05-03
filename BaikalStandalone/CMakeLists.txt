@@ -3,6 +3,8 @@ set(APPLICATION_SOURCES
     Application/application.h
     Application/app_utils.cpp
     Application/app_utils.h
+    Application/vk_render.cpp
+    Application/vk_render.h
     Application/cl_render.cpp
     Application/cl_render.h
     Application/gl_render.cpp

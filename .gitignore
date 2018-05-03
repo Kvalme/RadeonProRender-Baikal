@@ -27,3 +27,5 @@
 *.png
 *.pbxproj
 *.make
+/build
+/bin

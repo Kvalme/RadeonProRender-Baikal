@@ -27,6 +27,8 @@ set(RENDERERS_SOURCES
     Renderers/adaptive_renderer.h
     Renderers/monte_carlo_renderer.cpp
     Renderers/monte_carlo_renderer.h
+    Renderers/hybrid_renderer.cpp
+    Renderers/hybrid_renderer.h
     Renderers/renderer.h)
 
 set(RENDERFACTORY_SOURCES
@@ -178,4 +180,4 @@ find_package(Vulkan)
 target_compile_features(Baikal PRIVATE cxx_std_14)
 target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/Baikal")
 target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/RadeonRays/VKW")
-target_link_libraries(Baikal PUBLIC RadeonRays OpenImageIO::OpenImageIO Vulkan::Vulkan)
+target_link_libraries(Baikal PUBLIC RadeonRays VKW OpenImageIO::OpenImageIO Vulkan::Vulkan)

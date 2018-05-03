@@ -28,6 +28,7 @@ THE SOFTWARE.
 #endif
 
 #include "RenderFactory/render_factory.h"
+#include "Controllers/vkw_scene_controller.h"
 
 #ifndef APP_BENCHMARK
 
@@ -44,8 +45,152 @@ THE SOFTWARE.
 #include <GL/glx.h>
 #endif
 
+vkw::VkScopedObject<VkInstance> instance;
 
-vkw::RenderTargetAttachment rt_attachment;
+vkw::VkScopedObject<VkInstance> create_instance()
+{
+    VkApplicationInfo app_info;
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pNext = NULL;
+    app_info.pApplicationName = "BaikalStandalone";
+    app_info.applicationVersion = 1;
+    app_info.pEngineName = "BaikalStandalone";
+    app_info.engineVersion = 1;
+    app_info.apiVersion = VK_API_VERSION_1_0;
+    
+    VkInstanceCreateInfo instance_info;
+    instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instance_info.pNext = NULL;
+    instance_info.flags = 0;
+    instance_info.pApplicationInfo = &app_info;
+    instance_info.enabledExtensionCount = 0;
+    instance_info.ppEnabledExtensionNames = NULL;
+    instance_info.enabledLayerCount = 0;
+    instance_info.ppEnabledLayerNames = NULL;
+    
+    VkInstance instance = nullptr;
+    VkResult res = vkCreateInstance(&instance_info, nullptr, &instance);
+    if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
+    {
+        throw std::runtime_error("Cannot find a compatible Vulkan ICD\n");
+    }
+    else if (res)
+    {
+        throw std::runtime_error("Unknown error\n");
+    }
+    
+    return vkw::VkScopedObject<VkInstance>(instance,
+                                      [](VkInstance instance)
+                                      {
+                                          vkDestroyInstance(instance, nullptr);
+                                      });
+}
+
+vkw::VkScopedObject<VkDevice> create_device(VkInstance instance,
+                                       std::uint32_t& queue_family_index,
+                                       VkPhysicalDevice* opt_physical_device = nullptr)
+{
+    // Enumerate devices
+    auto gpu_count = 0u;
+    auto res = vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
+    
+    if (gpu_count == 0)
+    {
+        throw std::runtime_error("No compatible devices found\n");
+    }
+    
+    std::vector<VkPhysicalDevice> gpus(gpu_count);
+    res = vkEnumeratePhysicalDevices(instance, &gpu_count, gpus.data());
+    
+    float queue_priority = 0.f;
+    VkDeviceQueueCreateInfo queue_create_info;
+    queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info.pNext = nullptr;
+    queue_create_info.flags = 0;
+    queue_create_info.queueCount = 1u;
+    queue_create_info.pQueuePriorities = &queue_priority;
+    
+    auto queue_family_count = 0u;
+    vkGetPhysicalDeviceQueueFamilyProperties(gpus[0], &queue_family_count, nullptr);
+    
+    std::vector<VkQueueFamilyProperties> queue_props(queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(gpus[0], &queue_family_count, queue_props.data());
+    
+    // Look for a queue supporing both compute and transfer
+    bool found = false;
+    for (unsigned int i = 0; i < queue_family_count; i++)
+    {
+        if (queue_props[i].queueFlags & (VK_QUEUE_GRAPHICS_BIT))
+        {
+            queue_create_info.queueFamilyIndex = i;
+            queue_family_index = i;
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found)
+    {
+        throw std::runtime_error("No compute/transfer queues found\n");
+    }
+    
+    VkDeviceCreateInfo device_create_info;
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext = nullptr;
+    device_create_info.flags = 0;
+    device_create_info.queueCreateInfoCount = 1u;
+    device_create_info.pQueueCreateInfos = &queue_create_info;
+    device_create_info.enabledLayerCount = 0u;
+    device_create_info.ppEnabledLayerNames = nullptr;
+    device_create_info.enabledExtensionCount = 0u;
+    device_create_info.ppEnabledExtensionNames = nullptr;
+    device_create_info.pEnabledFeatures = nullptr;
+    
+    VkDevice device = nullptr;
+    res = vkCreateDevice(gpus[0], &device_create_info, nullptr, &device);
+    
+    if (res != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create Vulkan device\n");
+    }
+    
+    if (opt_physical_device)
+    {
+        *opt_physical_device = gpus[0];
+    }
+    
+    return vkw::VkScopedObject<VkDevice>(device,
+                                    [](VkDevice device)
+                                    {
+                                        vkDestroyDevice(device, nullptr);
+                                    });
+}
+
+// $tmp
+void ConfigManager::CreateConfigs(
+        Mode mode,
+        bool interop,
+        std::vector<VkwConfig>& renderers,
+        int initial_num_bounces,
+        int req_platform_index,
+        int req_device_index)
+{
+    renderers.resize(1);
+
+    instance = create_instance();
+
+    for (int i = 0; i < renderers.size(); ++i)
+    {
+        uint32_t queue_family_index = -1;
+        VkPhysicalDevice physical_device;
+
+        renderers[i].device = create_device(instance, queue_family_index, &physical_device);
+        renderers[i].physical_device = physical_device;
+        renderers[i].factory = std::make_unique<Baikal::VkwRenderFactory>(renderers[i].device, renderers[i].physical_device, queue_family_index);
+        renderers[i].controller = renderers[i].factory->CreateSceneController();
+        renderers[i].renderer = renderers[i].factory->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);
+    }
+}
 
 void ConfigManager::CreateConfigs(
     Mode mode,

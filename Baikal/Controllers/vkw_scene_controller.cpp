@@ -28,8 +28,12 @@ namespace Baikal
         return (value + 0xF) / 0x10 * 0x10;
     }
 
-    VkwSceneController::VkwSceneController(VkDevice device)
+    VkwSceneController::VkwSceneController(VkDevice device, VkPhysicalDevice physical_device, int queue_family_index)
     : m_default_material(SingleBxdf::Create(SingleBxdf::BxdfType::kLambert))
+    , m_device(device)
+    , m_physical_device(physical_device)
+    , m_memory_allocator(device, physical_device)
+    , m_memory_manager(device, queue_family_index, m_memory_allocator)
     {
 
     }
@@ -54,6 +58,54 @@ namespace Baikal
 
     void VkwSceneController::UpdateCamera(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const
     {
+        PerspectiveCamera* camera = dynamic_cast<PerspectiveCamera*>(scene.GetCamera().get());
+
+        if (camera == nullptr)
+        {
+            throw std::runtime_error("VkwSceneController supports only perspective cameras");
+        }
+
+        const float focal_length = camera->GetFocalLength();
+        const float2 sensor_size = camera->GetSensorSize();
+
+        float2 z_range = camera->GetDepthRange();
+
+        // Nan-avoidance in perspective matrix
+        z_range.x = std::max(z_range.x, std::numeric_limits<float>::epsilon());
+
+        const float fovy = atan(sensor_size.y / (2.0f * focal_length));
+
+        const float3 up = camera->GetUpVector();
+        const float3 right = -camera->GetRightVector();
+        const float3 forward = camera->GetForwardVector();
+        const float3 pos = camera->GetPosition();
+
+        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), z_range.x, z_range.y);
+        const float3 ip = float3(-dot(right, pos), -dot(up, pos), -dot(forward, pos));
+
+        const matrix view = matrix(right.x, right.y, right.z, ip.x,
+            up.x, up.y, up.z, ip.y,
+            forward.x, forward.y, forward.z, ip.z,
+            0.0f, 0.0f, 0.0f, 1.0f);
+
+        const matrix view_proj = proj * view;
+
+        VkwScene::Camera camera_internal;
+        camera_internal.camera_position = camera->GetPosition();
+        camera_internal.view_projection = view_proj;
+        camera_internal.inv_view = inverse(view);
+        camera_internal.inv_projection = inverse(proj);
+
+        vkw::MemoryManager* memory_manager = const_cast<vkw::MemoryManager*>(&m_memory_manager);
+
+        if (out.camera == VK_NULL_HANDLE)
+        {
+            out.camera = memory_manager->CreateBuffer(sizeof(VkwScene::Camera),
+                                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,                                           &camera_internal);
+        }
+        
+        memory_manager->WriteBuffer(out.camera, 0u, sizeof(VkwScene::Camera), &camera_internal);
     }
 
     void VkwSceneController::UpdateShapes(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const

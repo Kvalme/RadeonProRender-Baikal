@@ -9,8 +9,7 @@ struct Camera
 {
     float4  camera_position;
 
-    mat4    world_view;
-    mat4    projection;
+    mat4    view_projection;
 
     mat4    inv_view;
     mat4    inv_projection;

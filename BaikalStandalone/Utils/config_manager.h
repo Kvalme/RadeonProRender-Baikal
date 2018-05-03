@@ -24,6 +24,10 @@ THE SOFTWARE.
 
 #include "CLW.h"
 #include "RenderFactory/clw_render_factory.h"
+
+#include "VKW.h"
+#include "RenderFactory/vkw_render_factory.h"
+
 #include "Renderers/renderer.h"
 #include <vector>
 #include <memory>
@@ -65,10 +69,39 @@ public:
         }
     };
 
+    struct VkwConfig
+    {
+        DeviceType type;
+        std::unique_ptr<Baikal::Renderer<Baikal::VkwScene>> renderer;
+        std::unique_ptr<Baikal::SceneController<Baikal::VkwScene>> controller;
+        std::unique_ptr<Baikal::RenderFactory<Baikal::VkwScene>> factory;
+
+        vkw::VkScopedObject<VkDevice> device;
+        VkPhysicalDevice physical_device;
+
+        bool caninterop;
+
+        VkwConfig() = default;
+
+        VkwConfig(VkwConfig&& cfg) = default;
+
+        ~VkwConfig()
+        {
+        }
+    };
+
     static void CreateConfigs(
         Mode mode,
         bool interop,
         std::vector<Config>& renderers,
+        int initial_num_bounces,
+        int req_platform_index = -1,
+        int req_device_index = -1);
+
+    static void CreateConfigs(
+        Mode mode,
+        bool interop,
+        std::vector<VkwConfig>& renderers,
         int initial_num_bounces,
         int req_platform_index = -1,
         int req_device_index = -1);

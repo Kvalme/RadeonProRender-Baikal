@@ -25,6 +25,7 @@
 #include "Application/app_utils.h"
 #include "Application/cl_render.h"
 #include "Application/gl_render.h"
+#include "Application/vk_render.h"
 #include "SceneGraph/IO/image_io.h"
 
 #include <future>
@@ -59,6 +60,8 @@ namespace Baikal
         AppSettings m_settings;
         std::unique_ptr<AppClRender> m_cl;
         std::unique_ptr<AppGlRender> m_gl;
+        std::unique_ptr<AppVkRender> m_vk;
+        
 
         GLFWwindow* m_window;
 

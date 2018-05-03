@@ -306,7 +306,8 @@ namespace Baikal
 
         const float kMouseSensitivity = 0.001125f;
         const float kScrollSensitivity = 0.05f;
-        auto camera = m_cl->GetCamera();
+        //auto camera = m_cl->GetCamera();
+        auto camera = m_vk->GetCamera();
         if (!m_settings.benchmark && !m_settings.time_benchmark)
         {
             float2 delta = g_mouse_delta * float2(kMouseSensitivity, kMouseSensitivity);
@@ -384,23 +385,26 @@ namespace Baikal
                 m_settings.samplecount = 0;
             }
 
-            m_cl->UpdateScene();
+            //m_cl->UpdateScene();
+            m_vk->UpdateScene();
         }
 
         if (m_settings.num_samples == -1 || m_settings.samplecount <  m_settings.num_samples)
         {
-            m_cl->Render(m_settings.samplecount);
+            m_vk->Render(m_settings.samplecount);
+            //m_cl->Render(m_settings.samplecount);
             ++m_settings.samplecount;
         }
         else if (m_settings.samplecount == m_settings.num_samples)
         {
-            m_cl->SaveFrameBuffer(m_settings);
-            std::cout << "Target sample count reached\n";
-            ++m_settings.samplecount;
+            //m_cl->SaveFrameBuffer(m_settings);
+            //std::cout << "Target sample count reached\n";
+            //++m_settings.samplecount;
             //exit(0);
         }
 
-        m_cl->Update(m_settings);
+        //m_cl->Update(m_settings);
+        m_vk->Update(m_settings);
     }
 
     void Application::SaveToFile(std::chrono::high_resolution_clock::time_point time) const
@@ -526,6 +530,7 @@ namespace Baikal
             {
                 m_gl.reset(new AppGlRender(m_settings));
                 m_cl.reset(new AppClRender(m_settings, m_gl->GetTexture()));
+                m_vk.reset(new AppVkRender(m_settings, m_gl->GetTexture()));
 
                 //set callbacks
                 using namespace std::placeholders;
@@ -590,8 +595,10 @@ namespace Baikal
             std::cout << "Number of instances: " << m_num_instances << "\n";
 
             //compile scene
-            m_cl->UpdateScene();
-            m_cl->RunBenchmark(m_settings);
+            //m_cl->UpdateScene();
+            //m_cl->RunBenchmark(m_settings);
+            
+            m_vk->UpdateScene();
 
             auto minutes = (int)(m_settings.time_benchmark_time / 60.f);
             auto seconds = (int)(m_settings.time_benchmark_time - minutes * 60);
@@ -1124,7 +1131,8 @@ namespace Baikal
 
                 if (is_scene_changed)
                 {
-                    m_cl->UpdateScene();
+                    //m_cl->UpdateScene();
+                    m_vk->UpdateScene();
                 }
             }
 

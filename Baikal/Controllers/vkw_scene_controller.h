@@ -34,6 +34,8 @@
 
 #include "math/float3.h"
 
+#include "VKW.h"
+
 namespace Baikal
 {
     class Scene1;
@@ -56,7 +58,7 @@ namespace Baikal
     {
     public:
         // Constructor
-        VkwSceneController(VkDevice device);
+        VkwSceneController(VkDevice device, VkPhysicalDevice physical_device, int queue_family_index);
         // Destructor
         virtual ~VkwSceneController();
 
@@ -105,7 +107,15 @@ namespace Baikal
         // Collectore is required to convert texture pointers into indices.
         void WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const;
     protected:
+        // Memory allocator
+        vkw::MemoryAllocator    m_memory_allocator;
+        // Memory manager
+        vkw::MemoryManager      m_memory_manager;
+        // Vulkan logical device
+        VkDevice                m_device;
+        // Vulkan physical device
+        VkPhysicalDevice        m_physical_device;
         // Default material
-        Material::Ptr m_default_material;
+        Material::Ptr           m_default_material;
     };
 }

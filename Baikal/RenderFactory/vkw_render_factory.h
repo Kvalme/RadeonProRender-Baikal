@@ -42,7 +42,7 @@ namespace Baikal
     class VkwRenderFactory : public RenderFactory<VkwScene>
     {
     public:
-        VkwRenderFactory(VkDevice device);
+        VkwRenderFactory(VkDevice device, VkPhysicalDevice physical_device, int queue_family_index);
 
         // Create a renderer of specified type
         std::unique_ptr<Renderer<VkwScene>> 
@@ -58,6 +58,8 @@ namespace Baikal
             CreateSceneController() const override;
 
     private:
-        VkDevice m_device;
+        int                 m_queue_family_index;
+        VkDevice            m_device;
+        VkPhysicalDevice    m_physical_device;
     };
 }

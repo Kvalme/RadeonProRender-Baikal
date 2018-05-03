@@ -58,7 +58,7 @@ namespace Baikal
     {
     public:
         // Constructor
-        VkwSceneController(VkDevice device, VkPhysicalDevice physical_device, int queue_family_index);
+        VkwSceneController(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index);
         // Destructor
         virtual ~VkwSceneController();
 
@@ -108,14 +108,14 @@ namespace Baikal
         void WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const;
     protected:
         // Memory allocator
-        vkw::MemoryAllocator    m_memory_allocator;
+        vkw::MemoryAllocator            memory_allocator_;
         // Memory manager
-        vkw::MemoryManager      m_memory_manager;
+        mutable vkw::MemoryManager      memory_manager_;
         // Vulkan logical device
-        VkDevice                m_device;
+        VkDevice                        device_;
         // Vulkan physical device
-        VkPhysicalDevice        m_physical_device;
+        VkPhysicalDevice                physical_device_;
         // Default material
-        Material::Ptr           m_default_material;
+        Material::Ptr                   default_material_;
     };
 }

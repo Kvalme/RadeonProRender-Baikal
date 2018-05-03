@@ -11,7 +11,7 @@ namespace Baikal
     public:
         VkwOutput(VkDevice device, std::uint32_t w, std::uint32_t h)
         : Output(w, h)
-        , m_device(device)
+        , device_(device)
         {
         }
 
@@ -28,6 +28,6 @@ namespace Baikal
         }
         
     private:
-        VkDevice m_device;
+        VkDevice device_;
     };
 }

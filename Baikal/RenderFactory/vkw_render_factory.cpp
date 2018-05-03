@@ -11,10 +11,10 @@
 
 namespace Baikal
 {
-    VkwRenderFactory::VkwRenderFactory(VkDevice device, VkPhysicalDevice physical_device, int queue_family_index)
-    : m_device(device)
-    , m_physical_device(physical_device)
-    , m_queue_family_index(queue_family_index)
+    VkwRenderFactory::VkwRenderFactory(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
+    : device_(device)
+    , physical_device_(physical_device)
+    , queue_family_index_(queue_family_index)
     {
     }
 
@@ -25,7 +25,7 @@ namespace Baikal
         switch (type)
         {
             case RendererType::kHybrid:
-                return std::unique_ptr<Renderer<VkwScene>>(new HybridRenderer(m_device));
+                return std::unique_ptr<Renderer<VkwScene>>(new HybridRenderer(device_));
             case RendererType::kUnidirectionalPathTracer:
                 throw std::runtime_error("Renderer not supported");
             default:
@@ -37,7 +37,7 @@ namespace Baikal
                                                            std::uint32_t h)
                                                            const
     {
-        return std::unique_ptr<Output>(new VkwOutput(m_device, w, h));
+        return std::unique_ptr<Output>(new VkwOutput(device_, w, h));
     }
 
     std::unique_ptr<PostEffect> VkwRenderFactory::CreatePostEffect(
@@ -49,6 +49,6 @@ namespace Baikal
 
     std::unique_ptr<SceneController<VkwScene>> VkwRenderFactory::CreateSceneController() const
     {
-        return std::make_unique<VkwSceneController>(m_device, m_physical_device, m_queue_family_index);
+        return std::make_unique<VkwSceneController>(device_, physical_device_, queue_family_index_);
     }
 }

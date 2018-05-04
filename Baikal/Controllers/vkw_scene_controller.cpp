@@ -32,10 +32,9 @@ namespace Baikal
     : default_material_(SingleBxdf::Create(SingleBxdf::BxdfType::kLambert))
     , device_(device)
     , physical_device_(physical_device)
-    , memory_allocator_(device, physical_device)
-    , memory_manager_(device, queue_family_index, memory_allocator_)
     {
-
+        memory_allocator_ = std::unique_ptr<vkw::MemoryAllocator>(new vkw::MemoryAllocator(device, physical_device));
+        memory_manager_ = std::unique_ptr<vkw::MemoryManager>(new vkw::MemoryManager(device, queue_family_index, *memory_allocator_.get()));
     }
 
     Material::Ptr VkwSceneController::GetDefaultMaterial() const
@@ -98,12 +97,12 @@ namespace Baikal
 
         if (out.camera == VK_NULL_HANDLE)
         {
-            out.camera = memory_manager_.CreateBuffer( sizeof(VkwScene::Camera),
+            out.camera = memory_manager_->CreateBuffer( sizeof(VkwScene::Camera),
                                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &camera_internal);
         }
         
-        memory_manager_.WriteBuffer(out.camera, 0u, sizeof(VkwScene::Camera), &camera_internal);
+        memory_manager_->WriteBuffer(out.camera, 0u, sizeof(VkwScene::Camera), &camera_internal);
     }
 
     void VkwSceneController::UpdateShapes(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const

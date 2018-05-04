@@ -108,14 +108,14 @@ namespace Baikal
         void WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const;
     protected:
         // Memory allocator
-        vkw::MemoryAllocator            memory_allocator_;
+        std::unique_ptr<vkw::MemoryAllocator>           memory_allocator_;
         // Memory manager
-        mutable vkw::MemoryManager      memory_manager_;
+        mutable std::unique_ptr<vkw::MemoryManager>     memory_manager_;
         // Vulkan logical device
-        VkDevice                        device_;
+        VkDevice                                        device_;
         // Vulkan physical device
-        VkPhysicalDevice                physical_device_;
+        VkPhysicalDevice                                physical_device_;
         // Default material
-        Material::Ptr                   default_material_;
+        Material::Ptr                                   default_material_;
     };
 }

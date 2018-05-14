@@ -39,7 +39,6 @@ THE SOFTWARE.
 #include <thread>
 #include <chrono>
 
-
 #include "PostEffects/wavelet_denoiser.h"
 #include "Utils/clw_class.h"
 
@@ -49,6 +48,9 @@ namespace Baikal
     {
         InitVk(settings, m_tex);
         LoadScene(settings);
+
+        
+        m_output = m_cfgs[0].factory->CreateOutput(1920, 1080);
         m_primary = 0;
     }
 

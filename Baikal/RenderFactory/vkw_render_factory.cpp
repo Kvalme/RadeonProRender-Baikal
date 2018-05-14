@@ -16,6 +16,9 @@ namespace Baikal
     , physical_device_(physical_device)
     , queue_family_index_(queue_family_index)
     {
+        memory_allocator_ = std::unique_ptr<vkw::MemoryAllocator>(new vkw::MemoryAllocator(device, physical_device));
+        memory_manager_ = std::unique_ptr<vkw::MemoryManager>(new vkw::MemoryManager(device, queue_family_index, *memory_allocator_));
+        render_target_manager_ = std::unique_ptr<vkw::RenderTargetManager>(new vkw::RenderTargetManager(device, *memory_manager_));
     }
 
     // Create a renderer of specified type
@@ -37,7 +40,7 @@ namespace Baikal
                                                            std::uint32_t h)
                                                            const
     {
-        return std::unique_ptr<Output>(new VkwOutput(device_, w, h));
+        return std::unique_ptr<Output>(new VkwOutput(*render_target_manager_, w, h));
     }
 
     std::unique_ptr<PostEffect> VkwRenderFactory::CreatePostEffect(
@@ -49,6 +52,6 @@ namespace Baikal
 
     std::unique_ptr<SceneController<VkwScene>> VkwRenderFactory::CreateSceneController() const
     {
-        return std::make_unique<VkwSceneController>(device_, physical_device_, queue_family_index_);
+        return std::make_unique<VkwSceneController>(*memory_allocator_, *memory_manager_, device_, physical_device_, queue_family_index_);
     }
 }

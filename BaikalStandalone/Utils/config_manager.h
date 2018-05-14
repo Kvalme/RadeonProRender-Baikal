@@ -72,12 +72,13 @@ public:
     struct VkwConfig
     {
         DeviceType type;
+        
+        VkPhysicalDevice physical_device;
+        vkw::VkScopedObject<VkDevice> device;
+
+        std::unique_ptr<Baikal::RenderFactory<Baikal::VkwScene>> factory;
         std::unique_ptr<Baikal::Renderer<Baikal::VkwScene>> renderer;
         std::unique_ptr<Baikal::SceneController<Baikal::VkwScene>> controller;
-        std::unique_ptr<Baikal::RenderFactory<Baikal::VkwScene>> factory;
-
-        vkw::VkScopedObject<VkDevice> device;
-        VkPhysicalDevice physical_device;
 
         bool caninterop;
 

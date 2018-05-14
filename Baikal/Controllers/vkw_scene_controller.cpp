@@ -28,13 +28,38 @@ namespace Baikal
         return (value + 0xF) / 0x10 * 0x10;
     }
 
-    VkwSceneController::VkwSceneController(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
+    // Convert Light:: types to VkwScene:: types
+    static int GetLightType(Light const& light)
+    {
+        if (dynamic_cast<PointLight const*>(&light))
+        {
+            return VkwScene::kPoint;
+        }
+        else if (dynamic_cast<DirectionalLight const*>(&light))
+        {
+            return VkwScene::kDirectional;
+        }
+        else if (dynamic_cast<SpotLight const*>(&light))
+        {
+            return VkwScene::kSpot;
+        }
+        else if (dynamic_cast<ImageBasedLight const*>(&light))
+        {
+            return VkwScene::kIbl;
+        }
+        else
+        {
+            return VkwScene::kArea;
+        }
+    }
+
+    VkwSceneController::VkwSceneController(vkw::MemoryAllocator& memory_allocator, vkw::MemoryManager& memory_manager, VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
     : default_material_(SingleBxdf::Create(SingleBxdf::BxdfType::kLambert))
     , device_(device)
     , physical_device_(physical_device)
+    , memory_allocator_(memory_allocator)
+    , memory_manager_(memory_manager)
     {
-        memory_allocator_ = std::unique_ptr<vkw::MemoryAllocator>(new vkw::MemoryAllocator(device, physical_device));
-        memory_manager_ = std::unique_ptr<vkw::MemoryManager>(new vkw::MemoryManager(device, queue_family_index, *memory_allocator_.get()));
     }
 
     Material::Ptr VkwSceneController::GetDefaultMaterial() const
@@ -46,22 +71,13 @@ namespace Baikal
     {
     }
 
-    
-    void VkwSceneController::UpdateIntersector(Scene1 const& scene, VkwScene& out) const
-    {
-    }
-
-    void VkwSceneController::UpdateIntersectorTransforms(Scene1 const& scene, VkwScene& out) const
-    {
-    }
-
     void VkwSceneController::UpdateCamera(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const
     {
         PerspectiveCamera* camera = dynamic_cast<PerspectiveCamera*>(scene.GetCamera().get());
 
         if (camera == nullptr)
         {
-            throw std::runtime_error("VkwSceneController supports only perspective cameras");
+            throw std::runtime_error("VkwSceneController supports only perspective camera");
         }
 
         const float focal_length = camera->GetFocalLength();
@@ -97,20 +113,121 @@ namespace Baikal
 
         if (out.camera == VK_NULL_HANDLE)
         {
-            out.camera = memory_manager_->CreateBuffer( sizeof(VkwScene::Camera),
+            out.camera = memory_manager_.CreateBuffer( sizeof(VkwScene::Camera),
                                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &camera_internal);
         }
         
-        memory_manager_->WriteBuffer(out.camera, 0u, sizeof(VkwScene::Camera), &camera_internal);
+        memory_manager_.WriteBuffer(out.camera, 0u, sizeof(VkwScene::Camera), &camera_internal);
     }
 
     void VkwSceneController::UpdateShapes(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const
     {
+        size_t num_shapes = scene.GetNumShapes();
+        size_t num_vertices = 0;
+        size_t num_indices = 0;
+
+        vertex_buffer_.clear();
+        index_buffer_.clear();
+        mesh_transforms_.clear();
+
+        std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
+        for (; mesh_iter->IsValid(); mesh_iter->Next())
+        {
+            Baikal::Shape::Ptr shape = mesh_iter->ItemAs<Baikal::Shape>();
+            Baikal::Mesh const* mesh = dynamic_cast<Baikal::Mesh*>(shape.get());
+
+            if (mesh == nullptr)
+                continue;
+            
+            num_vertices += mesh->GetNumVertices();
+            num_indices  += mesh->GetNumIndices();
+
+            assert(mesh->GetNumVertices() == mesh->GetNumNormals());
+            assert(mesh->GetNumVertices() == mesh->GetNumUVs());
+
+            for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
+            {
+                Vertex vertex = { mesh->GetVertices()[v], mesh->GetNormals()[v], mesh->GetUVs()[v] };
+                vertex_buffer_.push_back(vertex);
+            }
+
+            for (std::size_t idx = 0; idx < mesh->GetNumIndices(); idx++)
+            {
+                index_buffer_.push_back(mesh->GetIndices()[idx]);
+            }
+
+            mesh_transforms_.push_back(mesh->GetTransform());
+        }
+        
+        if (out.vertex_count < num_vertices)
+        {
+            delete out.mesh_vertex_buffer;
+
+            out.mesh_vertex_buffer = memory_manager_.CreateBuffer(  sizeof(Vertex) * num_vertices,
+                                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, nullptr);
+
+            out.vertex_count = num_vertices;
+        }
+
+        if (out.index_count < num_indices)
+        {
+            delete out.mesh_index_buffer;
+            
+            out.mesh_index_buffer = memory_manager_.CreateBuffer( sizeof(uint32_t) * num_indices,
+                                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                                VK_BUFFER_USAGE_INDEX_BUFFER_BIT, nullptr);
+
+            out.index_count = num_indices;
+        }
+
+        if (out.shapes_count < num_shapes)
+        {
+            delete out.mesh_transforms;
+
+            out.mesh_transforms = memory_manager_.CreateBuffer( sizeof(RadeonRays::matrix) * num_shapes,
+                                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+
+            out.shapes_count = num_shapes;
+        }
+
+        memory_manager_.WriteBuffer(out.mesh_vertex_buffer, 0u, sizeof(Vertex) * num_vertices, &vertex_buffer_[0]);
+        memory_manager_.WriteBuffer(out.mesh_index_buffer, 0u, sizeof(uint32_t) * num_indices, &index_buffer_[0]);
+        memory_manager_.WriteBuffer(out.mesh_transforms, 0u, sizeof(RadeonRays::matrix) * num_shapes, &mesh_transforms_[0]);
     }
 
     void VkwSceneController::UpdateShapeProperties(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& volume_collector, VkwScene& out) const
     {
+        size_t num_shapes = scene.GetNumShapes();
+
+        mesh_transforms_.clear();
+
+        std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
+        for (; mesh_iter->IsValid(); mesh_iter->Next())
+        {
+            Baikal::Shape::Ptr shape = mesh_iter->ItemAs<Baikal::Shape>();
+            Baikal::Mesh const* mesh = dynamic_cast<Baikal::Mesh*>(shape.get());
+
+            if (mesh == nullptr)
+                continue;
+
+            mesh_transforms_.push_back(mesh->GetTransform());
+        }
+
+        if (out.shapes_count < num_shapes)
+        {
+            delete out.mesh_transforms;
+
+            out.mesh_transforms = memory_manager_.CreateBuffer( sizeof(RadeonRays::matrix) * num_shapes,
+                                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+
+            out.shapes_count = num_shapes;
+        }
+
+        memory_manager_.WriteBuffer(out.mesh_transforms, 0u, sizeof(RadeonRays::matrix) * num_shapes, &mesh_transforms_[0]);
     }
 
     void VkwSceneController::UpdateCurrentScene(Scene1 const& scene, VkwScene& out) const
@@ -139,6 +256,47 @@ namespace Baikal
 
     void VkwSceneController::UpdateLights(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
+        auto num_lights = scene.GetNumLights();
+
+        std::vector<VkwScene::Light> lights_internal(static_cast<size_t>(num_lights));
+
+        std::unique_ptr<Iterator> light_iter(scene.CreateLightIterator());
+        
+        for (; light_iter->IsValid(); light_iter->Next())
+        {
+            auto light = light_iter->ItemAs<Light>();
+
+            auto light_type = GetLightType(*light);
+
+            switch (light_type)
+            {
+                case VkwScene::kSpot:
+                {
+                    VkwScene::Light spot_light = { light->GetPosition(), light->GetDirection(), light->GetEmittedRadiance() };
+                    lights_internal.push_back(spot_light);
+
+                    break;
+                };
+
+                default:
+                {
+                    break;
+                };
+            }
+        }
+
+        if (out.lights == VK_NULL_HANDLE || out.light_count < num_lights)
+        {
+            delete out.lights;
+
+            out.lights = memory_manager_.CreateBuffer( sizeof(VkwScene::Light) * num_lights,
+                                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &lights_internal);
+        }
+
+        out.light_count = num_lights;
+
+        memory_manager_.WriteBuffer(out.lights, 0u, sizeof(VkwScene::Light) * num_lights, &lights_internal);
     }
 
     void VkwSceneController::WriteTexture(Texture const& texture, std::size_t data_offset, void* data) const

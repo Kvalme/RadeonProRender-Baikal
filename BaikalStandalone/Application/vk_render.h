@@ -106,8 +106,7 @@ namespace Baikal
         int m_primary = -1;
         std::uint32_t m_width, m_height;
 
-        //if interop
-        CLWImage2D m_cl_interop_image;
+        std::unique_ptr<Baikal::Output> m_output;
         //save GL tex for no interop case
         GLuint m_tex;
         OutputType m_output_type;

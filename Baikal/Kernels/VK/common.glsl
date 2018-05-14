@@ -1,3 +1,9 @@
+static const int kPoint = 0x1;
+static const int kDirectional = 0x2;
+static const int kSpot = 0x3;
+static const int kIbl = 0x4;
+static const int kArea = 0x5;
+
 struct Light
 {
     float4 position;

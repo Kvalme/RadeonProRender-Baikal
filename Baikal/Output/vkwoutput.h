@@ -9,10 +9,14 @@ namespace Baikal
     class VkwOutput : public Output
     {
     public:
-        VkwOutput(VkDevice device, std::uint32_t w, std::uint32_t h)
+        VkwOutput(vkw::RenderTargetManager& render_target_manager, std::uint32_t w, std::uint32_t h)
         : Output(w, h)
-        , device_(device)
         {
+            std::vector<vkw::RenderTargetCreateInfo> attachments = {
+                {w, h, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},
+            };
+    
+            render_target_ = render_target_manager.CreateRenderTarget(attachments);
         }
 
         void GetData(RadeonRays::float3* data) const
@@ -28,6 +32,6 @@ namespace Baikal
         }
         
     private:
-        VkDevice device_;
+        vkw::RenderTarget   render_target_;
     };
 }

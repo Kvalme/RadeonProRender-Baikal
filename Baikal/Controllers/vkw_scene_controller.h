@@ -58,7 +58,7 @@ namespace Baikal
     {
     public:
         // Constructor
-        VkwSceneController(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index);
+        VkwSceneController(vkw::MemoryAllocator& memory_allocator, vkw::MemoryManager& memory_manager, VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index);
         // Destructor
         virtual ~VkwSceneController();
 
@@ -87,9 +87,6 @@ namespace Baikal
         void UpdateVolumes(Scene1 const& scene, Collector& volume_collector, Collector& tex_collector, VkwScene& out) const override;
         // If scene attributes changed
         void UpdateSceneAttributes(Scene1 const& scene, Collector& tex_collector, VkwScene& out) const override;
-        // Update intersection API
-        void UpdateIntersector(Scene1 const& scene, VkwScene& out) const;
-        void UpdateIntersectorTransforms(Scene1 const& scene, VkwScene& out) const;
         // Write out single material at data pointer.
         // Collectors are required to convert texture and material pointers into indices.
         void WriteMaterial(Material const& material, Collector& mat_collector, Collector& tex_collector, void* data) const;
@@ -107,15 +104,26 @@ namespace Baikal
         // Collectore is required to convert texture pointers into indices.
         void WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const;
     protected:
+        struct Vertex
+        {
+            RadeonRays::float3 p;
+            RadeonRays::float3 n;
+            RadeonRays::float2 uv;
+        };
+    protected:
         // Memory allocator
-        std::unique_ptr<vkw::MemoryAllocator>           memory_allocator_;
+        vkw::MemoryAllocator&                           memory_allocator_;
         // Memory manager
-        mutable std::unique_ptr<vkw::MemoryManager>     memory_manager_;
+        vkw::MemoryManager&                             memory_manager_;
         // Vulkan logical device
         VkDevice                                        device_;
         // Vulkan physical device
         VkPhysicalDevice                                physical_device_;
         // Default material
         Material::Ptr                                   default_material_;
+        // Storage to prevent re-allocations on each scene update
+        mutable std::vector<Vertex>                     vertex_buffer_;
+        mutable std::vector<uint32_t>                   index_buffer_;
+        mutable std::vector<RadeonRays::matrix>         mesh_transforms_;
     };
 }

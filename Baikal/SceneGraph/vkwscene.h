@@ -18,8 +18,8 @@ namespace Baikal
         : lights(VK_NULL_HANDLE)
         , camera(VK_NULL_HANDLE)
         , mesh_transforms(VK_NULL_HANDLE)
-        , vertex_buffer(VK_NULL_HANDLE)
-        , index_buffer(VK_NULL_HANDLE)
+        , mesh_vertex_buffer(VK_NULL_HANDLE)
+        , mesh_index_buffer(VK_NULL_HANDLE)
         , ibl_skylight_diffuse(VK_NULL_HANDLE)
         , texture_data(VK_NULL_HANDLE)
         , texture_desc(VK_NULL_HANDLE)
@@ -30,6 +30,9 @@ namespace Baikal
         , sh_grid(VK_NULL_HANDLE)
         , light_count(0)
         , sh_count(0)
+        , shapes_count(0)
+        , vertex_count(0)
+        , index_count(0)
         {}
 
         typedef matrix mat4;
@@ -49,8 +52,8 @@ namespace Baikal
         vkw::VkScopedObject<VkBuffer>   camera;
 
         vkw::VkScopedObject<VkBuffer>   mesh_transforms;
-        vkw::VkScopedObject<VkBuffer>   vertex_buffer;
-        vkw::VkScopedObject<VkBuffer>   index_buffer;
+        vkw::VkScopedObject<VkBuffer>   mesh_vertex_buffer;
+        vkw::VkScopedObject<VkBuffer>   mesh_index_buffer;
 
         //vkw::Texture                  ibl_skylight_reflections;
         vkw::VkScopedObject<VkBuffer>   ibl_skylight_diffuse;
@@ -65,6 +68,9 @@ namespace Baikal
 
         vkw::VkScopedObject<VkBuffer>   sh_grid;
 
+        uint32_t                        vertex_count;
+        uint32_t                        index_count;
+        uint32_t                        shapes_count;
         uint32_t                        light_count;
         uint32_t                        sh_count;
 

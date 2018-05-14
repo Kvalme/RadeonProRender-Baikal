@@ -29,6 +29,7 @@
 #include <memory>
 #include <string>
 
+#include "VKW.h"
 
 namespace Baikal
 {
@@ -58,8 +59,12 @@ namespace Baikal
             CreateSceneController() const override;
 
     private:
-        int                 queue_family_index_;
-        VkDevice            device_;
-        VkPhysicalDevice    physical_device_;
+        std::unique_ptr<vkw::MemoryAllocator>       memory_allocator_;
+        std::unique_ptr<vkw::MemoryManager>         memory_manager_;
+        std::unique_ptr<vkw::RenderTargetManager>   render_target_manager_;
+
+        int                                         queue_family_index_;
+        VkDevice                                    device_;
+        VkPhysicalDevice                            physical_device_;
     };
 }

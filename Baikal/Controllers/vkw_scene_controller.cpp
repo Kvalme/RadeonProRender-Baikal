@@ -130,6 +130,9 @@ namespace Baikal
         vertex_buffer_.clear();
         index_buffer_.clear();
         mesh_transforms_.clear();
+        out.meshes.clear();
+
+        int mat_id = 0;
 
         std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
         for (; mesh_iter->IsValid(); mesh_iter->Next())
@@ -140,6 +143,13 @@ namespace Baikal
             if (mesh == nullptr)
                 continue;
             
+            // TODO: desc sets and roughness, metallic, diffuse
+            VkwScene::MaterialConstants constants;
+            constants.data[0] = mat_id++;
+ 
+            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), VK_NULL_HANDLE, constants };
+            out.meshes.push_back(vkw_mesh);
+
             num_vertices += mesh->GetNumVertices();
             num_indices  += mesh->GetNumIndices();
 

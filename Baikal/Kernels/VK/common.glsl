@@ -28,5 +28,4 @@ struct MaterialConstants
     float4   diffuse;
     float4   metallic;
     float4   roughness;
-    float4   normal;
 };

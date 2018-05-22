@@ -1,16 +1,13 @@
 /**********************************************************************
 Copyright (c) 2016 Advanced Micro Devices, Inc. All rights reserved.
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
@@ -20,22 +17,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ********************************************************************/
 
-#ifdef __APPLE__
-#include <OpenCL/OpenCL.h>
-#define GLFW_INCLUDE_GLCOREARB
-#define GLFW_NO_GLU
+#include "Application/application.h"
+
+#define GLFW_INCLUDE_NONE
+#define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
-#elif WIN32
-#define NOMINMAX
-#include <Windows.h>
-#include "GL/glew.h"
-#include "GLFW/glfw3.h"
-#else
-#include <CL/cl.h>
-#include <GL/glew.h>
-#include <GL/glx.h>
-#include "GLFW/glfw3.h"
-#endif
 
 #include "ImGUI/imgui.h"
 #include "ImGUI/imgui_impl_glfw_gl3.h"
@@ -61,14 +47,7 @@ THE SOFTWARE.
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#ifdef RR_EMBED_KERNELS
-#include "./CL/cache/kernels.h"
-#endif
-
-#include "CLW.h"
-
 #include "math/mathutils.h"
-#include "Application/application.h"
 #include "SceneGraph/IO/material_io.h"
 
 using namespace RadeonRays;
@@ -293,6 +272,14 @@ namespace Baikal
         }
     }
 
+    Application::Application()
+    : m_window(nullptr)
+    , m_num_triangles(0)
+    , m_num_instances(0)
+    , m_image_io(ImageIo::CreateImageIo())
+    {
+    }
+
     void Application::Update(bool update_required)
     {
         static auto prevtime = std::chrono::high_resolution_clock::now();
@@ -306,8 +293,7 @@ namespace Baikal
 
         const float kMouseSensitivity = 0.001125f;
         const float kScrollSensitivity = 0.05f;
-        //auto camera = m_cl->GetCamera();
-        auto camera = m_vk->GetCamera();
+        auto camera = app_render_->GetCamera();
         if (!m_settings.benchmark && !m_settings.time_benchmark)
         {
             float2 delta = g_mouse_delta * float2(kMouseSensitivity, kMouseSensitivity);
@@ -385,242 +371,54 @@ namespace Baikal
                 m_settings.samplecount = 0;
             }
 
-            //m_cl->UpdateScene();
-            m_vk->UpdateScene();
+            app_render_->UpdateScene();
         }
 
         if (m_settings.num_samples == -1 || m_settings.samplecount <  m_settings.num_samples)
         {
-            m_vk->Render(m_settings.samplecount);
-            //m_cl->Render(m_settings.samplecount);
+            app_render_->Render(m_settings.samplecount);
             ++m_settings.samplecount;
         }
         else if (m_settings.samplecount == m_settings.num_samples)
         {
-            //m_cl->SaveFrameBuffer(m_settings);
-            //std::cout << "Target sample count reached\n";
-            //++m_settings.samplecount;
+            app_render_->SaveFrameBuffer(m_settings);
+            std::cout << "Target sample count reached\n";
+            ++m_settings.samplecount;
             //exit(0);
         }
 
-        //m_cl->Update(m_settings);
-        m_vk->Update(m_settings);
+        app_render_->Update(m_settings);
     }
 
-    void Application::SaveToFile(std::chrono::high_resolution_clock::time_point time) const
-    {
-        using namespace OIIO;
-        int w, h;
-        glfwGetFramebufferSize(m_window, &w, &h);
-        assert(glGetError() == 0);
-        const auto channels = 3;
-        auto *data = new GLubyte[channels * w * h];
-        glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, data);
-
-        //opengl coordinates to oiio coordinates
-        for (auto i = 0; i <= h / 2; ++i)
-        {
-            std::swap_ranges(data + channels * w * i, data + channels * w * (i + 1) - 1, data + channels * w * (h - (i + 1)));
-        }
-        
-        const auto filename = m_settings.path + "/" + m_settings.base_image_file_name + "-" + std::to_string(time.time_since_epoch().count()) + "." + m_settings.image_file_format;
-        auto out = ImageOutput::create(filename);
-        if (out)
-        {
-            ImageSpec spec{ w, h, channels, TypeDesc::UINT8 };
-            out->open(filename, spec);
-            out->write_image(TypeDesc::UINT8, data);
-            out->close();
-            delete out; // ImageOutput::destroy not found
-        }
-        else
-        {
-            std::cout << "Wrong file format\n";
-        }
-        
-        delete[] data;
-    }
-
-
-    void OnError(int error, const char* description)
-    {
-        std::cout << description << "\n";
-    }
-
-    bool GradeTimeBenchmarkResults(std::string const& scene, int time_in_sec, std::string& rating, ImVec4& color)
+    bool Application::GradeTimeBenchmarkResults(std::string const& scene, int time_in_sec, std::string& rating, RadeonRays::float3& color)
     {
         if (scene == "classroom.obj")
         {
             if (time_in_sec < 70)
             {
                 rating = "Excellent";
-                color = ImVec4(0.1f, 0.7f, 0.1f, 1.f);
+                color = RadeonRays::float3(0.1f, 0.7f, 0.1f, 1.f);
             }
             else if (time_in_sec < 100)
             {
                 rating = "Good";
-                color = ImVec4(0.1f, 0.7f, 0.1f, 1.f);
+                color = RadeonRays::float3(0.1f, 0.7f, 0.1f, 1.f);
             }
             else if (time_in_sec < 120)
             {
                 rating = "Average";
-                color = ImVec4(0.7f, 0.7f, 0.1f, 1.f);
+                color = RadeonRays::float3(0.7f, 0.7f, 0.1f, 1.f);
             }
             else
             {
                 rating = "Poor";
-                color = ImVec4(0.7f, 0.1f, 0.1f, 1.f);
+                color = RadeonRays::float3(0.7f, 0.1f, 0.1f, 1.f);
             }
 
             return true;
         }
 
         return false;
-    }
-
-    Application::Application(int argc, char * argv[])
-        : m_window(nullptr)
-        , m_num_triangles(0)
-        , m_num_instances(0)
-        , m_image_io(ImageIo::CreateImageIo())
-    {
-        // Command line parsing
-        AppCliParser cli;
-        m_settings = cli.Parse(argc, argv);
-        if (!m_settings.cmd_line_mode)
-        {
-            // Initialize GLFW
-            {
-                auto err = glfwInit();
-                if (err != GL_TRUE)
-                {
-                    std::cout << "GLFW initialization failed\n";
-                    exit(-1);
-                }
-            }
-            // Setup window
-            glfwSetErrorCallback(OnError);
-            glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    #if __APPLE__
-            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    #endif
-
-            // GLUT Window Initialization:
-            m_window = glfwCreateWindow(m_settings.width, m_settings.height, "Baikal standalone demo", nullptr, nullptr);
-            glfwMakeContextCurrent(m_window);
-
-    #ifndef __APPLE__
-            {
-                glewExperimental = GL_TRUE;
-                GLenum err = glewInit();
-                if (err != GLEW_OK)
-                {
-                    std::cout << "GLEW initialization failed\n";
-                    exit(-1);
-                }
-            }
-    #endif
-
-            ImGui_ImplGlfwGL3_Init(m_window, true);
-
-            try
-            {
-                m_gl.reset(new AppGlRender(m_settings));
-                m_cl.reset(new AppClRender(m_settings, m_gl->GetTexture()));
-                m_vk.reset(new AppVkRender(m_settings, m_gl->GetTexture()));
-
-                //set callbacks
-                using namespace std::placeholders;
-                glfwSetWindowUserPointer(m_window, this);
-                glfwSetMouseButtonCallback(m_window, Application::OnMouseButton);
-                glfwSetCursorPosCallback(m_window, Application::OnMouseMove);
-                glfwSetKeyCallback(m_window, Application::OnKey);
-                glfwSetScrollCallback(m_window, Application::OnMouseScroll);
-            }
-            catch (std::runtime_error& err)
-            {
-                glfwDestroyWindow(m_window);
-                std::cout << err.what();
-                exit(-1);
-            }
-        }
-        else
-        {
-            m_settings.interop = false;
-            m_cl.reset(new AppClRender(m_settings, -1));
-        }
-    }
-
-    void Application::Run()
-    {
-        CollectSceneStats();
-
-        if (!m_settings.cmd_line_mode)
-        {
-            try
-            {
-                m_cl->StartRenderThreads();
-                static bool update = true;
-                while (!glfwWindowShouldClose(m_window))
-                {
-
-                    ImGui_ImplGlfwGL3_NewFrame();
-                    Update(update);
-                    m_gl->Render(m_window);
-                    update = UpdateGui();
-
-                    glfwSwapBuffers(m_window);
-                    glfwPollEvents();
-                }
-
-                m_cl->StopRenderThreads();
-
-                glfwDestroyWindow(m_window);
-            }
-            catch (std::runtime_error& err)
-            {
-                glfwDestroyWindow(m_window);
-                std::cout << err.what();
-                exit(-1);
-            }
-        }
-        else
-        {
-            m_cl.reset(new AppClRender(m_settings, -1));
-                        
-            std::cout << "Number of triangles: " << m_num_triangles << "\n";
-            std::cout << "Number of instances: " << m_num_instances << "\n";
-
-            //compile scene
-            //m_cl->UpdateScene();
-            //m_cl->RunBenchmark(m_settings);
-            
-            m_vk->UpdateScene();
-
-            auto minutes = (int)(m_settings.time_benchmark_time / 60.f);
-            auto seconds = (int)(m_settings.time_benchmark_time - minutes * 60);
-
-            std::cout << "General benchmark results:\n";
-            std::cout << "\tRendering time: " << minutes << "min:" << seconds << "s\n";
-            std::string rating;
-            ImVec4 color;
-            if (GradeTimeBenchmarkResults(m_settings.modelname, minutes * 60 + seconds, rating, color))
-            {
-                std::cout << "\tRating: " << rating.c_str() << "\n";
-            }
-            else
-            {
-                std::cout << "\tRating: N/A\n";
-            }
-
-            std::cout << "RT benchmark results:\n";
-            std::cout << "\tPrimary: " << m_settings.stats.primary_throughput * 1e-6f << " Mrays/s\n";
-            std::cout << "\tSecondary: " << m_settings.stats.secondary_throughput * 1e-6f << " Mrays/s\n";
-            std::cout << "\tShadow: " << m_settings.stats.shadow_throughput * 1e-6f << " Mrays/s\n";
-        }
     }
 
     bool Application::ReadFloatInput(Material::Ptr material, MaterialSettings& settings, std::uint32_t input_idx, std::string id_suffix)
@@ -761,9 +559,10 @@ namespace Baikal
             ImGui::Text("Mouse+RMB to look around");
             ImGui::Text("F1 to hide/show GUI");
             ImGui::Separator();
-            ImGui::Text("Device vendor: %s", m_cl->GetDevice(0).GetVendor().c_str());
-            ImGui::Text("Device name: %s", m_cl->GetDevice(0).GetName().c_str());
-            ImGui::Text("OpenCL: %s", m_cl->GetDevice(0).GetVersion().c_str());
+            //TODO: implement
+            //ImGui::Text("Device vendor: %s", m_cl->GetDevice(0).GetVendor().c_str());
+            //ImGui::Text("Device name: %s", m_cl->GetDevice(0).GetName().c_str());
+            //ImGui::Text("OpenCL: %s", m_cl->GetDevice(0).GetVersion().c_str());
             ImGui::Separator();
             ImGui::Text("Resolution: %dx%d ", m_settings.width, m_settings.height);
             ImGui::Text("Scene: %s", m_settings.modelname.c_str());
@@ -772,7 +571,7 @@ namespace Baikal
             ImGui::Separator();
             ImGui::SliderInt("GI bounces", &num_bounces, 1, 10);
 
-            auto camera = m_cl->GetCamera();
+            auto camera = app_render_->GetCamera();
 
             if (m_settings.camera_type == CameraType::kPerspective)
             {
@@ -812,15 +611,15 @@ namespace Baikal
             if (num_bounces != m_settings.num_bounces)
             {
                 m_settings.num_bounces = num_bounces;
-                m_cl->SetNumBounces(num_bounces);
+                app_render_->SetNumBounces(num_bounces);
                 update = true;
             }
 
             auto gui_out_type = static_cast<Baikal::OutputType>(output);
 
-            if (gui_out_type != m_cl->GetOutputType())
+            if (gui_out_type != app_render_->GetOutputType())
             {
-                m_cl->SetOutputType(gui_out_type);
+                app_render_->SetOutputType(gui_out_type);
                 update = true;
             }
 
@@ -873,12 +672,12 @@ namespace Baikal
                 auto seconds = (int)(m_settings.time_benchmark_time - minutes * 60);
                 ImGui::Separator();
 
-                ImVec4 color;
+                RadeonRays::float3 color;
                 std::string rating;
                 ImGui::Text("Rendering time: %2dmin:%ds", minutes, seconds);
                 if (GradeTimeBenchmarkResults(m_settings.modelname, minutes * 60 + seconds, rating, color))
                 {
-                    ImGui::TextColored(color, "Rating: %s", rating.c_str());
+                    ImGui::TextColored(ImVec4(color.x, color.y, color.z, color.w), "Rating: %s", rating.c_str());
                 }
                 else
                 {
@@ -899,22 +698,22 @@ namespace Baikal
 #ifdef ENABLE_DENOISER
             ImGui::Separator();
 
-            static float sigmaPosition = m_cl->GetDenoiserFloatParam("position_sensitivity").x;
-            static float sigmaNormal = m_cl->GetDenoiserFloatParam("normal_sensitivity").x;
-            static float sigmaColor = m_cl->GetDenoiserFloatParam("color_sensitivity").x;
+            static float sigmaPosition = app_render_->GetDenoiserFloatParam("position_sensitivity").x;
+            static float sigmaNormal = app_render_->GetDenoiserFloatParam("normal_sensitivity").x;
+            static float sigmaColor = app_render_->GetDenoiserFloatParam("color_sensitivity").x;
 
             ImGui::Text("Denoiser settings");
             ImGui::SliderFloat("Position sigma", &sigmaPosition, 0.f, 0.3f);
             ImGui::SliderFloat("Normal sigma", &sigmaNormal, 0.f, 5.f);
             ImGui::SliderFloat("Color sigma", &sigmaColor, 0.f, 5.f);       
 
-            if (m_cl->GetDenoiserFloatParam("position_sensitivity").x != sigmaPosition ||
-                m_cl->GetDenoiserFloatParam("normal_sensitivity").x != sigmaNormal ||
-                m_cl->GetDenoiserFloatParam("color_sensitivity").x != sigmaColor)
+            if (app_render_->GetDenoiserFloatParam("position_sensitivity").x != sigmaPosition ||
+                app_render_->GetDenoiserFloatParam("normal_sensitivity").x != sigmaNormal ||
+                app_render_->GetDenoiserFloatParam("color_sensitivity").x != sigmaColor)
             {
-                m_cl->SetDenoiserFloatParam("position_sensitivity", sigmaPosition);
-                m_cl->SetDenoiserFloatParam("normal_sensitivity", sigmaNormal);
-                m_cl->SetDenoiserFloatParam("color_sensitivity", sigmaColor);
+                app_render_->SetDenoiserFloatParam("position_sensitivity", sigmaPosition);
+                app_render_->SetDenoiserFloatParam("normal_sensitivity", sigmaNormal);
+                app_render_->SetDenoiserFloatParam("color_sensitivity", sigmaColor);
             }
 #endif
             ImGui::End();
@@ -923,7 +722,7 @@ namespace Baikal
             if (m_shape_id_future.valid())
             {
                 m_current_shape_id = m_shape_id_future.get();
-                auto shape = m_cl->GetShapeById(m_current_shape_id);
+                auto shape = app_render_->GetShapeById(m_current_shape_id);
                 m_material_selector = nullptr;
 
                 if (shape)
@@ -948,7 +747,7 @@ namespace Baikal
             // Process double click event if it occured
             if (g_is_double_click)
             {
-                m_shape_id_future = m_cl->GetShapeId((std::uint32_t)g_mouse_pos.x, (std::uint32_t)g_mouse_pos.y);
+                m_shape_id_future = app_render_->GetShapeId((std::uint32_t)g_mouse_pos.x, (std::uint32_t)g_mouse_pos.y);
                 g_is_double_click = false;
             }
 
@@ -1062,7 +861,7 @@ namespace Baikal
                 }
 
                 // process volume materials
-                auto volume = m_cl->GetShapeById(m_current_shape_id)->GetVolumeMaterial();
+                auto volume = app_render_->GetShapeById(m_current_shape_id)->GetVolumeMaterial();
 
                 auto volume_settings = std::find_if(m_volume_settings.begin(), m_volume_settings.end(),
                     [&](const MaterialSettings& settings)
@@ -1083,7 +882,7 @@ namespace Baikal
                     new_volume->SetInputValue("emission", RadeonRays::float4(.0f, .0f, .0f, .0f));
                     new_volume->SetInputValue("g", RadeonRays::float4(.0f, .0f, .0f, .0f));
 
-                    m_cl->GetShapeById(m_current_shape_id)->SetVolumeMaterial(new_volume);
+                    app_render_->GetShapeById(m_current_shape_id)->SetVolumeMaterial(new_volume);
 
                     MaterialSettings volume_settings;
                     volume_settings.id = m_current_shape_id;
@@ -1096,8 +895,8 @@ namespace Baikal
                 if (ImGui::Button("Save materials"))
                 {
                     auto material_io{ Baikal::MaterialIo::CreateMaterialIoXML() };
-                    material_io->SaveMaterialsFromScene(m_settings.path + "/materials.xml", *m_cl->GetScene());
-                    material_io->SaveIdentityMapping(m_settings.path + "/mapping.xml", *m_cl->GetScene());
+                    material_io->SaveMaterialsFromScene(m_settings.path + "/materials.xml", *app_render_->GetScene());
+                    material_io->SaveIdentityMapping(m_settings.path + "/mapping.xml", *app_render_->GetScene());
                 }
 
                 if (volume != nullptr)
@@ -1122,7 +921,7 @@ namespace Baikal
 
                     if (ImGui::Button("Make world volume"))
                     {
-                        m_cl->GetCamera()->SetVolume(volume);
+                        app_render_->GetCamera()->SetVolume(volume);
                         is_scene_changed = true;
                     }
                 }
@@ -1131,8 +930,7 @@ namespace Baikal
 
                 if (is_scene_changed)
                 {
-                    //m_cl->UpdateScene();
-                    m_vk->UpdateScene();
+                    app_render_->UpdateScene();
                 }
             }
 
@@ -1149,7 +947,7 @@ namespace Baikal
         m_num_triangles = 0U;
         m_num_instances = 0U;
         {
-            auto scene = m_cl->GetScene();
+            auto scene = app_render_->GetScene();
             auto shape_iter = scene->CreateShapeIterator();
 
             for (; shape_iter->IsValid(); shape_iter->Next())
@@ -1168,5 +966,4 @@ namespace Baikal
             }
         }
     }
-
 }

@@ -22,7 +22,6 @@
  ********************************************************************/
 #pragma once
 
-#include "Application/render.h"
 #include "Output/output.h"
 #include "Output/vkwoutput.h"
 #include "SceneGraph/vkwscene.h"
@@ -32,57 +31,46 @@
 
 #include <memory>
 #include <vector>
+#include <future>
 
 namespace Baikal
 {
-    class AppVkRender : public AppRender
+    class AppRender
     {
-        struct OutputData 
-        {
-            std::unique_ptr<Baikal::Output> output;
-            std::vector<RadeonRays::float3> fdata;
-            std::vector<unsigned char> udata;
-        };
-
     public:
-        AppVkRender(AppSettings& settings);
-        //copy data from to GL
-        void Update(AppSettings& settings);
+        // update render
+        virtual void Update(AppSettings& settings) = 0;
 
         //compile scene
-        void UpdateScene();
+        virtual void UpdateScene() = 0;
+        
         //render
-        void Render(int sample_cnt);
-        void StartRenderThreads();
-        void StopRenderThreads();
-        void RunBenchmark(AppSettings& settings);
+        virtual void Render(int sample_cnt) = 0;
+        virtual void StartRenderThreads() = 0;
+        virtual void StopRenderThreads() = 0;
+        virtual void RunBenchmark(AppSettings& settings) = 0;
 
-        //save vk frame buffer to file
-        void SaveFrameBuffer(AppSettings& settings);
-        void SaveImage(const std::string& name, int width, int height, const RadeonRays::float3* data);
+        //save frame buffer to file
+        virtual void SaveFrameBuffer(AppSettings& settings) = 0;
+        virtual void SaveImage(const std::string& name, int width, int height, const RadeonRays::float3* data) = 0;
+
+        inline Baikal::Camera::Ptr GetCamera() { return m_camera; };
+        inline Baikal::Scene1::Ptr GetScene() { return m_scene; };
 
         inline OutputType GetOutputType() { return m_output_type; };
 
-        void SetNumBounces(int num_bounces);
-        void SetOutputType(OutputType type);
+        virtual void SetNumBounces(int num_bounces) = 0;
+        virtual void SetOutputType(OutputType type) = 0;
 
-        VkDevice            GetDevice() { return m_cfg.device_; }
-        VkInstance          GetInstance() { return m_cfg.instance_; }
-        VkPhysicalDevice    GetPhysicalDevice() { return m_cfg.physical_device_;}
-        uint32_t            GetGraphicsQueueFamilyIndex() {return m_cfg.graphics_queue_family_idx_;}
-#ifdef ENABLE_DENOISER
-        // Denoiser
-        void SetDenoiserFloatParam(const std::string& name, const float4& value);
-        float4 GetDenoiserFloatParam(const std::string& name);
-#endif
-        std::future<int> GetShapeId(std::uint32_t x, std::uint32_t y);
-        Baikal::Shape::Ptr GetShapeById(int shape_id);
-    private:
-        void InitVk(AppSettings& settings);
+        virtual std::future<int> GetShapeId(std::uint32_t x, std::uint32_t y) = 0;
+        virtual Baikal::Shape::Ptr GetShapeById(int shape_id) = 0;
 
-        VkConfigManager::VkConfig m_cfg;
+    protected:
+        void LoadScene(AppSettings& settings);
+    protected:
+        Baikal::Scene1::Ptr m_scene;
+        Baikal::Camera::Ptr m_camera;
 
         OutputType m_output_type;
-        OutputData m_output;
     };
 }

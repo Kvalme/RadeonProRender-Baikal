@@ -22,11 +22,11 @@
  ********************************************************************/
 #pragma once
 
+#include "Application/render.h"
 #include "Application/app_utils.h"
-#include "Application/cl_render.h"
-#include "Application/gl_render.h"
-#include "Application/vk_render.h"
 #include "SceneGraph/IO/image_io.h"
+
+#include "GLFW/glfw3.h"
 
 #include <future>
 #include <memory>
@@ -34,13 +34,14 @@
 
 namespace Baikal
 {
-
     class Application
     {
     public:
-        Application(int argc, char * argv[]);
-        void Run();
-    private:
+        Application();
+        virtual ~Application() {};
+        
+        virtual void Run() = 0;
+    protected:
         void Update(bool update_required);
         
         //update app state according to gui
@@ -48,7 +49,7 @@ namespace Baikal
         bool UpdateGui();
         void CollectSceneStats();
 
-        void SaveToFile(std::chrono::high_resolution_clock::time_point time) const;
+        virtual void SaveToFile(std::chrono::high_resolution_clock::time_point time) const = 0;
 
         //input callbacks
         //Note: use glfwGetWindowUserPointer(window) to get app instance
@@ -57,11 +58,7 @@ namespace Baikal
         static void OnMouseButton(GLFWwindow* window, int button, int action, int mods);
         static void OnMouseScroll(GLFWwindow* window, double x, double y);
 
-        AppSettings m_settings;
-        std::unique_ptr<AppClRender> m_cl;
-        std::unique_ptr<AppGlRender> m_gl;
-        std::unique_ptr<AppVkRender> m_vk;
-        
+        AppSettings m_settings;     
 
         GLFWwindow* m_window;
 
@@ -126,6 +123,9 @@ namespace Baikal
 
         bool ReadFloatInput(Material::Ptr material, MaterialSettings& settings, std::uint32_t input_idx, std::string id_suffix = std::string());
         bool ReadTextruePath(Material::Ptr material, MaterialSettings& settings, std::uint32_t input_idx);
+        bool GradeTimeBenchmarkResults(std::string const& scene, int time_in_sec, std::string& rating, RadeonRays::float3& color);
+
+        std::unique_ptr<AppRender> app_render_;
 
         std::unique_ptr<MaterialSelector> m_material_selector;
         std::unique_ptr<ImageIo> m_image_io;

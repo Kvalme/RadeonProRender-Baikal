@@ -22,20 +22,12 @@ THE SOFTWARE.
 #ifndef CONFIG_MANAGER_H
 #define CONFIG_MANAGER_H
 
-#include "CLW.h"
-#include "RenderFactory/clw_render_factory.h"
-
-#include "VKW.h"
-#include "RenderFactory/vkw_render_factory.h"
-
-#include "Renderers/renderer.h"
 #include <vector>
 #include <memory>
 
 class ConfigManager
 {
 public:
-
     enum DeviceType
     {
         kPrimary,
@@ -50,65 +42,6 @@ public:
         kUseSingleCpu,
         kUseCpus
     };
-
-    struct Config
-    {
-        DeviceType type;
-        std::unique_ptr<Baikal::Renderer<Baikal::ClwScene>> renderer;
-        std::unique_ptr<Baikal::SceneController<Baikal::ClwScene>> controller;
-        std::unique_ptr<Baikal::RenderFactory<Baikal::ClwScene>> factory;
-        CLWContext context;
-        bool caninterop;
-
-        Config() = default;
-
-        Config(Config&& cfg) = default;
-
-        ~Config()
-        {
-        }
-    };
-
-    struct VkwConfig
-    {
-        DeviceType type;
-        
-        VkPhysicalDevice physical_device;
-        vkw::VkScopedObject<VkDevice> device;
-
-        std::unique_ptr<Baikal::RenderFactory<Baikal::VkwScene>> factory;
-        std::unique_ptr<Baikal::Renderer<Baikal::VkwScene>> renderer;
-        std::unique_ptr<Baikal::SceneController<Baikal::VkwScene>> controller;
-
-        bool caninterop;
-
-        VkwConfig() = default;
-
-        VkwConfig(VkwConfig&& cfg) = default;
-
-        ~VkwConfig()
-        {
-        }
-    };
-
-    static void CreateConfigs(
-        Mode mode,
-        bool interop,
-        std::vector<Config>& renderers,
-        int initial_num_bounces,
-        int req_platform_index = -1,
-        int req_device_index = -1);
-
-    static void CreateConfigs(
-        Mode mode,
-        bool interop,
-        std::vector<VkwConfig>& renderers,
-        int initial_num_bounces,
-        int req_platform_index = -1,
-        int req_device_index = -1);
-
-private:
-
 };
 
 #endif // CONFIG_MANAGER_H

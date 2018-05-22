@@ -19,31 +19,47 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ********************************************************************/
+#ifndef CL_CONFIG_MANAGER_H
+#define CL_CONFIG_MANAGER_H
 
-#define HYBRID_RENDER
+#include "config_manager.h"
 
-#ifndef HYBRID_RENDER
-#include "Application/cl_application.h"
-#else
-#include "Application/vk_application.h"
-#endif
+#include "CLW.h"
 
-int main(int argc, char * argv[])
+#include "RenderFactory/clw_render_factory.h"
+#include "Renderers/renderer.h"
+
+#include <vector>
+#include <memory>
+
+class ClConfigManager : public ConfigManager
 {
-    try
+public:
+    struct ClConfig
     {
-        #ifndef HYBRID_RENDER
-            Baikal::ClApplication app(argc, argv);
-        #else
-            Baikal::VkApplication app(argc, argv);
-        #endif
+        DeviceType type;
 
-        app.Run();
-    }
-    catch (std::exception& ex)
-    {
-        std::cout << ex.what() << std::endl;
-        return -1;
-    }
-    return 0;
-}
+        ClConfig() = default;
+        ClConfig(ClConfig&& cfg) = default;
+
+        std::unique_ptr<Baikal::RenderFactory<Baikal::ClwScene>> factory_;
+        std::unique_ptr<Baikal::Renderer<Baikal::ClwScene>> renderer_;
+        std::unique_ptr<Baikal::SceneController<Baikal::ClwScene>> controller_;
+
+        CLWContext context;
+        bool caninterop;
+    };
+
+    static void CreateConfigs(
+        Mode mode,
+        bool interop,
+        std::vector<ClConfig>& renderers,
+        int initial_num_bounces,
+        int req_platform_index = -1,
+        int req_device_index = -1);
+
+private:
+
+};
+
+#endif // CL_CONFIG_MANAGER_H

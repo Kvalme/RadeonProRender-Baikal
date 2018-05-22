@@ -31,9 +31,10 @@
 #include "Renderers/monte_carlo_renderer.h"
 #include "Output/clwoutput.h"
 #include "Application/app_utils.h"
-#include "Utils/config_manager.h"
+#include "Utils/cl_config_manager.h"
 #include "Application/gl_render.h"
 #include "SceneGraph/camera.h"
+#include "render.h"
 
 #ifdef ENABLE_DENOISER
 #include "PostEffects/bilateral_denoiser.h"
@@ -42,7 +43,7 @@
 
 namespace Baikal
 {
-    class AppClRender
+    class AppClRender : public AppRender
     {
         struct OutputData
         {
@@ -88,8 +89,6 @@ namespace Baikal
         void SaveFrameBuffer(AppSettings& settings);
         void SaveImage(const std::string& name, int width, int height, const RadeonRays::float3* data);
 
-        inline Baikal::Camera::Ptr GetCamera() { return m_camera; };
-        inline Baikal::Scene1::Ptr GetScene() { return m_scene; };
         inline CLWDevice GetDevice(int i) { return m_cfgs[m_primary].context.GetDevice(i); };
         inline OutputType GetOutputType() { return m_output_type; };
 
@@ -106,17 +105,13 @@ namespace Baikal
 #endif
     private:
         void InitCl(AppSettings& settings, GLuint tex);
-        void LoadScene(AppSettings& settings);
         void RenderThread(ControlData& cd);
-
-        Baikal::Scene1::Ptr m_scene;
-        Baikal::Camera::Ptr m_camera;
 
         std::promise<int> m_promise;
         bool m_shape_id_requested = false;
         OutputData m_shape_id_data;
         RadeonRays::float2 m_shape_id_pos;
-        std::vector<ConfigManager::Config> m_cfgs;
+        std::vector<ClConfigManager::ClConfig> m_cfgs;
         std::vector<OutputData> m_outputs;
         std::unique_ptr<ControlData[]> m_ctrl;
         std::vector<std::thread> m_renderthreads;

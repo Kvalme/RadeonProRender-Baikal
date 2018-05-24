@@ -92,9 +92,7 @@ set(SCENEGRAPH_SOURCES
 set(SCENEGRAPH_COLLECTOR_SOURCES
     SceneGraph/Collector/collector.cpp
     SceneGraph/Collector/collector.h)
-       
-    SceneGraph/IO/scene_fbx_io.cpp
-    SceneGraph/IO/scene_gltf_io.cpp
+
 set(XML_SOURCES
     XML/tinyxml2.cpp
     XML/tinyxml2.h)

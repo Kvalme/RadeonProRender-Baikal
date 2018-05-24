@@ -385,6 +385,8 @@ namespace Baikal
 
         try
         {
+
+            m_settings.vk_required_extensions = glfwGetRequiredInstanceExtensions(&(m_settings.vk_required_extensions_count));
             app_render_.reset(new AppVkRender(m_settings));
             
             glfwSetMouseButtonCallback(m_window, Application::OnMouseButton);

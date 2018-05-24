@@ -34,7 +34,7 @@ namespace Baikal
 
     void AppVkRender::InitVk(AppSettings& settings)
     {
-        VkConfigManager::CreateConfig(m_cfg);
+        VkConfigManager::CreateConfig(m_cfg, settings.vk_required_extensions_count, settings.vk_required_extensions);
 
         m_output.output = m_cfg.factory_->CreateOutput(settings.width, settings.height);
         m_output.fdata.resize(settings.width * settings.height);

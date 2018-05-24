@@ -54,12 +54,13 @@ public:
 
         uint32_t                        compute_queue_family_idx_;
         uint32_t                        graphics_queue_family_idx_;
+
     };
 
-    static void CreateConfig(VkConfig& renderers);
+    static void CreateConfig(VkConfig& renderers, std::uint32_t extensions_count, const char** extensions);
 
 private:
-    static vkw::VkScopedObject<VkInstance> CreateInstance();
+    static vkw::VkScopedObject<VkInstance> CreateInstance(std::uint32_t extensions_count, const char** extensions);
 
     static vkw::VkScopedObject<VkDevice> CreateDevice(VkInstance instance
                                                 , std::uint32_t& compute_queue_family_index

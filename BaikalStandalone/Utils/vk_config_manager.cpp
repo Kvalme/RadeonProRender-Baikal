@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #ifndef APP_BENCHMARK
 
-vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance()
+vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(std::uint32_t extensions_count, const char** extensions)
 {
     VkApplicationInfo app_info;
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -37,15 +37,13 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance()
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION_1_0;
     
-    const char* instance_extensions[2] = {"VK_KHR_surface", "VK_MVK_macos_surface"};
-
     VkInstanceCreateInfo instance_info;
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_info.pNext = NULL;
     instance_info.flags = 0;
     instance_info.pApplicationInfo = &app_info;
-    instance_info.enabledExtensionCount = 2;
-    instance_info.ppEnabledExtensionNames = instance_extensions;
+    instance_info.enabledExtensionCount = extensions_count;
+    instance_info.ppEnabledExtensionNames = extensions;
     instance_info.enabledLayerCount = 0;
     instance_info.ppEnabledLayerNames = NULL;
     
@@ -57,7 +55,7 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance()
     }
     else if (res)
     {
-        throw std::runtime_error("Unknown error\n");
+        throw std::runtime_error("vkCreateInstance: Unknown error\n");
     }
     
     return vkw::VkScopedObject<VkInstance>(instance,
@@ -164,14 +162,14 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
                                     });
 }
 
-void VkConfigManager::CreateConfig(VkConfig& renderers)
+void VkConfigManager::CreateConfig(VkConfig& renderers, std::uint32_t extensions_count, const char** extensions)
 {
     uint32_t compute_queue_family_index = -1;
     uint32_t graphics_queue_family_index = -1;
 
     VkPhysicalDevice physical_device;
         
-    renderers.instance_ = CreateInstance();
+    renderers.instance_ = CreateInstance(extensions_count, extensions);
     renderers.device_   = CreateDevice(renderers.instance_, compute_queue_family_index, graphics_queue_family_index, &physical_device);
     renderers.compute_queue_family_idx_ = compute_queue_family_index;
     renderers.graphics_queue_family_idx_ = graphics_queue_family_index;

@@ -12,9 +12,9 @@
 namespace Baikal
 {
     VkwRenderFactory::VkwRenderFactory(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
-    : device_(device)
+    : queue_family_index_(queue_family_index)
+    , device_(device)
     , physical_device_(physical_device)
-    , queue_family_index_(queue_family_index)
     {
         memory_allocator_ = std::unique_ptr<vkw::MemoryAllocator>(new vkw::MemoryAllocator(device, physical_device));
         memory_manager_ = std::unique_ptr<vkw::MemoryManager>(new vkw::MemoryManager(device, queue_family_index, *memory_allocator_));

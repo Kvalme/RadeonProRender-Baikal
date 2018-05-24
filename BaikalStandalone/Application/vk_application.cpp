@@ -329,7 +329,12 @@ namespace Baikal
         submit_info.pSignalSemaphores = &render_complete_semaphores_[frame_idx_];
 
         err = vkEndCommandBuffer(command_buffers_[frame_idx_]);
+        if (err != VK_SUCCESS)
+            throw std::runtime_error("VkApplication: Failed EndFrame");
+
         err = vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+        if (err != VK_SUCCESS)
+            throw std::runtime_error("VkApplication: Failed EndFrame");
     }
 
     void VkApplication::PresentFrame(VkQueue queue)
@@ -348,15 +353,15 @@ namespace Baikal
 
     VkApplication::VkApplication(int argc, char * argv[])
     : Application()
-    , window_surface_(VK_NULL_HANDLE)
-    , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
-    , swapchain_(VK_NULL_HANDLE)
-    , render_pass_(VK_NULL_HANDLE)
-    , command_pool_(VK_NULL_HANDLE)
-    , back_buffer_count_(0)
+    , frame_idx_(0)
     , framebuffer_width_(0)
     , framebuffer_height_(0)
-    , frame_idx_(0)
+    , window_surface_(VK_NULL_HANDLE)
+    , swapchain_(VK_NULL_HANDLE)
+    , render_pass_(VK_NULL_HANDLE)
+    , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
+    , back_buffer_count_(0)
+    , command_pool_(VK_NULL_HANDLE)
     {
         if (glfwInit() != GL_TRUE)
         {

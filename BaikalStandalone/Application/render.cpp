@@ -20,12 +20,10 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
  ********************************************************************/
-#pragma once
-
 #include "Application/render.h"
 
-#include "SceneGraph/IO/scene_io.h"
-#include "SceneGraph/IO/material_io.h"
+#include "scene_io.h"
+#include "material_io.h"
 
 namespace Baikal
 {
@@ -41,15 +39,7 @@ namespace Baikal
 
         {
             // Load OBJ scene
-            bool is_fbx = filename.find(".fbx") != std::string::npos;
-            bool is_gltf = filename.find(".gltf") != std::string::npos;
-            std::unique_ptr<Baikal::SceneIo> scene_io;
-            if (is_gltf)
-                scene_io = Baikal::SceneIo::CreateSceneIoGltf();
-            else
-                scene_io = is_fbx ? Baikal::SceneIo::CreateSceneIoFbx() : Baikal::SceneIo::CreateSceneIoObj();
-            auto scene_io1 = Baikal::SceneIo::CreateSceneIoTest();
-            m_scene = scene_io->LoadScene(filename, basepath);
+            m_scene = Baikal::SceneIo::LoadScene(filename, basepath);
 
             // Check it we have material remapping
             std::ifstream in_materials(basepath + "materials.xml");

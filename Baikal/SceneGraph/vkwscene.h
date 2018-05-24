@@ -23,16 +23,16 @@ namespace Baikal
         , ibl_skylight_diffuse(VK_NULL_HANDLE)
         , texture_data(VK_NULL_HANDLE)
         , texture_desc(VK_NULL_HANDLE)
-        , raytrace_lights_buffer(VK_NULL_HANDLE)
-        , raytrace_material_buffer(VK_NULL_HANDLE)
-        , raytrace_RNG_buffer(VK_NULL_HANDLE)
         , raytrace_shape_buffer(VK_NULL_HANDLE)
+        , raytrace_material_buffer(VK_NULL_HANDLE)
+        , raytrace_lights_buffer(VK_NULL_HANDLE)
+        , raytrace_RNG_buffer(VK_NULL_HANDLE)
         , sh_grid(VK_NULL_HANDLE)
-        , light_count(0)
-        , sh_count(0)
-        , shapes_count(0)
         , vertex_count(0)
         , index_count(0)
+        , shapes_count(0)
+        , light_count(0)
+        , sh_count(0)
         {}
 
         typedef matrix mat4;

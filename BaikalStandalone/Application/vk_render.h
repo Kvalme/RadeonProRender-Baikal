@@ -84,5 +84,6 @@ namespace Baikal
 
         OutputType m_output_type;
         OutputData m_output;
+        std::promise<int> m_promise;
     };
 }

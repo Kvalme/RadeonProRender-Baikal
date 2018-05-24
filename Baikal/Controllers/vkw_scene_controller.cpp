@@ -23,10 +23,10 @@ using namespace RadeonRays;
 
 namespace Baikal
 {
-    static std::size_t align16(std::size_t value)
+/*    static std::size_t align16(std::size_t value)
     {
         return (value + 0xF) / 0x10 * 0x10;
-    }
+    }*/
 
     // Convert Light:: types to VkwScene:: types
     static int GetLightType(Light const& light)
@@ -54,11 +54,12 @@ namespace Baikal
     }
 
     VkwSceneController::VkwSceneController(vkw::MemoryAllocator& memory_allocator, vkw::MemoryManager& memory_manager, VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
-    : default_material_(SingleBxdf::Create(SingleBxdf::BxdfType::kLambert))
+    :
+    memory_allocator_(memory_allocator)
+    , memory_manager_(memory_manager)
     , device_(device)
     , physical_device_(physical_device)
-    , memory_allocator_(memory_allocator)
-    , memory_manager_(memory_manager)
+    , default_material_(UberV2Material::Create())
     {
     }
 
@@ -172,8 +173,7 @@ namespace Baikal
         
         if (out.vertex_count < num_vertices)
         {
-            delete out.mesh_vertex_buffer;
-
+            out.mesh_vertex_buffer.Reset();
             out.mesh_vertex_buffer = memory_manager_.CreateBuffer(  sizeof(Vertex) * num_vertices,
                                                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                                                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, nullptr);
@@ -183,7 +183,7 @@ namespace Baikal
 
         if (out.index_count < num_indices)
         {
-            delete out.mesh_index_buffer;
+            out.mesh_index_buffer.Reset();
             
             out.mesh_index_buffer = memory_manager_.CreateBuffer( sizeof(uint32_t) * num_indices,
                                                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -194,7 +194,7 @@ namespace Baikal
 
         if (out.shapes_count < num_shapes)
         {
-            delete out.mesh_transforms;
+            out.mesh_transforms.Reset();
 
             out.mesh_transforms = memory_manager_.CreateBuffer( sizeof(RadeonRays::matrix) * num_shapes,
                                                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -228,7 +228,7 @@ namespace Baikal
 
         if (out.shapes_count < num_shapes)
         {
-            delete out.mesh_transforms;
+            out.mesh_transforms.Reset();
 
             out.mesh_transforms = memory_manager_.CreateBuffer( sizeof(RadeonRays::matrix) * num_shapes,
                                                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -297,7 +297,7 @@ namespace Baikal
 
         if (out.lights == VK_NULL_HANDLE || out.light_count < num_lights)
         {
-            delete out.lights;
+            out.lights.Reset();
 
             out.lights = memory_manager_.CreateBuffer( sizeof(VkwScene::Light) * num_lights,
                                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,

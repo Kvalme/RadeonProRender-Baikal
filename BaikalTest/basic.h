@@ -120,7 +120,7 @@ public:
         ASSERT_NO_THROW(m_controller = m_factory->CreateSceneController());
         ASSERT_NO_THROW(m_output = m_factory->CreateOutput(kOutputWidth, kOutputHeight));
         m_output->Clear(RadeonRays::float3(0.0f));
-        ASSERT_NO_THROW(m_renderer->SetOutput(Baikal::Renderer::OutputType::kColor, m_output.get()));
+        ASSERT_NO_THROW(m_renderer->SetOutput(Baikal::OutputType::kColor, m_output.get()));
 
         ASSERT_NO_THROW(LoadTestScene());
         ASSERT_NO_THROW(SetupCamera());

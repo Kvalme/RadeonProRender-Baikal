@@ -27,8 +27,6 @@
 #include "Application/cl_render.h"
 #include "Application/gl_render.h"
 
-#include "SceneGraph/IO/image_io.h"
-
 #include <future>
 #include <memory>
 #include <chrono>

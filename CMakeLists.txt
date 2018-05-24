@@ -22,6 +22,7 @@ endif (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
 
 if (BAIKAL_ENABLE_HYBRID_RENDERER)
     add_definitions(-DHYBRID_RENDERER=1)
+    add_subdirectory(RadeonRays/VKW)
 endif()
 
 #global settings

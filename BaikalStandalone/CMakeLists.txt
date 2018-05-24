@@ -1,12 +1,21 @@
 set(APPLICATION_SOURCES
     Application/application.cpp
     Application/application.h
+    Application/cl_application.cpp
+    Application/cl_application.h
+    Application/vk_application.cpp
+    Application/vk_application.h
     Application/app_utils.cpp
     Application/app_utils.h
+    Application/vk_render.cpp
+    Application/vk_render.h
     Application/cl_render.cpp
     Application/cl_render.h
     Application/gl_render.cpp
-    Application/gl_render.h)
+    Application/gl_render.h
+    Application/render.cpp
+    Application/render.h
+    Application/render.h)
 
 set(IMGUI_SORUCES
     ImGUI/imconfig.h
@@ -23,7 +32,10 @@ set(IMGUI_SORUCES
 
 set(MAIN_SOURCES main.cpp)
 set(UTILS_SOURCES
-    Utils/config_manager.cpp
+    Utils/cl_config_manager.cpp
+    Utils/cl_config_manager.h
+    Utils/vk_config_manager.cpp
+    Utils/vk_config_manager.h
     Utils/config_manager.h
     Utils/shader_manager.cpp
     Utils/shader_manager.h)

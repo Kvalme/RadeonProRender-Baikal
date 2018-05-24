@@ -19,31 +19,51 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ********************************************************************/
+#pragma once
 
-#define HYBRID_RENDER
+#include "math/int2.h"
+#include "renderer.h"
 
-#ifndef HYBRID_RENDER
-#include "Application/cl_application.h"
-#else
-#include "Application/vk_application.h"
-#endif
+#include "SceneGraph/vkwscene.h"
+#include "Controllers/vkw_scene_controller.h"
 
-int main(int argc, char * argv[])
+#include "VKW.h"
+
+#include <memory>
+
+
+namespace Baikal
 {
-    try
+    ///< Renderer implementation
+    class HybridRenderer : public Renderer<VkwScene>
     {
-        #ifndef HYBRID_RENDER
-            Baikal::ClApplication app(argc, argv);
-        #else
-            Baikal::VkApplication app(argc, argv);
-        #endif
+    public:
 
-        app.Run();
-    }
-    catch (std::exception& ex)
-    {
-        std::cout << ex.what() << std::endl;
-        return -1;
-    }
-    return 0;
+        HybridRenderer(
+            VkDevice device
+        );
+
+        ~HybridRenderer() = default;
+
+        // Renderer overrides
+        void Clear(RadeonRays::float3 const& val,
+                   Output& output) const override;
+
+        // Render the scene into the output
+        void Render(VkwScene const& scene) override;
+
+        // Render single tile
+        void RenderTile(VkwScene const& scene,
+                        RadeonRays::int2 const& tile_origin,
+                        RadeonRays::int2 const& tile_size) override;
+
+        // Set output
+        void SetOutput(OutputType type, Output* output) override;
+
+        void SetRandomSeed(std::uint32_t seed) override;
+
+        // Set max number of light bounces
+        void SetMaxBounces(std::uint32_t max_bounces);
+    };
+
 }

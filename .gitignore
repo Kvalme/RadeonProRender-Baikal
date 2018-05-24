@@ -22,3 +22,10 @@
 */OutputImages/*
 */ReferenceImages/*
 */cache/*.bin
+*.cmake
+*.o
+*.png
+*.pbxproj
+*.make
+/build
+/bin

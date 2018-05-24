@@ -38,7 +38,6 @@ THE SOFTWARE.
 namespace Baikal
 {
     class Output;
-    struct ClwScene;
 
     /**
      \brief Interface for the renderer.
@@ -46,29 +45,35 @@ namespace Baikal
      Renderer implemenation is taking the scene and producing its image into
      an output surface.
      */
+
+    enum class OutputType
+    {
+        kColor,
+        kWorldPosition,
+        kWorldShadingNormal,
+        kWorldGeometricNormal,
+        kUv,
+        kWireframe,
+        kAlbedo,
+        kWorldTangent,
+        kWorldBitangent,
+        kGloss,
+        kShapeId,
+        kDepth,
+        kVisibility,
+        kMax
+    };
+
+    template <typename CompiledScene> 
     class Renderer
     {
     public:
-        enum class OutputType
+    
+        Renderer()
         {
-            kColor = 0,
-            kWorldPosition,
-            kWorldShadingNormal,
-            kWorldGeometricNormal,
-            kUv,
-            kWireframe,
-            kAlbedo,
-            kWorldTangent,
-            kWorldBitangent,
-            kGloss,
-            kMeshID,
-            kDepth,
-            kShapeId,
-            kVisibility,
-            kMax
-        };
+            std::fill(m_outputs.begin(), m_outputs.end(), nullptr);
+        }
 
-        Renderer();
         virtual ~Renderer() = default;
 
         /**
@@ -86,7 +91,7 @@ namespace Baikal
          \param scene Scene to render
          */
         virtual
-        void Render(ClwScene const& scene) = 0;
+        void Render(CompiledScene const& scene) = 0;
 
         /**
         \brief Render single iteration.
@@ -94,7 +99,7 @@ namespace Baikal
         \param scene Scene to render
         */
         virtual
-        void RenderTile(ClwScene const& scene,
+        void RenderTile(CompiledScene const& scene,
             RadeonRays::int2 const& tile_origin,
             RadeonRays::int2 const& tile_size) = 0;
 
@@ -103,15 +108,27 @@ namespace Baikal
 
          \param output The output to render into.
          */
-        virtual void SetOutput(OutputType type, Output* output);
+        virtual void SetOutput(OutputType type, Output* output)
+        {
+            auto idx = static_cast<std::size_t>(type);
+            if (idx >= static_cast<std::size_t>(OutputType::kMax))
+                throw std::out_of_range("Output type is out of supported range");
+            m_outputs[idx] = output;
+        }
+
 
         /**
         \brief Get the output for rendering.
 
         \param output The output to render into.
         */
-        virtual Output* GetOutput(OutputType type) const;
-
+        virtual Output* GetOutput(OutputType type) const
+        {
+            auto idx = static_cast<std::size_t>(type);
+            if (idx >= static_cast<std::size_t>(OutputType::kMax))
+                throw std::out_of_range("Output type is out of supported range");
+            return m_outputs[idx];
+        }
         /**
         \brief Set random seed value for the renderer. Renders
         with the same random seed are guaranteed to be the same.
@@ -130,26 +147,4 @@ namespace Baikal
         std::array<Output*, static_cast<std::size_t>(OutputType::kMax)>
             m_outputs;
     };
-
-    inline Renderer::Renderer()
-    {
-        std::fill(m_outputs.begin(), m_outputs.end(), nullptr);
-    }
-
-    inline void Renderer::SetOutput(OutputType type, Output* output)
-    {
-        auto idx = static_cast<std::size_t>(type);
-        if (idx >= static_cast<std::size_t>(OutputType::kMax))
-            throw std::out_of_range("Output type is out of supported range");
-
-        m_outputs[idx] = output;
-    }
-
-    inline Output* Renderer::GetOutput(OutputType type) const
-    {
-        auto idx = static_cast<std::size_t>(type);
-        if (idx >= static_cast<std::size_t>(OutputType::kMax))
-            throw std::out_of_range("Output type is out of supported range");
-        return m_outputs[idx];
-    }
 }

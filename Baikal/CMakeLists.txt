@@ -1,6 +1,8 @@
 set(CONTROLLERS_SOURCES
     Controllers/clw_scene_controller.cpp
     Controllers/clw_scene_controller.h
+    Controllers/vkw_scene_controller.cpp
+    Controllers/vkw_scene_controller.h
     Controllers/scene_controller.h
     Controllers/scene_controller.inl)
     
@@ -10,9 +12,10 @@ set(ESTIMATORS_SOURCES
     Estimators/path_tracing_estimator.h)
 
 set(OUTPUT_SOURCES
+    Output/vkwoutput.h
     Output/clwoutput.h
     Output/output.h)
-    
+
 set(POSTEFFECT_SOURCES
     PostEffects/clw_post_effect.h
     PostEffects/post_effect.h
@@ -26,9 +29,13 @@ set(RENDERERS_SOURCES
     Renderers/adaptive_renderer.h
     Renderers/monte_carlo_renderer.cpp
     Renderers/monte_carlo_renderer.h
+    Renderers/hybrid_renderer.cpp
+    Renderers/hybrid_renderer.h
     Renderers/renderer.h)
 
 set(RENDERFACTORY_SOURCES
+    RenderFactory/vkw_render_factory.cpp
+    RenderFactory/vkw_render_factory.h
     RenderFactory/clw_render_factory.cpp
     RenderFactory/clw_render_factory.h
     RenderFactory/render_factory.h)
@@ -63,6 +70,7 @@ set(SCENEGRAPH_SOURCES
     SceneGraph/camera.cpp
     SceneGraph/camera.h
     SceneGraph/clwscene.h
+    SceneGraph/vkwscene.h
     SceneGraph/iterator.h
     SceneGraph/light.cpp
     SceneGraph/light.h
@@ -85,6 +93,8 @@ set(SCENEGRAPH_COLLECTOR_SOURCES
     SceneGraph/Collector/collector.cpp
     SceneGraph/Collector/collector.h)
        
+    SceneGraph/IO/scene_fbx_io.cpp
+    SceneGraph/IO/scene_gltf_io.cpp
 set(XML_SOURCES
     XML/tinyxml2.cpp
     XML/tinyxml2.h)
@@ -154,13 +164,15 @@ if (BAIKAL_ENABLE_RAYMASK)
     target_compile_definitions(Baikal PUBLIC ENABLE_RAYMASK)
 endif (BAIKAL_ENABLE_RAYMASK)
 
+find_package(Vulkan)
 
 target_compile_features(Baikal PRIVATE cxx_std_14)
 target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/Baikal")
+target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/RadeonRays/VKW")
+target_link_libraries(Baikal PUBLIC RadeonRays VKW OpenImageIO::OpenImageIO Vulkan::Vulkan)
 target_link_libraries(Baikal PUBLIC RadeonRays)
 if (WIN32)
     target_compile_options(Baikal PUBLIC /WX)
 elseif (UNIX)
     target_compile_options(Baikal PUBLIC -Wall -Werror)
 endif (WIN32)
-    

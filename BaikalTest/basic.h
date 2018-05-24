@@ -301,7 +301,7 @@ public:
         return std::find(begin, end, option) != end;
     }
 
-    std::unique_ptr<Baikal::Renderer> m_renderer;
+    std::unique_ptr<Baikal::Renderer<Baikal::ClwScene>> m_renderer;
     std::unique_ptr<Baikal::SceneController<Baikal::ClwScene>> m_controller;
     std::unique_ptr<Baikal::RenderFactory<Baikal::ClwScene>> m_factory;
     std::unique_ptr<Baikal::Output> m_output;

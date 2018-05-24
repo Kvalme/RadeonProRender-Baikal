@@ -19,10 +19,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ********************************************************************/
-#include "config_manager.h"
+#include "cl_config_manager.h"
 
 #include "CLW.h"
+
 #include "RenderFactory/render_factory.h"
+#include "Controllers/vkw_scene_controller.h"
 
 #ifndef APP_BENCHMARK
 
@@ -39,10 +41,11 @@ THE SOFTWARE.
 #include <GL/glx.h>
 #endif
 
-void ConfigManager::CreateConfigs(
+
+void ClConfigManager::CreateConfigs(
     Mode mode,
     bool interop,
-    std::vector<Config>& configs,
+    std::vector<ClConfig>& configs,
     int initial_num_bounces,
     int req_platform_index,
     int req_device_index)
@@ -92,7 +95,7 @@ void ConfigManager::CreateConfigs(
                     continue;
             }
 
-            Config cfg;
+            ClConfig cfg;
             cfg.caninterop = false;
 
             if (platforms[i].GetDevice(d).HasGlInterop() && !hasprimary && interop)
@@ -162,17 +165,18 @@ void ConfigManager::CreateConfigs(
 
     for (std::size_t i = 0; i < configs.size(); ++i)
     {
-        configs[i].factory = std::make_unique<Baikal::ClwRenderFactory>(configs[i].context, "cache");
-        configs[i].controller = configs[i].factory->CreateSceneController();
-        configs[i].renderer = configs[i].factory->CreateRenderer(Baikal::ClwRenderFactory::RendererType::kUnidirectionalPathTracer);
+        configs[i].factory_ = std::make_unique<Baikal::ClwRenderFactory>(configs[i].context, "cache");
+        configs[i].controller_ = configs[i].factory_->CreateSceneController();
+        configs[i].renderer_ = configs[i].factory_->CreateRenderer(Baikal::ClwRenderFactory::RendererType::kUnidirectionalPathTracer);
     }
 }
 
 #else
-void ConfigManager::CreateConfigs(
+
+void ClConfigManager::CreateConfigs(
     Mode mode,
     bool interop,
-    std::vector<Config>& configs,
+    std::vector<ClConfig>& configs,
     int initial_num_bounces,
     int req_platform_index,
     int req_device_index)
@@ -199,7 +203,7 @@ void ConfigManager::CreateConfigs(
             if ((mode == kUseCpus || mode == kUseSingleCpu) && platforms[i].GetDevice(d).GetType() != CL_DEVICE_TYPE_CPU)
                 continue;
 
-            Config cfg;
+            ClConfig cfg;
             cfg.caninterop = false;
             cfg.context = CLWContext::Create(platforms[i].GetDevice(d));
             cfg.type = kSecondary;
@@ -221,9 +225,10 @@ void ConfigManager::CreateConfigs(
 
     for (int i = 0; i < configs.size(); ++i)
     {
-        configs[i].factory = std::make_unique<Baikal::ClwRenderFactory>(configs[i].context);
-        configs[i].controller = configs[i].factory->CreateSceneController();
-        configs[i].renderer = configs[i].factory->CreateRenderer(Baikal::ClwRenderFactory::RendererType::kUnidirectionalPathTracer);
+        configs[i].factory_ = std::make_unique<Baikal::ClwRenderFactory>(configs[i].context);
+        configs[i].controller_ = configs[i].factory_->CreateSceneController();
+        configs[i].renderer_ = configs[i].factory_->CreateRenderer(Baikal::ClwRenderFactory::RendererType::kUnidirectionalPathTracer);
     }
 }
+
 #endif //APP_BENCHMARK

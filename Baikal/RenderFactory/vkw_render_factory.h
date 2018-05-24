@@ -23,15 +23,13 @@
 #pragma once
 
 #include "render_factory.h"
-#include "radeon_rays_cl.h"
-#include "CLW.h"
 
-#include "SceneGraph/clwscene.h"
-#include "Utils/cl_program_manager.h"
+#include "SceneGraph/vkwscene.h"
 
 #include <memory>
 #include <string>
 
+#include "VKW.h"
 
 namespace Baikal
 {
@@ -42,13 +40,13 @@ namespace Baikal
      each other since many of them might use either CPU or GPU implementation.
      Entities create via the same factory are known to be compatible.
      */
-    class ClwRenderFactory : public RenderFactory<ClwScene>
+    class VkwRenderFactory : public RenderFactory<VkwScene>
     {
     public:
-        ClwRenderFactory(CLWContext context, std::string const& cache_path="");
+        VkwRenderFactory(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index);
 
         // Create a renderer of specified type
-        std::unique_ptr<Renderer<ClwScene>> 
+        std::unique_ptr<Renderer<VkwScene>> 
             CreateRenderer(RendererType type) const override;
         // Create an output of specified type
         std::unique_ptr<Output> 
@@ -57,16 +55,16 @@ namespace Baikal
         std::unique_ptr<PostEffect> 
             CreatePostEffect(PostEffectType type) const override;
 
-        std::unique_ptr<SceneController<ClwScene>>
+        std::unique_ptr<SceneController<VkwScene>>
             CreateSceneController() const override;
 
     private:
-        CLWContext m_context;
-        std::string m_cache_path;
-        CLProgramManager m_program_manager;
+        std::unique_ptr<vkw::MemoryAllocator>       memory_allocator_;
+        std::unique_ptr<vkw::MemoryManager>         memory_manager_;
+        std::unique_ptr<vkw::RenderTargetManager>   render_target_manager_;
 
-        using RadeonRaysInstanceDelete = decltype(RadeonRays::IntersectionApi::Delete);
-
-        std::shared_ptr<RadeonRays::IntersectionApi> m_intersector;
+        int                                         queue_family_index_;
+        VkDevice                                    device_;
+        VkPhysicalDevice                            physical_device_;
     };
 }

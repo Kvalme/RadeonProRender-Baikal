@@ -8,6 +8,7 @@ option(BAIKAL_ENABLE_RPR "Enable RadeonProRender API lib" OFF)
 option(BAIKAL_ENABLE_TESTS "Enable tests" ON)
 option(BAIKAL_ENABLE_STANDALONE "Enable standalone application build" ON)
 option(BAIKAL_ENABLE_IO "Enable IO library build" ON)
+option(BAIKAL_ENABLE_HYBRID_RENDERER "Enable hybrid renderer" ON)
 option(BAIKAL_ENABLE_FBX "Enable FBX import in BaikalIO. Requires BaikalIO to be turned ON" OFF)
 
 #Disabled for now.
@@ -17,6 +18,11 @@ option(BAIKAL_ENABLE_FBX "Enable FBX import in BaikalIO. Requires BaikalIO to be
 if (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
     message(FATAL_ERROR "glTF support requires RPR but it's disabled")
 endif (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
+
+
+if (BAIKAL_ENABLE_HYBRID_RENDERER)
+    add_definitions(-DHYBRID_RENDERER=1)
+endif()
 
 #global settings
 if (WIN32)

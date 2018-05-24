@@ -22,58 +22,30 @@
  ********************************************************************/
 #pragma once
 
-#include <thread>
-#include <atomic>
-#include <mutex>
-#include <future>
+#include "Application/render.h"
+#include "Output/output.h"
+#include "Output/vkwoutput.h"
+#include "SceneGraph/vkwscene.h"
+#include "Utils/vk_config_manager.h"
+#include "math/float3.h"
+#include "app_utils.h"
 
-#include "RenderFactory/render_factory.h"
-#include "Renderers/monte_carlo_renderer.h"
-#include "Output/clwoutput.h"
-#include "Application/app_utils.h"
-#include "Utils/cl_config_manager.h"
-#include "Application/gl_render.h"
-#include "SceneGraph/camera.h"
-#include "render.h"
-
-#ifdef ENABLE_DENOISER
-#include "PostEffects/bilateral_denoiser.h"
-#endif
-
+#include <memory>
+#include <vector>
 
 namespace Baikal
 {
-    class AppClRender : public AppRender
+    class AppVkRender : public AppRender
     {
-        struct OutputData
+        struct OutputData 
         {
             std::unique_ptr<Baikal::Output> output;
-
-#ifdef ENABLE_DENOISER
-            std::unique_ptr<Baikal::Output> output_position;
-            std::unique_ptr<Baikal::Output> output_normal;
-            std::unique_ptr<Baikal::Output> output_albedo;
-            std::unique_ptr<Baikal::Output> output_mesh_id;
-            std::unique_ptr<Baikal::Output> output_denoised;
-            std::unique_ptr<Baikal::PostEffect> denoiser;
-#endif
-
-            std::vector<float3> fdata;
+            std::vector<RadeonRays::float3> fdata;
             std::vector<unsigned char> udata;
-            CLWBuffer<float3> copybuffer;
-        };
-
-        struct ControlData
-        {
-            std::atomic<int> clear;
-            std::atomic<int> stop;
-            std::atomic<int> newdata;
-            std::mutex datamutex;
-            int idx;
         };
 
     public:
-        AppClRender(AppSettings& settings, GLuint tex);
+        AppVkRender(AppSettings& settings);
         //copy data from to GL
         void Update(AppSettings& settings);
 
@@ -85,43 +57,32 @@ namespace Baikal
         void StopRenderThreads();
         void RunBenchmark(AppSettings& settings);
 
-        //save cl frame buffer to file
+        //save vk frame buffer to file
         void SaveFrameBuffer(AppSettings& settings);
         void SaveImage(const std::string& name, int width, int height, const RadeonRays::float3* data);
 
-        inline CLWDevice GetDevice(int i) { return m_cfgs[m_primary].context.GetDevice(i); };
         inline OutputType GetOutputType() { return m_output_type; };
 
         void SetNumBounces(int num_bounces);
         void SetOutputType(OutputType type);
 
-        std::future<int> GetShapeId(std::uint32_t x, std::uint32_t y);
-        Baikal::Shape::Ptr GetShapeById(int shape_id);
-
+        VkDevice            GetDevice() { return m_cfg.device_; }
+        VkInstance          GetInstance() { return m_cfg.instance_; }
+        VkPhysicalDevice    GetPhysicalDevice() { return m_cfg.physical_device_;}
+        uint32_t            GetGraphicsQueueFamilyIndex() {return m_cfg.graphics_queue_family_idx_;}
 #ifdef ENABLE_DENOISER
         // Denoiser
         void SetDenoiserFloatParam(const std::string& name, const float4& value);
         float4 GetDenoiserFloatParam(const std::string& name);
 #endif
+        std::future<int> GetShapeId(std::uint32_t x, std::uint32_t y);
+        Baikal::Shape::Ptr GetShapeById(int shape_id);
     private:
-        void InitCl(AppSettings& settings, GLuint tex);
-        void RenderThread(ControlData& cd);
+        void InitVk(AppSettings& settings);
 
-        std::promise<int> m_promise;
-        bool m_shape_id_requested = false;
-        OutputData m_shape_id_data;
-        RadeonRays::float2 m_shape_id_pos;
-        std::vector<ClConfigManager::ClConfig> m_cfgs;
-        std::vector<OutputData> m_outputs;
-        std::unique_ptr<ControlData[]> m_ctrl;
-        std::vector<std::thread> m_renderthreads;
-        int m_primary = -1;
-        std::uint32_t m_width, m_height;
+        VkConfigManager::VkConfig m_cfg;
 
-        //if interop
-        CLWImage2D m_cl_interop_image;
-        //save GL tex for no interop case
-        GLuint m_tex;
         OutputType m_output_type;
+        OutputData m_output;
     };
 }

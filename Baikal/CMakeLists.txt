@@ -64,6 +64,8 @@ set(UTILS_SOURCES
     Utils/cl_program_manager.h
     Utils/cl_uberv2_generator.h
     Utils/cl_uberv2_generator.cpp
+    Utils/vulkandebug.cpp
+    Utils/vulkandebug.h
 )
 
 set(SCENEGRAPH_SOURCES

@@ -54,13 +54,13 @@ public:
 
         uint32_t                        compute_queue_family_idx_;
         uint32_t                        graphics_queue_family_idx_;
-
+        VkDebugReportCallbackEXT        debug_report_callback_;
     };
 
-    static void CreateConfig(VkConfig& renderers, std::uint32_t extensions_count, const char** extensions);
+    static void CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions);
 
 private:
-    static vkw::VkScopedObject<VkInstance> CreateInstance(std::uint32_t extensions_count, const char** extensions);
+    static vkw::VkScopedObject<VkInstance> CreateInstance(const std::vector<const char*> &requested_extensions);
 
     static vkw::VkScopedObject<VkDevice> CreateDevice(VkInstance instance
                                                 , std::uint32_t& compute_queue_family_index

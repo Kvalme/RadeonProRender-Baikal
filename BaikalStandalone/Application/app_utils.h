@@ -91,8 +91,7 @@ namespace Baikal
         int platform_index;
         int device_index;
         // Vulkan required extensions list
-        const char** vk_required_extensions;
-        std::uint32_t vk_required_extensions_count;
+        std::vector<const char*> vk_required_extensions;
 
     };
 

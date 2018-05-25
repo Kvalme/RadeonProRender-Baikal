@@ -24,9 +24,13 @@ THE SOFTWARE.
 #include "RenderFactory/render_factory.h"
 #include "Controllers/vkw_scene_controller.h"
 
+#ifndef NDEBUG
+#include "Utils/vulkandebug.h"
+#endif
+
 #ifndef APP_BENCHMARK
 
-vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(std::uint32_t extensions_count, const char** extensions)
+vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vector<const char*> &requested_extensions)
 {
     VkApplicationInfo app_info;
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -37,15 +41,27 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(std::uint32_t ex
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION_1_0;
     
+    std::vector<const char*> extensions(requested_extensions);
+    std::vector<const char*> layers;
+#ifndef NDEBUG
+#ifndef __APPLE__
+
+    extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    layers.push_back(Baikal::VK_LAYER_LUNARG_parameter_validation_name);
+    layers.push_back(Baikal::VK_LAYER_LUNARG_standard_validation_name);
+
+#endif
+#endif
+
     VkInstanceCreateInfo instance_info;
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_info.pNext = NULL;
     instance_info.flags = 0;
     instance_info.pApplicationInfo = &app_info;
-    instance_info.enabledExtensionCount = extensions_count;
-    instance_info.ppEnabledExtensionNames = extensions;
-    instance_info.enabledLayerCount = 0;
-    instance_info.ppEnabledLayerNames = NULL;
+    instance_info.enabledExtensionCount = extensions.size();
+    instance_info.ppEnabledExtensionNames = extensions.data();
+    instance_info.enabledLayerCount = layers.size();
+    instance_info.ppEnabledLayerNames = layers.data();
     
     VkInstance instance = nullptr;
     VkResult res = vkCreateInstance(&instance_info, nullptr, &instance);
@@ -58,10 +74,33 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(std::uint32_t ex
         throw std::runtime_error("vkCreateInstance: Unknown error\n");
     }
     
+#ifndef NDEBUG
+#ifndef __APPLE__
+
+    VkDebugReportCallbackCreateInfoEXT debugReportCallback;
+    debugReportCallback.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    debugReportCallback.pfnCallback = &(Baikal::DebugReportCallback);
+    debugReportCallback.flags =
+        VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+
+    VkDebugReportCallbackEXT debug_report_callback_;
+    vkCreateDebugReportCallbackEXT(instance, &debugReportCallback, nullptr, &debug_report_callback_);
+
+    return vkw::VkScopedObject<VkInstance>(instance,
+                                           [debug_report_callback_](VkInstance instance)
+                                           {
+                                               vkDestroyInstance(instance, nullptr);
+                                               vkDestroyDebugReportCallbackEXT(instance, debug_report_callback_, nullptr);
+                                           });
+
+#endif
+#endif
+
     return vkw::VkScopedObject<VkInstance>(instance,
                                       [](VkInstance instance)
                                       {
                                           vkDestroyInstance(instance, nullptr);
+
                                       });
 }
 
@@ -162,14 +201,14 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
                                     });
 }
 
-void VkConfigManager::CreateConfig(VkConfig& renderers, std::uint32_t extensions_count, const char** extensions)
+void VkConfigManager::CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions)
 {
     uint32_t compute_queue_family_index = -1;
     uint32_t graphics_queue_family_index = -1;
 
     VkPhysicalDevice physical_device;
         
-    renderers.instance_ = CreateInstance(extensions_count, extensions);
+    renderers.instance_ = CreateInstance(requested_extensions);
     renderers.device_   = CreateDevice(renderers.instance_, compute_queue_family_index, graphics_queue_family_index, &physical_device);
     renderers.compute_queue_family_idx_ = compute_queue_family_index;
     renderers.graphics_queue_family_idx_ = graphics_queue_family_index;

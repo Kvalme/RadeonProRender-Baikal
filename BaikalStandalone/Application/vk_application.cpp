@@ -386,7 +386,14 @@ namespace Baikal
         try
         {
 
-            m_settings.vk_required_extensions = glfwGetRequiredInstanceExtensions(&(m_settings.vk_required_extensions_count));
+            std::uint32_t glfw_required_extensions_count;
+            const char **glfw_required_extensions = glfwGetRequiredInstanceExtensions(&glfw_required_extensions_count);
+            m_settings.vk_required_extensions.clear();
+            for (auto a = 0U; a < glfw_required_extensions_count; ++a)
+            {
+                m_settings.vk_required_extensions.push_back(glfw_required_extensions[a]);
+            }
+
             app_render_.reset(new AppVkRender(m_settings));
             
             glfwSetMouseButtonCallback(m_window, Application::OnMouseButton);

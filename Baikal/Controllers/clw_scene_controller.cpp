@@ -887,7 +887,7 @@ namespace Baikal
         m_context.UnmapBuffer(0, out.texturedata, data);
     }
 
-//#ifdef DEBUG
+#ifndef NDEBUG
     // We're not using this function on release
     // Convert Material:: types to ClwScene:: types
     static ClwScene::Bxdf GetMaterialType(Material const& material)
@@ -900,7 +900,7 @@ namespace Baikal
 
         return ClwScene::Bxdf::kZero;
     }
-//#endif
+#endif
 
     void ClwSceneController::WriteMaterial(Material const& material, Collector& mat_collector, Collector& tex_collector, std::vector<std::int32_t> &material_data) const
     {

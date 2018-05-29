@@ -29,3 +29,21 @@ struct MaterialConstants
     float4   metallic;
     float4   roughness;
 };
+
+static const int TextureFormatRGBA8 = 1;
+static const int TextureFormatRGBA16 = 2;
+static const int TextureFormatRGBA32 = 3;
+
+/// Texture description
+struct Texture
+{
+    // Width, height and depth
+    int w;
+    int h;
+    int d;
+    // Offset in texture data array
+    int data_offset;
+    // Format
+    int fmt;
+    int extra;
+};

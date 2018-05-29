@@ -125,5 +125,7 @@ namespace Baikal
         mutable std::vector<Vertex>                     vertex_buffer_;
         mutable std::vector<uint32_t>                   index_buffer_;
         mutable std::vector<RadeonRays::matrix>         mesh_transforms_;
+        mutable std::vector<VkwScene::Texture>          texture_descs_;
+        mutable std::vector<char>                       texture_data_;
     };
 }

@@ -23,10 +23,10 @@ using namespace RadeonRays;
 
 namespace Baikal
 {
-/*    static std::size_t align16(std::size_t value)
+    static std::size_t align16(std::size_t value)
     {
         return (value + 0xF) / 0x10 * 0x10;
-    }*/
+    }
 
     // Convert Light:: types to VkwScene:: types
     static int GetLightType(Light const& light)
@@ -254,6 +254,63 @@ namespace Baikal
 
     void VkwSceneController::UpdateTextures(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
+        // Get new buffer size
+        std::size_t tex_buffer_size = tex_collector.GetNumItems();
+        std::size_t tex_data_buffer_size = 0;
+
+        if (tex_buffer_size == 0)
+        {
+            out.texture_desc = memory_manager_.CreateBuffer(sizeof(VkwScene::Texture), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+            out.texture_data = memory_manager_.CreateBuffer(1, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+            return;
+        }
+
+
+        // Resize texture cache if needed
+        if (texture_descs_.size() < tex_buffer_size)
+        {
+            texture_descs_.resize(tex_buffer_size);
+        }
+
+        // Create texture iterator
+        std::unique_ptr<Iterator> tex_iter(tex_collector.CreateIterator());
+
+        // Iterate and serialize
+        std::size_t num_textures_written = 0;
+        for (; tex_iter->IsValid(); tex_iter->Next())
+        {
+            auto tex = tex_iter->ItemAs<Texture>();
+            WriteTexture(*tex, tex_data_buffer_size, texture_descs_.data() + num_textures_written);
+
+            ++num_textures_written;
+
+            tex_data_buffer_size += align16(tex->GetSizeInBytes());
+        }
+
+        if (texture_data_.size() < tex_data_buffer_size)
+        {
+            texture_data_.resize(tex_data_buffer_size);
+        }
+
+        tex_iter->Reset();
+        std::size_t num_bytes_written = 0;
+        for (; tex_iter->IsValid(); tex_iter->Next())
+        {
+            auto tex = tex_iter->ItemAs<Texture>();
+            WriteTextureData(*tex, texture_data_.data() + num_bytes_written);
+
+            num_bytes_written += align16(tex->GetSizeInBytes());
+        }
+
+        out.texture_desc = memory_manager_.CreateBuffer(sizeof(VkwScene::Texture) * texture_descs_.size(),
+                                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+        out.texture_data = memory_manager_.CreateBuffer(texture_data_.size(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+        memory_manager_.WriteBuffer(out.texture_desc, 0u, sizeof(VkwScene::Texture) * texture_descs_.size(), texture_descs_.data());
+        memory_manager_.WriteBuffer(out.texture_data, 0u, texture_data_.size(), texture_data_.data());
     }
 
     void VkwSceneController::WriteMaterial(Material const& material, Collector& mat_collector, Collector& tex_collector, void* data) const
@@ -309,12 +366,34 @@ namespace Baikal
         memory_manager_.WriteBuffer(out.lights, 0u, sizeof(VkwScene::Light) * num_lights, &lights_internal);
     }
 
+    // Convert texture format into ClwScene:: types
+    static int GetTextureFormat(Texture const& texture)
+    {
+        switch (texture.GetFormat())
+        {
+            case Texture::Format::kRgba8: return VkwScene::TextureFormatRGBA8;
+            case Texture::Format::kRgba16: return VkwScene::TextureFormatRGBA16;
+            case Texture::Format::kRgba32: return VkwScene::TextureFormatRGBA32;
+            default: return VkwScene::TextureFormatRGBA8;
+        }
+    }
+
     void VkwSceneController::WriteTexture(Texture const& texture, std::size_t data_offset, void* data) const
     {
+        VkwScene::Texture *vkw_texture = static_cast<VkwScene::Texture*>(data);
+        auto size = texture.GetSize();
+        vkw_texture->w = size.x;
+        vkw_texture->h = size.y;
+        vkw_texture->d = size.z;
+        vkw_texture->data_offset = static_cast<int>(data_offset);
+        vkw_texture->fmt = GetTextureFormat(texture);
     }
 
     void VkwSceneController::WriteTextureData(Texture const& texture, void* data) const
     {
+        auto begin = texture.GetData();
+        auto end = begin + texture.GetSizeInBytes();
+        std::copy(begin, end, static_cast<char*>(data));
     }
 
     void VkwSceneController::WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const

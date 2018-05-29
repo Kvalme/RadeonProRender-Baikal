@@ -39,7 +39,9 @@ namespace Baikal
         m_output.output = m_cfg.factory_->CreateOutput(settings.width, settings.height);
         m_output.fdata.resize(settings.width * settings.height);
         m_output.udata.resize(settings.width * settings.height * 4);
+
         m_output_type = OutputType::kColor;
+
         SetOutputType(OutputType::kColor);
     }
 
@@ -81,7 +83,6 @@ namespace Baikal
 
     void AppVkRender::SetOutputType(OutputType type)
     {
-        m_cfg.renderer_->SetOutput(m_output_type, nullptr);
         m_cfg.renderer_->SetOutput(type, m_output.output.get());
 
         m_output_type = type;

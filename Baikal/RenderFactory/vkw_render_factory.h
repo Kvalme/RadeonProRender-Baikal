@@ -46,17 +46,15 @@ namespace Baikal
         VkwRenderFactory(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index);
 
         // Create a renderer of specified type
-        std::unique_ptr<Renderer<VkwScene>> 
-            CreateRenderer(RendererType type) const override;
+        std::unique_ptr<Renderer<VkwScene>> CreateRenderer(RendererType type) const override;
+        
         // Create an output of specified type
-        std::unique_ptr<Output> 
-            CreateOutput(std::uint32_t w, std::uint32_t h) const override;
+        std::unique_ptr<Output> CreateOutput(std::uint32_t w, std::uint32_t h) const override;
+        
         // Create post effect of specified type
-        std::unique_ptr<PostEffect> 
-            CreatePostEffect(PostEffectType type) const override;
+        std::unique_ptr<PostEffect> CreatePostEffect(PostEffectType type) const override;
 
-        std::unique_ptr<SceneController<VkwScene>>
-            CreateSceneController() const override;
+        std::unique_ptr<SceneController<VkwScene>> CreateSceneController() const override;
 
     private:
         std::unique_ptr<vkw::MemoryAllocator>       memory_allocator_;

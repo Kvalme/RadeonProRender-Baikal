@@ -22,13 +22,12 @@ namespace Baikal
     }
 
     // Create a renderer of specified type
-    std::unique_ptr<Renderer<VkwScene>> VkwRenderFactory::CreateRenderer(
-                                                    RendererType type) const
+    std::unique_ptr<Renderer<VkwScene>> VkwRenderFactory::CreateRenderer(RendererType type) const
     {
         switch (type)
         {
             case RendererType::kHybrid:
-                return std::unique_ptr<Renderer<VkwScene>>(new HybridRenderer(device_));
+                return std::unique_ptr<Renderer<VkwScene>>(new HybridRenderer(device_, *memory_manager_, *render_target_manager_));
             case RendererType::kUnidirectionalPathTracer:
                 throw std::runtime_error("Renderer not supported");
             default:
@@ -36,15 +35,12 @@ namespace Baikal
         }
     }
 
-    std::unique_ptr<Output> VkwRenderFactory::CreateOutput(std::uint32_t w,
-                                                           std::uint32_t h)
-                                                           const
+    std::unique_ptr<Output> VkwRenderFactory::CreateOutput(std::uint32_t w, std::uint32_t h) const
     {
         return std::unique_ptr<Output>(new VkwOutput(*render_target_manager_, w, h));
     }
 
-    std::unique_ptr<PostEffect> VkwRenderFactory::CreatePostEffect(
-                                                    PostEffectType type) const
+    std::unique_ptr<PostEffect> VkwRenderFactory::CreatePostEffect(PostEffectType type) const
     {
         // TODO: Implement
         assert(0);

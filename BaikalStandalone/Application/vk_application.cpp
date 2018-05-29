@@ -272,7 +272,18 @@ namespace Baikal
 
     void VkApplication::PrepareFrame(VkDevice device, VkPhysicalDevice physical_device)
     {
-        VkResult r = vkAcquireNextImageKHR(device, swapchain_, UINT64_MAX, present_semaphores_[frame_idx_], VK_NULL_HANDLE, &frame_idx_);
+        for (;;)
+        {
+            VkResult r = vkWaitForFences(device, 1, &fences_[frame_idx_], VK_TRUE, std::numeric_limits<uint64_t>::max());
+            
+            if (r == VK_SUCCESS) break;
+            if (r == VK_TIMEOUT) continue;
+        }
+        
+
+        vkResetFences(device, 1, &fences_[frame_idx_]);
+
+        VkResult r = vkAcquireNextImageKHR(device, swapchain_, UINT64_MAX, present_semaphores_[frame_idx_], VK_NULL_HANDLE, &back_buffer_indices_[frame_idx_]);
         
         if (r != VK_SUCCESS)
         {
@@ -280,7 +291,7 @@ namespace Baikal
             {
                 ResizeSwapChain(device, physical_device, framebuffer_width_, framebuffer_height_);
             }
-            else 
+            else
             {
                 throw std::runtime_error("VkApplication: Failed to acquire next KHR image");
             }
@@ -302,7 +313,7 @@ namespace Baikal
         VkRenderPassBeginInfo render_pass_begin_info = {};
         render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         render_pass_begin_info.renderPass = render_pass_;
-        render_pass_begin_info.framebuffer = framebuffers_[frame_idx_];
+        render_pass_begin_info.framebuffer = framebuffers_[back_buffer_indices_[frame_idx_]];
         render_pass_begin_info.renderArea.extent.width = framebuffer_width_;
         render_pass_begin_info.renderArea.extent.height = framebuffer_height_;
         render_pass_begin_info.clearValueCount = 1;
@@ -328,22 +339,29 @@ namespace Baikal
         submit_info.signalSemaphoreCount = 1;
         submit_info.pSignalSemaphores = &render_complete_semaphores_[frame_idx_];
 
-        err = vkEndCommandBuffer(command_buffers_[frame_idx_]);
-        err = vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+        if(vkEndCommandBuffer(command_buffers_[frame_idx_]) != VK_SUCCESS)
+            throw std::runtime_error("VkApplication: Failed to end command buffer");
+
+        if(vkQueueSubmit(queue, 1, &submit_info, fences_[frame_idx_]) != VK_SUCCESS)
+            throw std::runtime_error("VkApplication: Failed to submit queue");
     }
 
     void VkApplication::PresentFrame(VkQueue queue)
     {
+        uint32_t indices[1] = { back_buffer_indices_[frame_idx_] };
+
         VkPresentInfoKHR info = {};
         info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &present_semaphores_[frame_idx_];
+        info.pWaitSemaphores = &render_complete_semaphores_[frame_idx_];
         info.swapchainCount = 1;
         info.pSwapchains = &swapchain_;
-        info.pImageIndices = &frame_idx_;
+        info.pImageIndices = indices;
 
         if (vkQueuePresentKHR(queue, &info) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Failed PresentFrame");
+        
+        frame_idx_ = (frame_idx_ + 1) % num_queued_frames_;
     }
 
     VkApplication::VkApplication(int argc, char * argv[])
@@ -352,7 +370,6 @@ namespace Baikal
     , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
     , swapchain_(VK_NULL_HANDLE)
     , render_pass_(VK_NULL_HANDLE)
-    , command_pool_(VK_NULL_HANDLE)
     , back_buffer_count_(0)
     , framebuffer_width_(0)
     , framebuffer_height_(0)
@@ -425,24 +442,31 @@ namespace Baikal
 
             if (vkCreateSemaphore(vk_app_render->GetDevice(), &info, nullptr, &render_complete_semaphores_[i]) != VK_SUCCESS)
                 throw std::runtime_error("VkApplication:Failed to create semaphore");
+
+            VkFenceCreateInfo fence_info = {};
+            fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            
+            if (vkCreateFence(vk_app_render->GetDevice(), &fence_info, nullptr, &fences_[i]) != VK_SUCCESS)
+                throw std::runtime_error("VkApplication:Failed to create fence");
+
+            VkCommandPoolCreateInfo command_pool_create_info = {};
+            command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            command_pool_create_info.queueFamilyIndex = vk_app_render->GetGraphicsQueueFamilyIndex();
+            command_pool_create_info.flags = 0;
+
+             if (vkCreateCommandPool(vk_app_render->GetDevice(), &command_pool_create_info, nullptr, &command_pools_[i]) != VK_SUCCESS)
+                    throw std::runtime_error("VkApplication: Failed to create command pool");
+            
+            VkCommandBufferAllocateInfo command_buffers_create_info = {};
+            command_buffers_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            command_buffers_create_info.commandPool = command_pools_[i];
+            command_buffers_create_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            command_buffers_create_info.commandBufferCount = num_queued_frames_;
+
+            if (vkAllocateCommandBuffers(vk_app_render->GetDevice(), &command_buffers_create_info, command_buffers_) != VK_SUCCESS)
+                throw std::runtime_error("VkApplication: Failed to allocate command buffers");
         }
-
-        VkCommandPoolCreateInfo command_pool_create_info = {};
-        command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        command_pool_create_info.queueFamilyIndex = vk_app_render->GetGraphicsQueueFamilyIndex();
-        command_pool_create_info.flags = 0;
-
-        if (vkCreateCommandPool(vk_app_render->GetDevice(), &command_pool_create_info, nullptr, &command_pool_) != VK_SUCCESS)
-            throw std::runtime_error("VkApplication: Failed to create command pool");
-        
-        VkCommandBufferAllocateInfo command_buffers_create_info = {};
-        command_buffers_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        command_buffers_create_info.commandPool = command_pool_;
-        command_buffers_create_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        command_buffers_create_info.commandBufferCount = num_queued_frames_;
-
-        if (vkAllocateCommandBuffers(vk_app_render->GetDevice(), &command_buffers_create_info, command_buffers_) != VK_SUCCESS)
-            throw std::runtime_error("VkApplication: Failed to allocate command buffers");
     }
 
     VkApplication::~VkApplication()
@@ -468,9 +492,9 @@ namespace Baikal
         {
             vkDestroySemaphore(device, present_semaphores_[i], nullptr);
             vkDestroySemaphore(device, render_complete_semaphores_[i], nullptr);
+            vkDestroyCommandPool(device, command_pools_[i], nullptr);
+            vkDestroyFence(device, fences_[i], nullptr);
         }
-
-        vkDestroyCommandPool(device, command_pool_, nullptr);
 
         vkDestroyRenderPass(device, render_pass_, nullptr);
         vkDestroySwapchainKHR(device, swapchain_, nullptr);
@@ -506,6 +530,8 @@ namespace Baikal
                 EndFrame(vk_app_render->GetDevice(), queue);
 
                 PresentFrame(queue);
+
+                vkDeviceWaitIdle(vk_app_render->GetDevice());
 
                 glfwPollEvents();
             }

@@ -34,14 +34,12 @@ THE SOFTWARE.
 
 namespace Baikal
 {
-    ///< Renderer implementation
+    ///< Hybrid renderer implementation
     class HybridRenderer : public Renderer<VkwScene>
     {
     public:
 
-        HybridRenderer(
-            VkDevice device
-        );
+        HybridRenderer(VkDevice device, vkw::MemoryManager& memory_manager, vkw::RenderTargetManager& render_target_manager);
 
         ~HybridRenderer() = default;
 
@@ -64,6 +62,18 @@ namespace Baikal
 
         // Set max number of light bounces
         void SetMaxBounces(std::uint32_t max_bounces);
+    protected:
+        void ResizeRenderTargets(uint32_t width, uint32_t height);
+    protected:
+        vkw::MemoryManager& memory_manager_;
+        vkw::RenderTargetManager& render_target_manager_;
+
+        vkw::RenderTarget                               g_buffer_;
+
+        std::unique_ptr<vkw::CommandBufferBuilder>      command_buffer_builder_;
+        std::unique_ptr<vkw::PipelineManager>           pipeline_manager_;
+
+        VkDevice            device_;
     };
 
 }

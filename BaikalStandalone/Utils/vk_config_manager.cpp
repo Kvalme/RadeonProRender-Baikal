@@ -209,11 +209,11 @@ void VkConfigManager::CreateConfig(VkConfig& renderers, const std::vector<const 
     VkPhysicalDevice physical_device;
         
     renderers.instance_ = CreateInstance(requested_extensions);
-    renderers.device_   = CreateDevice(renderers.instance_, compute_queue_family_index, graphics_queue_family_index, &physical_device);
+    renderers.device_   = CreateDevice(renderers.instance_.get(), compute_queue_family_index, graphics_queue_family_index, &physical_device);
     renderers.compute_queue_family_idx_ = compute_queue_family_index;
     renderers.graphics_queue_family_idx_ = graphics_queue_family_index;
     renderers.physical_device_ = physical_device;
-    renderers.factory_ = std::make_unique<Baikal::VkwRenderFactory>(renderers.device_, renderers.physical_device_, graphics_queue_family_index);
+    renderers.factory_ = std::make_unique<Baikal::VkwRenderFactory>(renderers.device_.get(), renderers.physical_device_, graphics_queue_family_index);
     renderers.controller_ = renderers.factory_->CreateSceneController();
     renderers.renderer_ = renderers.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);
 }

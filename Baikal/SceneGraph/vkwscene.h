@@ -7,6 +7,7 @@
 
 #include "math/matrix.h"
 #include "vk_scoped_object.h"
+#include "vk_texture.h"
 
 namespace Baikal
 {
@@ -21,8 +22,6 @@ namespace Baikal
         , mesh_vertex_buffer(VK_NULL_HANDLE)
         , mesh_index_buffer(VK_NULL_HANDLE)
         , ibl_skylight_diffuse(VK_NULL_HANDLE)
-        , texture_data(VK_NULL_HANDLE)
-        , texture_desc(VK_NULL_HANDLE)
         , raytrace_shape_buffer(VK_NULL_HANDLE)
         , raytrace_material_buffer(VK_NULL_HANDLE)
         , raytrace_lights_buffer(VK_NULL_HANDLE)
@@ -48,6 +47,12 @@ namespace Baikal
             MaterialConstants       material_constants;
         };
 
+        struct VkwTexture
+        {
+            vkw::VkScopedObject<VkImage> image;
+            vkw::VkScopedObject<VkImageView> image_view;
+        };
+
         vkw::VkScopedObject<VkBuffer>   lights;
         vkw::VkScopedObject<VkBuffer>   camera;
 
@@ -57,9 +62,6 @@ namespace Baikal
 
         //vkw::Texture                  ibl_skylight_reflections;
         vkw::VkScopedObject<VkBuffer>   ibl_skylight_diffuse;
-
-        vkw::VkScopedObject<VkBuffer>   texture_data;
-        vkw::VkScopedObject<VkBuffer>   texture_desc;
 
         vkw::VkScopedObject<VkBuffer>   raytrace_shape_buffer;
         vkw::VkScopedObject<VkBuffer>   raytrace_material_buffer;
@@ -74,7 +76,7 @@ namespace Baikal
         uint32_t                        light_count;
         uint32_t                        sh_count;
 
-        //std::vector<vkw::Texture>     textures;
+        std::vector<vkw::Texture>       textures;
         std::vector<VkwMesh>            meshes;
 
         std::unique_ptr<Bundle>         material_bundle;

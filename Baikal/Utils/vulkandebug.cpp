@@ -23,7 +23,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Baikal::DebugReportCallback(
         {VK_DEBUG_REPORT_INFORMATION_BIT_EXT, "Info: "},
         {VK_DEBUG_REPORT_WARNING_BIT_EXT, "Warn: "},
         {VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "Perf: "},
-        {VK_DEBUG_REPORT_DEBUG_BIT_EXT, "Debug: "}
+        {VK_DEBUG_REPORT_DEBUG_BIT_EXT, "Debug: "},
+        {VK_DEBUG_REPORT_ERROR_BIT_EXT, "Error: "}
     };
 
     auto prefix_it = vkDebugPrefix.find(flags);

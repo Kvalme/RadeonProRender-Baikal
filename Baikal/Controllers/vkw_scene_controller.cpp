@@ -252,7 +252,6 @@ namespace Baikal
     {
         // Get new buffer size
         std::size_t tex_buffer_size = tex_collector.GetNumItems();
-return;
         if (tex_buffer_size == 0)
         {
             return;
@@ -263,6 +262,9 @@ return;
         {
             out.textures.resize(tex_buffer_size);
         }
+
+        // Update material bundle first to be able to track differences
+        out.texture_bundle.reset(tex_collector.CreateBundle());
 
         // Create texture iterator
         std::unique_ptr<Iterator> tex_iter(tex_collector.CreateIterator());
@@ -354,7 +356,7 @@ return;
 
         VkFormat fmt = GetTextureFormat(texture);
 
-        vk_texture.SetTexture(&memory_manager_, size, fmt, texture.GetData());
+        vk_texture.SetTexture(device_, &memory_manager_, size, fmt, texture.GetSizeInBytes(), texture.GetData());
     }
 
     void VkwSceneController::WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const

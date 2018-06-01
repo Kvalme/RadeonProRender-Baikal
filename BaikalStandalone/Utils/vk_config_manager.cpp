@@ -81,7 +81,7 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
     debugReportCallback.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     debugReportCallback.pfnCallback = &(Baikal::DebugReportCallback);
     debugReportCallback.flags =
-        VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+    VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
 
     VkDebugReportCallbackEXT debug_report_callback_;
     vkCreateDebugReportCallbackEXT(instance, &debugReportCallback, nullptr, &debug_report_callback_);

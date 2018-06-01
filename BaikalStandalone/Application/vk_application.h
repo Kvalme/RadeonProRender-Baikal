@@ -51,7 +51,7 @@ namespace Baikal
         void EndFrame(VkDevice device, VkQueue queue);
         void PresentFrame(VkQueue queue);
     private:
-        static const uint32_t       num_queued_frames_ = 2;
+        static const uint32_t       num_queued_frames_ = 16;
         static const uint32_t       num_max_back_buffers = 16;
         
         uint32_t                    frame_idx_;

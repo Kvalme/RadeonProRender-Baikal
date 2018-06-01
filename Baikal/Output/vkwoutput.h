@@ -31,6 +31,11 @@ namespace Baikal
         {
         }
         
+        vkw::RenderTarget& GetRenderTarget() 
+        {
+            return render_target_;
+        };
+
     private:
         vkw::RenderTarget   render_target_;
     };

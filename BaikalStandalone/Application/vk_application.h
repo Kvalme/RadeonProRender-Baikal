@@ -55,6 +55,7 @@ namespace Baikal
         static const uint32_t       num_max_back_buffers = 16;
         
         uint32_t                    frame_idx_;
+        uint32_t                    back_buffer_indices_[num_queued_frames_];
 
         uint32_t                    framebuffer_width_;
         uint32_t                    framebuffer_height_;
@@ -74,8 +75,9 @@ namespace Baikal
 
         uint32_t                    back_buffer_count_;
 
-        VkCommandPool               command_pool_;
+        VkCommandPool               command_pools_[num_queued_frames_];
         VkCommandBuffer             command_buffers_[num_queued_frames_];
+        VkFence                     fences_[num_queued_frames_];
         VkSemaphore                 present_semaphores_[num_queued_frames_];
         VkSemaphore                 render_complete_semaphores_[num_queued_frames_];
     };

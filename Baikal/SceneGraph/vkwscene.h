@@ -47,12 +47,6 @@ namespace Baikal
             MaterialConstants       material_constants;
         };
 
-        struct VkwTexture
-        {
-            vkw::VkScopedObject<VkImage> image;
-            vkw::VkScopedObject<VkImageView> image_view;
-        };
-
         vkw::VkScopedObject<VkBuffer>   lights;
         vkw::VkScopedObject<VkBuffer>   camera;
 

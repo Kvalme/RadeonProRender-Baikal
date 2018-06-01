@@ -542,9 +542,7 @@ namespace Baikal
                 EndFrame(vk_app_render->GetDevice(), queue);
 
                 PresentFrame(queue);
-
-                vkDeviceWaitIdle(vk_app_render->GetDevice());
-
+                
                 glfwPollEvents();
             }
 

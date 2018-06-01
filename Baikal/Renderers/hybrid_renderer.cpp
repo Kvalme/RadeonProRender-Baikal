@@ -6,9 +6,9 @@
 namespace Baikal
 {
     HybridRenderer::HybridRenderer(VkDevice device, vkw::MemoryManager& memory_manager, vkw::RenderTargetManager& render_target_manager)
-    : device_(device)
-    , memory_manager_(memory_manager)
+    : memory_manager_(memory_manager)
     , render_target_manager_(render_target_manager)
+    , device_(device)
     {
         uint32_t graphics_family_idx = 0;
 
@@ -24,7 +24,7 @@ namespace Baikal
 
     void HybridRenderer::Render(VkwScene const& scene)
     {
-        Output* output = GetOutput(OutputType::kColor);
+/*        Output* output = GetOutput(OutputType::kColor);
         
         if (output == nullptr)
             throw std::runtime_error("HybridRenderer: output buffer is not set");
@@ -45,7 +45,7 @@ namespace Baikal
         command_buffer_builder_->BeginRenderPass(clear_values, output_rt);
         command_buffer_builder_->EndRenderPass();
 
-        vkw::CommandBuffer cmd_buffer = command_buffer_builder_->EndCommandBuffer();
+        vkw::CommandBuffer cmd_buffer = command_buffer_builder_->EndCommandBuffer();*/
     }
     
     void HybridRenderer::RenderTile(VkwScene const& scene,

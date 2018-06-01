@@ -324,7 +324,6 @@ namespace Baikal
 
     void VkApplication::EndFrame(VkDevice device, VkQueue queue)
     {
-        VkResult err;
         vkCmdEndRenderPass(command_buffers_[frame_idx_]);
 
         VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -344,8 +343,6 @@ namespace Baikal
 
         if(vkQueueSubmit(queue, 1, &submit_info, fences_[frame_idx_]) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Failed to submit queue");
-        if (err != VK_SUCCESS)
-            throw std::runtime_error("VkApplication: Failed EndFrame");
     }
 
     void VkApplication::PresentFrame(VkQueue queue)
@@ -376,7 +373,6 @@ namespace Baikal
     , render_pass_(VK_NULL_HANDLE)
     , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
     , back_buffer_count_(0)
-    , command_pool_(VK_NULL_HANDLE)
     {
         if (glfwInit() != GL_TRUE)
         {

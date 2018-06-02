@@ -156,6 +156,12 @@ namespace Baikal
         if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, window_surface_, &caps) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Can't get physical device surface caps");
 
+		VkBool32 supported;
+		vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, 0, window_surface_, &supported);
+
+		if (supported != VK_TRUE)
+			throw std::runtime_error("VkApplication: Error no WSI support on physical device");
+
         if (caps.maxImageCount > 0)
             swap_chain_create_info.minImageCount = (caps.minImageCount + 2 < caps.maxImageCount) ? (caps.minImageCount + 2) : caps.maxImageCount;
         else
@@ -189,8 +195,7 @@ namespace Baikal
 
         if (old_swapchain != VK_NULL_HANDLE)
             vkDestroySwapchainKHR(device, old_swapchain, nullptr);
-
-        
+      
         VkAttachmentDescription attachment = {};
         attachment.format = window_surface_format_.format;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -297,6 +302,9 @@ namespace Baikal
             }
         }
 
+		if (vkResetCommandPool(device, command_pools_[frame_idx_], 0))
+			throw std::runtime_error("VkApplication: Failed to reset command pool");
+
         VkCommandBufferBeginInfo command_buffer_begin_info = {};
         command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         command_buffer_begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -397,6 +405,14 @@ namespace Baikal
 
         try
         {
+			std::uint32_t glfw_required_extensions_count;
+			const char **glfw_required_extensions = glfwGetRequiredInstanceExtensions(&glfw_required_extensions_count);
+			m_settings.vk_required_extensions.clear();
+			for (auto a = 0U; a < glfw_required_extensions_count; ++a)
+			{
+				m_settings.vk_required_extensions.push_back(glfw_required_extensions[a]);
+			}
+
             app_render_.reset(new AppVkRender(m_settings));
             
             glfwSetMouseButtonCallback(m_window, Application::OnMouseButton);

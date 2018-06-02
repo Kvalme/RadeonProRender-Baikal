@@ -42,9 +42,6 @@ namespace Baikal
             { 0.0f, 0.0f, 0.0f, 0.0f } // color
         };
 
-        command_buffer_builder_->BeginRenderPass(clear_values, output_rt);
-        command_buffer_builder_->EndRenderPass();
-
         vkw::CommandBuffer cmd_buffer = command_buffer_builder_->EndCommandBuffer();
     }
     

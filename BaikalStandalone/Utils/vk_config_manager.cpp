@@ -24,9 +24,13 @@ THE SOFTWARE.
 #include "RenderFactory/render_factory.h"
 #include "Controllers/vkw_scene_controller.h"
 
+#ifndef NDEBUG
+#include "Utils/vulkandebug.h"
+#endif
+
 #ifndef APP_BENCHMARK
 
-vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance()
+vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vector<const char*> &requested_extensions)
 {
     VkApplicationInfo app_info;
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -37,17 +41,27 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance()
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION_1_0;
     
-    const char* instance_extensions[2] = {"VK_KHR_surface", "VK_MVK_macos_surface"};
+	std::vector<const char*> extensions(requested_extensions);
+	std::vector<const char*> layers;
+#ifndef NDEBUG
+#ifndef __APPLE__
+
+	extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	layers.push_back(Baikal::VK_LAYER_LUNARG_parameter_validation_name);
+	layers.push_back(Baikal::VK_LAYER_LUNARG_standard_validation_name);
+
+#endif
+#endif
 
     VkInstanceCreateInfo instance_info;
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_info.pNext = NULL;
     instance_info.flags = 0;
     instance_info.pApplicationInfo = &app_info;
-    instance_info.enabledExtensionCount = 2;
-    instance_info.ppEnabledExtensionNames = instance_extensions;
-    instance_info.enabledLayerCount = 0;
-    instance_info.ppEnabledLayerNames = NULL;
+    instance_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    instance_info.ppEnabledExtensionNames = extensions.data();
+    instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
+    instance_info.ppEnabledLayerNames = layers.data();
     
     VkInstance instance = nullptr;
     VkResult res = vkCreateInstance(&instance_info, nullptr, &instance);
@@ -136,7 +150,7 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pNext = nullptr;
     device_create_info.flags = 0;
-    device_create_info.queueCreateInfoCount = queue_create_infos.size();
+    device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
     device_create_info.pQueueCreateInfos = queue_create_infos.data();
     device_create_info.enabledLayerCount = 0u;
     device_create_info.ppEnabledLayerNames = nullptr;
@@ -164,19 +178,19 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
                                     });
 }
 
-void VkConfigManager::CreateConfig(VkConfig& renderers)
+void VkConfigManager::CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions)
 {
     uint32_t compute_queue_family_index = -1;
     uint32_t graphics_queue_family_index = -1;
 
     VkPhysicalDevice physical_device;
         
-    renderers.instance_ = CreateInstance();
-    renderers.device_   = CreateDevice(renderers.instance_, compute_queue_family_index, graphics_queue_family_index, &physical_device);
+    renderers.instance_ = CreateInstance(requested_extensions);
+    renderers.device_   = CreateDevice(renderers.instance_.get(), compute_queue_family_index, graphics_queue_family_index, &physical_device);
     renderers.compute_queue_family_idx_ = compute_queue_family_index;
     renderers.graphics_queue_family_idx_ = graphics_queue_family_index;
     renderers.physical_device_ = physical_device;
-    renderers.factory_ = std::make_unique<Baikal::VkwRenderFactory>(renderers.device_, renderers.physical_device_, graphics_queue_family_index);
+    renderers.factory_ = std::make_unique<Baikal::VkwRenderFactory>(renderers.device_.get(), renderers.physical_device_, graphics_queue_family_index);
     renderers.controller_ = renderers.factory_->CreateSceneController();
     renderers.renderer_ = renderers.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);
 }

@@ -44,6 +44,9 @@ namespace Baikal
     {
         // TODO: Implement
         assert(0);
+
+		std::unique_ptr<PostEffect> post_effect;
+		return post_effect;
     }
 
     std::unique_ptr<SceneController<VkwScene>> VkwRenderFactory::CreateSceneController() const

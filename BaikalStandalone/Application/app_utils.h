@@ -91,6 +91,8 @@ namespace Baikal
         int num_shadow_rays;
         int samplecount;
         float envmapmul;
+		// Vulkan required extensions list
+		std::vector<const char*> vk_required_extensions;
     };
 
     class AppCliParser

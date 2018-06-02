@@ -34,7 +34,7 @@ namespace Baikal
 
     void AppVkRender::InitVk(AppSettings& settings)
     {
-        VkConfigManager::CreateConfig(m_cfg);
+        VkConfigManager::CreateConfig(m_cfg, settings.vk_required_extensions);
 
         m_output.output = m_cfg.factory_->CreateOutput(settings.width, settings.height);
         m_output.fdata.resize(settings.width * settings.height);
@@ -100,12 +100,13 @@ namespace Baikal
 
     std::future<int> AppVkRender::GetShapeId(std::uint32_t x, std::uint32_t y)
     {
-
+		m_promise = std::promise<int>();
+		return m_promise.get_future();
     }
 
     Baikal::Shape::Ptr AppVkRender::GetShapeById(int shape_id)
     {
-
+		return nullptr;
     }
 
 } // Baikal

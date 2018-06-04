@@ -55,7 +55,7 @@ public:
         std::vector<CLWPlatform> platforms;
 
         ASSERT_NO_THROW(CLWPlatform::CreateAllPlatforms(platforms));
-        ASSERT_GT(platforms.size(), 0);
+        ASSERT_GT(platforms.size(), 0u);
 
         char* device_index_option = GetCmdOption(g_argv, g_argv + g_argc, "-device");
         char* platform_index_option = GetCmdOption(g_argv, g_argv + g_argc, "-platform");
@@ -108,7 +108,7 @@ public:
             }
         }
 
-        ASSERT_LT(platform_index, platforms.size());
+        ASSERT_LT((std::size_t)platform_index, platforms.size());
         ASSERT_LT((std::uint32_t)device_index, platforms[platform_index].GetDeviceCount());
 
         auto platform = platforms[platform_index];
@@ -119,6 +119,7 @@ public:
         ASSERT_NO_THROW(m_renderer = m_factory->CreateRenderer(Baikal::ClwRenderFactory::RendererType::kUnidirectionalPathTracer));
         ASSERT_NO_THROW(m_controller = m_factory->CreateSceneController());
         ASSERT_NO_THROW(m_output = m_factory->CreateOutput(kOutputWidth, kOutputHeight));
+        m_output->Clear(RadeonRays::float3(0.0f));
         ASSERT_NO_THROW(m_renderer->SetOutput(Baikal::Renderer::OutputType::kColor, m_output.get()));
 
         ASSERT_NO_THROW(LoadTestScene());

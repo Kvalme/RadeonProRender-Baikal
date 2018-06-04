@@ -100,13 +100,13 @@ namespace Baikal
 
     std::future<int> AppVkRender::GetShapeId(std::uint32_t x, std::uint32_t y)
     {
-		m_promise = std::promise<int>();
-		return m_promise.get_future();
+        m_promise = std::promise<int>();
+        return m_promise.get_future();
     }
 
     Baikal::Shape::Ptr AppVkRender::GetShapeById(int shape_id)
     {
-		return nullptr;
+        return nullptr;
     }
 
 } // Baikal

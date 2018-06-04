@@ -62,9 +62,9 @@ private:
     static vkw::VkScopedObject<VkInstance> CreateInstance(const std::vector<const char*> &requested_extensions);
 
     static vkw::VkScopedObject<VkDevice> CreateDevice(VkInstance instance
-                                                , std::uint32_t& compute_queue_family_index
-                                                , std::uint32_t& graphics_queue_family_index
-                                                , VkPhysicalDevice* opt_physical_device = nullptr);
+        , std::uint32_t& compute_queue_family_index
+        , std::uint32_t& graphics_queue_family_index
+        , VkPhysicalDevice* opt_physical_device = nullptr);
 };
 
 #endif // VK_CONFIG_MANAGER_H

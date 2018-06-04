@@ -52,7 +52,7 @@ namespace Baikal
         if (format_count == 1)
         {
             // VK_FORMAT_UNDEFINED means that any format is available
-            if( surface_formats[0].format == VK_FORMAT_UNDEFINED )
+            if (surface_formats[0].format == VK_FORMAT_UNDEFINED)
             {
                 window_surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
                 window_surface_format.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
@@ -100,12 +100,12 @@ namespace Baikal
         std::vector<VkPresentModeKHR> present_modes(present_mode_count);
 
         vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, window_surface_, &present_mode_count, present_modes.data());
-        
+
         bool found = false;
 
         present_mode = default_present_mode_;
 
-        for (auto mode : present_modes) 
+        for (auto mode : present_modes)
         {
             if (mode == default_present_mode_)
             {
@@ -156,11 +156,11 @@ namespace Baikal
         if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, window_surface_, &caps) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Can't get physical device surface caps");
 
-		VkBool32 supported;
-		vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, 0, window_surface_, &supported);
+        VkBool32 supported;
+        vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, 0, window_surface_, &supported);
 
-		if (supported != VK_TRUE)
-			throw std::runtime_error("VkApplication: Error no WSI support on physical device");
+        if (supported != VK_TRUE)
+            throw std::runtime_error("VkApplication: Error no WSI support on physical device");
 
         if (caps.maxImageCount > 0)
             swap_chain_create_info.minImageCount = (caps.minImageCount + 2 < caps.maxImageCount) ? (caps.minImageCount + 2) : caps.maxImageCount;
@@ -190,12 +190,12 @@ namespace Baikal
         if (vkGetSwapchainImagesKHR(device, swapchain_, &back_buffer_count_, NULL) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Can't retrieve swapchain image count");
 
-        if(vkGetSwapchainImagesKHR(device, swapchain_, &back_buffer_count_, back_buffer_images_) != VK_SUCCESS)
+        if (vkGetSwapchainImagesKHR(device, swapchain_, &back_buffer_count_, back_buffer_images_) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Can't retrieve swapchain images");
 
         if (old_swapchain != VK_NULL_HANDLE)
             vkDestroySwapchainKHR(device, old_swapchain, nullptr);
-      
+
         VkAttachmentDescription attachment = {};
         attachment.format = window_surface_format_.format;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -234,7 +234,7 @@ namespace Baikal
 
         if (vkCreateRenderPass(device, &render_pass_create_info, nullptr, &render_pass_) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Can't create render pass");
-    
+
         VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
         VkImageViewCreateInfo image_view_create_info = {};
@@ -269,7 +269,7 @@ namespace Baikal
         for (uint32_t i = 0; i < back_buffer_count_; i++)
         {
             view_attachment[0] = back_buffer_views_[i];
-            
+
             if (vkCreateFramebuffer(device, &frame_buffer_create_info, nullptr, &framebuffers_[i]) != VK_SUCCESS)
                 throw std::runtime_error("VkApplication: Can't create image view");
         }
@@ -280,16 +280,16 @@ namespace Baikal
         for (;;)
         {
             VkResult r = vkWaitForFences(device, 1, &fences_[frame_idx_], VK_TRUE, std::numeric_limits<uint64_t>::max());
-            
+
             if (r == VK_SUCCESS) break;
             if (r == VK_TIMEOUT) continue;
         }
-        
+
 
         vkResetFences(device, 1, &fences_[frame_idx_]);
 
         VkResult r = vkAcquireNextImageKHR(device, swapchain_, UINT64_MAX, present_semaphores_[frame_idx_], VK_NULL_HANDLE, &back_buffer_indices_[frame_idx_]);
-        
+
         if (r != VK_SUCCESS)
         {
             if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR)
@@ -302,8 +302,8 @@ namespace Baikal
             }
         }
 
-		if (vkResetCommandPool(device, command_pools_[frame_idx_], 0))
-			throw std::runtime_error("VkApplication: Failed to reset command pool");
+        if (vkResetCommandPool(device, command_pools_[frame_idx_], 0))
+            throw std::runtime_error("VkApplication: Failed to reset command pool");
 
         VkCommandBufferBeginInfo command_buffer_begin_info = {};
         command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -336,7 +336,7 @@ namespace Baikal
         vkCmdEndRenderPass(command_buffers_[frame_idx_]);
 
         VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                
+
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.waitSemaphoreCount = 1;
@@ -347,10 +347,10 @@ namespace Baikal
         submit_info.signalSemaphoreCount = 1;
         submit_info.pSignalSemaphores = &render_complete_semaphores_[frame_idx_];
 
-        if(vkEndCommandBuffer(command_buffers_[frame_idx_]) != VK_SUCCESS)
+        if (vkEndCommandBuffer(command_buffers_[frame_idx_]) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Failed to end command buffer");
 
-        if(vkQueueSubmit(queue, 1, &submit_info, fences_[frame_idx_]) != VK_SUCCESS)
+        if (vkQueueSubmit(queue, 1, &submit_info, fences_[frame_idx_]) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Failed to submit queue");
     }
 
@@ -368,20 +368,20 @@ namespace Baikal
 
         if (vkQueuePresentKHR(queue, &info) != VK_SUCCESS)
             throw std::runtime_error("VkApplication: Failed PresentFrame");
-        
+
         frame_idx_ = (frame_idx_ + 1) % num_queued_frames_;
     }
 
     VkApplication::VkApplication(int argc, char * argv[])
-    : Application()
-    , window_surface_(VK_NULL_HANDLE)
-    , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
-    , swapchain_(VK_NULL_HANDLE)
-    , render_pass_(VK_NULL_HANDLE)
-    , back_buffer_count_(0)
-    , framebuffer_width_(0)
-    , framebuffer_height_(0)
-    , frame_idx_(0)
+        : Application()
+        , window_surface_(VK_NULL_HANDLE)
+        , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
+        , swapchain_(VK_NULL_HANDLE)
+        , render_pass_(VK_NULL_HANDLE)
+        , back_buffer_count_(0)
+        , framebuffer_width_(0)
+        , framebuffer_height_(0)
+        , frame_idx_(0)
     {
         if (glfwInit() != GL_TRUE)
         {
@@ -405,16 +405,16 @@ namespace Baikal
 
         try
         {
-			std::uint32_t glfw_required_extensions_count;
-			const char **glfw_required_extensions = glfwGetRequiredInstanceExtensions(&glfw_required_extensions_count);
-			m_settings.vk_required_extensions.clear();
-			for (auto a = 0U; a < glfw_required_extensions_count; ++a)
-			{
-				m_settings.vk_required_extensions.push_back(glfw_required_extensions[a]);
-			}
+            std::uint32_t glfw_required_extensions_count;
+            const char **glfw_required_extensions = glfwGetRequiredInstanceExtensions(&glfw_required_extensions_count);
+            m_settings.vk_required_extensions.clear();
+            for (auto a = 0U; a < glfw_required_extensions_count; ++a)
+            {
+                m_settings.vk_required_extensions.push_back(glfw_required_extensions[a]);
+            }
 
             app_render_.reset(new AppVkRender(m_settings));
-            
+
             glfwSetMouseButtonCallback(m_window, Application::OnMouseButton);
             glfwSetCursorPosCallback(m_window, Application::OnMouseMove);
             glfwSetKeyCallback(m_window, Application::OnKey);
@@ -428,7 +428,7 @@ namespace Baikal
         }
 
         AppVkRender* vk_app_render = dynamic_cast<AppVkRender*>(app_render_.get());
-        
+
         if (vk_app_render == nullptr)
         {
             throw std::runtime_error("VkApplication: Internal error");
@@ -462,7 +462,7 @@ namespace Baikal
             VkFenceCreateInfo fence_info = {};
             fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            
+
             if (vkCreateFence(vk_app_render->GetDevice(), &fence_info, nullptr, &fences_[i]) != VK_SUCCESS)
                 throw std::runtime_error("VkApplication:Failed to create fence");
 
@@ -471,9 +471,9 @@ namespace Baikal
             command_pool_create_info.queueFamilyIndex = vk_app_render->GetGraphicsQueueFamilyIndex();
             command_pool_create_info.flags = 0;
 
-             if (vkCreateCommandPool(vk_app_render->GetDevice(), &command_pool_create_info, nullptr, &command_pools_[i]) != VK_SUCCESS)
-                    throw std::runtime_error("VkApplication: Failed to create command pool");
-            
+            if (vkCreateCommandPool(vk_app_render->GetDevice(), &command_pool_create_info, nullptr, &command_pools_[i]) != VK_SUCCESS)
+                throw std::runtime_error("VkApplication: Failed to create command pool");
+
             VkCommandBufferAllocateInfo command_buffers_create_info = {};
             command_buffers_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
             command_buffers_create_info.commandPool = command_pools_[i];
@@ -497,7 +497,7 @@ namespace Baikal
 
         VkDevice    device = vk_app_render->GetDevice();
         VkInstance  instance = vk_app_render->GetInstance();
-        
+
         for (uint32_t i = 0; i < back_buffer_count_; i++)
         {
             vkDestroyImageView(device, back_buffer_views_[i], nullptr);
@@ -525,7 +525,7 @@ namespace Baikal
         try
         {
             AppVkRender* vk_app_render = dynamic_cast<AppVkRender*>(app_render_.get());
-        
+
             if (vk_app_render == nullptr)
             {
                 throw std::runtime_error("VkApplication: Internal error");
@@ -534,19 +534,19 @@ namespace Baikal
             vk_app_render->StartRenderThreads();
 
             static bool update = true;
-            
+
             VkQueue queue;
             vkGetDeviceQueue(vk_app_render->GetDevice(), vk_app_render->GetGraphicsQueueFamilyIndex(), 0, &queue);
 
             while (!glfwWindowShouldClose(m_window))
             {
                 Update(update);
-                
+
                 PrepareFrame(vk_app_render->GetDevice(), vk_app_render->GetPhysicalDevice());
                 EndFrame(vk_app_render->GetDevice(), queue);
 
                 PresentFrame(queue);
-                
+
                 glfwPollEvents();
             }
 

@@ -39,7 +39,7 @@ namespace Baikal
     public:
         VkApplication(int argc, char * argv[]);
         virtual ~VkApplication();
-        
+
         void Run();
     private:
         void SaveToFile(std::chrono::high_resolution_clock::time_point time) const;
@@ -53,7 +53,7 @@ namespace Baikal
     private:
         static const uint32_t       num_queued_frames_ = 2;
         static const uint32_t       num_max_back_buffers = 16;
-        
+
         uint32_t                    frame_idx_;
         uint32_t                    back_buffer_indices_[num_queued_frames_];
 

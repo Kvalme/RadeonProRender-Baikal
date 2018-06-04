@@ -20,12 +20,12 @@
  THE SOFTWARE.
  ********************************************************************/
 
-/**
- \file vkw_scene_controller.h
- \author Dmytro Rubalskyi
- \version 1.0
- \brief Contains VkSceneController class implementation.
- */
+ /**
+  \file vkw_scene_controller.h
+  \author Dmytro Rubalskyi
+  \version 1.0
+  \brief Contains VkSceneController class implementation.
+  */
 #pragma once
 
 #include "scene_controller.h"

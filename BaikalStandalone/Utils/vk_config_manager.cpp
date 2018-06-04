@@ -40,15 +40,15 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
     app_info.pEngineName = "BaikalStandalone";
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION_1_0;
-    
-	std::vector<const char*> extensions(requested_extensions);
-	std::vector<const char*> layers;
+
+    std::vector<const char*> extensions(requested_extensions);
+    std::vector<const char*> layers;
 #ifndef NDEBUG
 #ifndef __APPLE__
 
-	extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-	layers.push_back(Baikal::VK_LAYER_LUNARG_parameter_validation_name);
-	layers.push_back(Baikal::VK_LAYER_LUNARG_standard_validation_name);
+    extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    layers.push_back(Baikal::VK_LAYER_LUNARG_parameter_validation_name);
+    layers.push_back(Baikal::VK_LAYER_LUNARG_standard_validation_name);
 
 #endif
 #endif
@@ -62,7 +62,7 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
     instance_info.ppEnabledExtensionNames = extensions.data();
     instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
     instance_info.ppEnabledLayerNames = layers.data();
-    
+
     VkInstance instance = nullptr;
     VkResult res = vkCreateInstance(&instance_info, nullptr, &instance);
     if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
@@ -73,39 +73,39 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
     {
         throw std::runtime_error("Unknown error\n");
     }
-    
+
     return vkw::VkScopedObject<VkInstance>(instance,
-                                      [](VkInstance instance)
-                                      {
-                                          vkDestroyInstance(instance, nullptr);
-                                      });
+        [](VkInstance instance)
+    {
+        vkDestroyInstance(instance, nullptr);
+    });
 }
 
 vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
-                                            , std::uint32_t& compute_queue_family_index
-                                            , std::uint32_t& graphics_queue_family_index
-                                            , VkPhysicalDevice* opt_physical_device)
+    , std::uint32_t& compute_queue_family_index
+    , std::uint32_t& graphics_queue_family_index
+    , VkPhysicalDevice* opt_physical_device)
 {
     // Enumerate devices
     auto gpu_count = 0u;
     auto res = vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
-    
+
     if (gpu_count == 0)
     {
         throw std::runtime_error("No compatible devices found\n");
     }
-    
+
     std::vector<VkPhysicalDevice> gpus(gpu_count);
     res = vkEnumeratePhysicalDevices(instance, &gpu_count, gpus.data());
-    
+
     auto queue_family_count = 0u;
     vkGetPhysicalDeviceQueueFamilyProperties(gpus[0], &queue_family_count, nullptr);
-    
+
     std::vector<VkQueueFamilyProperties> queue_props(queue_family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(gpus[0], &queue_family_count, queue_props.data());
-    
+
     // Look for a queue supporting
-    uint32_t queue_family_idx[2] = {0xFFFFFFFF, 0xFFFFFFFF};
+    uint32_t queue_family_idx[2] = { 0xFFFFFFFF, 0xFFFFFFFF };
 
     for (unsigned int i = 0; i < queue_family_count; i++)
     {
@@ -119,7 +119,7 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
             queue_family_idx[1] = i;
         }
     }
-    
+
     if (queue_family_idx[0] == 0xFFFFFFFF || queue_family_idx[1] == 0xFFFFFFFF)
     {
         throw std::runtime_error("No graphics/compute queues found\n");
@@ -129,9 +129,9 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
     compute_queue_family_index = queue_family_idx[1];
 
     uint32_t queue_count = queue_family_idx[0] == queue_family_idx[1] ? 1 : 2;
-    
+
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos(queue_count);
-    
+
     float queue_priority = 0.f;
     for (size_t i = 0; i < queue_create_infos.size(); i++)
     {
@@ -142,7 +142,7 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
         queue_create_infos[i].pQueuePriorities = &queue_priority;
         queue_create_infos[i].queueFamilyIndex = queue_family_idx[i];
     }
-    
+
     int device_extension_count = 1;
     const char* device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
@@ -157,25 +157,25 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
     device_create_info.enabledExtensionCount = device_extension_count;
     device_create_info.ppEnabledExtensionNames = device_extensions;
     device_create_info.pEnabledFeatures = nullptr;
-    
+
     VkDevice device = nullptr;
     res = vkCreateDevice(gpus[0], &device_create_info, nullptr, &device);
-    
+
     if (res != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create Vulkan device\n");
     }
-    
+
     if (opt_physical_device)
     {
         *opt_physical_device = gpus[0];
     }
-    
+
     return vkw::VkScopedObject<VkDevice>(device,
-                                    [](VkDevice device)
-                                    {
-                                        vkDestroyDevice(device, nullptr);
-                                    });
+        [](VkDevice device)
+    {
+        vkDestroyDevice(device, nullptr);
+    });
 }
 
 void VkConfigManager::CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions)
@@ -184,9 +184,9 @@ void VkConfigManager::CreateConfig(VkConfig& renderers, const std::vector<const 
     uint32_t graphics_queue_family_index = -1;
 
     VkPhysicalDevice physical_device;
-        
+
     renderers.instance_ = CreateInstance(requested_extensions);
-    renderers.device_   = CreateDevice(renderers.instance_.get(), compute_queue_family_index, graphics_queue_family_index, &physical_device);
+    renderers.device_ = CreateDevice(renderers.instance_.get(), compute_queue_family_index, graphics_queue_family_index, &physical_device);
     renderers.compute_queue_family_idx_ = compute_queue_family_index;
     renderers.graphics_queue_family_idx_ = graphics_queue_family_index;
     renderers.physical_device_ = physical_device;

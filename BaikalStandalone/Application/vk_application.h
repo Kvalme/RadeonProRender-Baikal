@@ -80,5 +80,15 @@ namespace Baikal
         VkFence                     fences_[num_queued_frames_];
         VkSemaphore                 present_semaphores_[num_queued_frames_];
         VkSemaphore                 render_complete_semaphores_[num_queued_frames_];
+
+        vkw::VkScopedObject<VkBuffer>       fullscreen_quad_vb_;
+        vkw::VkScopedObject<VkBuffer>       fullscreen_quad_ib_;
+        vkw::VkScopedObject<VkSampler>      sampler_;
+
+
+        vkw::Shader                         fsq_vert_shader_;
+        vkw::Shader                         output_frag_shader_;
+
+        vkw::GraphicsPipeline               output_pipeline_;
     };
 }

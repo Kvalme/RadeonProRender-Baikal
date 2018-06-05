@@ -70,11 +70,14 @@ namespace Baikal
         VkInstance          GetInstance() { return m_cfg.instance_.get(); }
         VkPhysicalDevice    GetPhysicalDevice() { return m_cfg.physical_device_; }
         uint32_t            GetGraphicsQueueFamilyIndex() { return m_cfg.graphics_queue_family_idx_; }
-#ifdef ENABLE_DENOISER
-        // Denoiser
-        void SetDenoiserFloatParam(const std::string& name, const float4& value);
-        float4 GetDenoiserFloatParam(const std::string& name);
-#endif
+        Output*             GetRendererOutput() { return m_output.output.get(); }
+        
+        vkw::MemoryManager& GetMemoryManager() { return *m_cfg.memory_manager_; }
+        vkw::ShaderManager& GetShaderManager() { return *m_cfg.shader_manager_; }
+        vkw::RenderTargetManager& GetRenderTargetManager() { return *m_cfg.render_target_manager_; }
+        vkw::PipelineManager& GetPipelineManager() { return *m_cfg.pipeline_manager_; }
+        vkw::Utils& GetUtils() { return *m_cfg.utils_; }
+
         std::future<int> GetShapeId(std::uint32_t x, std::uint32_t y);
         Baikal::Shape::Ptr GetShapeById(int shape_id);
     private:

@@ -46,6 +46,15 @@ public:
         vkw::VkScopedObject<VkInstance> instance_;
         vkw::VkScopedObject<VkDevice>   device_;
 
+        std::unique_ptr<vkw::MemoryAllocator>       memory_allocator_;
+        std::unique_ptr<vkw::MemoryManager>         memory_manager_;
+        std::unique_ptr<vkw::RenderTargetManager>   render_target_manager_;
+        std::unique_ptr<vkw::ShaderManager>         shader_manager_;
+        std::unique_ptr<vkw::DescriptorManager>     descriptor_manager_;
+        std::unique_ptr<vkw::PipelineManager>       pipeline_manager_;
+        std::unique_ptr<vkw::Utils>                 utils_;
+
+
         std::unique_ptr<Baikal::RenderFactory<Baikal::VkwScene>> factory_;
         std::unique_ptr<Baikal::Renderer<Baikal::VkwScene>> renderer_;
         std::unique_ptr<Baikal::SceneController<Baikal::VkwScene>> controller_;

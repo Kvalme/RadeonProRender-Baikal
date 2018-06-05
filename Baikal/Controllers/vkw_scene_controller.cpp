@@ -23,28 +23,27 @@ using namespace RadeonRays;
 
 namespace Baikal
 {
-    // Convert Light:: types to VkwScene:: types
     static int GetLightType(Light const& light)
     {
         if (dynamic_cast<PointLight const*>(&light))
         {
-            return VkwScene::kPoint;
+            return kPoint;
         }
         else if (dynamic_cast<DirectionalLight const*>(&light))
         {
-            return VkwScene::kDirectional;
+            return kDirectional;
         }
         else if (dynamic_cast<SpotLight const*>(&light))
         {
-            return VkwScene::kSpot;
+            return kSpot;
         }
         else if (dynamic_cast<ImageBasedLight const*>(&light))
         {
-            return VkwScene::kIbl;
+            return kIbl;
         }
         else
         {
-            return VkwScene::kArea;
+            return kArea;
         }
     }
 
@@ -100,7 +99,7 @@ namespace Baikal
 
         const matrix view_proj = proj * view;
 
-        VkwScene::Camera camera_internal;
+        VkCamera camera_internal;
         camera_internal.camera_position = camera->GetPosition();
         camera_internal.view_projection = view_proj;
         camera_internal.inv_view = inverse(view);
@@ -109,12 +108,12 @@ namespace Baikal
         if (out.camera == VK_NULL_HANDLE)
         {
             out.camera.reset();
-            out.camera = memory_manager_.CreateBuffer(sizeof(VkwScene::Camera),
+            out.camera = memory_manager_.CreateBuffer(sizeof(VkCamera),
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &camera_internal);
         }
 
-        memory_manager_.WriteBuffer(out.camera.get(), 0u, sizeof(VkwScene::Camera), &camera_internal);
+        memory_manager_.WriteBuffer(out.camera.get(), 0u, sizeof(VkCamera), &camera_internal);
     }
 
     void VkwSceneController::UpdateShapes(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const
@@ -140,7 +139,7 @@ namespace Baikal
                 continue;
 
             // TODO: desc sets and roughness, metallic, diffuse
-            VkwScene::MaterialConstants constants;
+            VkMaterialConstants constants;
             constants.data[0] = mat_id++;
 
             VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), VK_NULL_HANDLE, constants };
@@ -264,7 +263,7 @@ namespace Baikal
     {
         auto num_lights = scene.GetNumLights();
 
-        std::vector<VkwScene::Light> lights_internal(static_cast<size_t>(num_lights));
+        std::vector<VkLight> lights_internal(static_cast<size_t>(num_lights));
 
         std::unique_ptr<Iterator> light_iter(scene.CreateLightIterator());
 
@@ -276,9 +275,9 @@ namespace Baikal
 
             switch (light_type)
             {
-            case VkwScene::kSpot:
+            case kSpot:
             {
-                VkwScene::Light spot_light = { light->GetPosition(), light->GetDirection(), light->GetEmittedRadiance() };
+                VkLight spot_light = { light->GetPosition(), light->GetDirection(), light->GetEmittedRadiance() };
                 lights_internal.push_back(spot_light);
 
                 break;
@@ -295,14 +294,14 @@ namespace Baikal
         {
             out.lights.reset();
 
-            out.lights = memory_manager_.CreateBuffer(sizeof(VkwScene::Light) * num_lights,
+            out.lights = memory_manager_.CreateBuffer(sizeof(VkLight) * num_lights,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &lights_internal);
         }
 
         out.light_count = num_lights;
 
-        memory_manager_.WriteBuffer(out.lights.get(), 0u, sizeof(VkwScene::Light) * num_lights, &lights_internal);
+        memory_manager_.WriteBuffer(out.lights.get(), 0u, sizeof(VkLight) * num_lights, &lights_internal);
     }
 
     void VkwSceneController::WriteTexture(Texture const& texture, std::size_t data_offset, void* data) const

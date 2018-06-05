@@ -12,6 +12,8 @@ namespace Baikal
 {
     using namespace RadeonRays;
 
+    #include "Kernels/VK/common.glsl"
+
     struct VkwScene
     {
         VkwScene() 
@@ -35,17 +37,13 @@ namespace Baikal
         , index_count(0)
         {}
 
-        typedef matrix mat4;
-
-        #include "Kernels/VK/common.glsl"
-
         struct VkwMesh
         {
             uint32_t                index_base;
             uint32_t                index_count;
 
             VkDescriptorSet         descriptor_set;
-            MaterialConstants       material_constants;
+            VkMaterialConstants     material_constants;
         };
 
         vkw::VkScopedObject<VkBuffer>   lights;

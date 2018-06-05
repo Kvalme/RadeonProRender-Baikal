@@ -332,7 +332,6 @@ namespace Baikal
 
     void VkApplication::EndFrame(VkDevice device, VkQueue queue)
     {
-        VkResult err;
         vkCmdEndRenderPass(command_buffers_[frame_idx_]);
 
         VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -448,6 +447,50 @@ namespace Baikal
 
         ResizeSwapChain(vk_app_render->GetDevice(), vk_app_render->GetPhysicalDevice(), framebuffer_width, framebuffer_height);
 
+        vkw::ShaderManager& shader_manager = vk_app_render->GetShaderManager();
+        vkw::PipelineManager& pipeline_manager = vk_app_render->GetPipelineManager();
+        vkw::MemoryManager& memory_manager = vk_app_render->GetMemoryManager();
+        vkw::Utils& utils = vk_app_render->GetUtils();
+
+        sampler_ = utils.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+        struct Vertex
+        {
+            float position[4];
+        };
+
+        std::vector<Vertex> vertices =
+        {
+            { 1.0f, 1.0f, 0.0f, 1.0f },
+            { -1.0f, 1.0f, 0.0f, 1.0f },
+            { -1.0f, -1.0f, 0.0f, 1.0f },
+            { 1.0f, -1.0f, 0.0f, 1.0f }
+        };
+
+        std::vector<uint32_t> indices = { 1, 0, 2, 3, 2, 0 };
+
+        fullscreen_quad_vb_ = memory_manager.CreateBuffer(vertices.size() * sizeof(Vertex),
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            vertices.data());
+
+        fullscreen_quad_ib_ = memory_manager.CreateBuffer(indices.size() * sizeof(uint32_t),
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            indices.data());
+
+
+        fsq_vert_shader_    = shader_manager.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/fullscreen_quad.vert.spv");
+        output_frag_shader_ = shader_manager.CreateShader(VK_SHADER_STAGE_FRAGMENT_BIT, "../Baikal/Kernels/VK/output.frag.spv");
+        output_pipeline_    = pipeline_manager.CreateGraphicsPipeline(fsq_vert_shader_, output_frag_shader_, render_pass_);
+
+        Output* output = vk_app_render->GetRendererOutput();
+
+        VkwOutput* vkw_output = dynamic_cast<VkwOutput*>(output);
+
+        output_frag_shader_.SetArg(1, vkw_output->GetRenderTarget().attachments[0].view.get(), sampler_.get());
+        output_frag_shader_.CommitArgs();
+
         for (uint32_t i = 0; i < num_queued_frames_; i++)
         {
             VkSemaphoreCreateInfo info = {};
@@ -543,6 +586,34 @@ namespace Baikal
                 Update(update);
 
                 PrepareFrame(vk_app_render->GetDevice(), vk_app_render->GetPhysicalDevice());
+
+                vkCmdBindPipeline(command_buffers_[frame_idx_], VK_PIPELINE_BIND_POINT_GRAPHICS, output_pipeline_.pipeline.get());
+                
+                VkDeviceSize offsets[1] = { 0 };
+                VkBuffer vb = fullscreen_quad_vb_.get();
+
+                VkViewport viewport = vkw::Utils::InitializeViewport(
+                    static_cast<float>(framebuffer_width_),
+                    static_cast<float>(framebuffer_height_),
+                    0.f, 1.f);
+
+                vkCmdSetViewport(command_buffers_[frame_idx_], 0, 1, &viewport);
+
+                VkRect2D scissor = {};
+                scissor.extent.width = framebuffer_width_;
+                scissor.extent.height = framebuffer_height_;
+                scissor.offset.x = 0;
+                scissor.offset.y = 0;
+
+                vkCmdSetScissor(command_buffers_[frame_idx_], 0, 1, &scissor);
+
+                VkDescriptorSet desc_set = output_frag_shader_.descriptor_set.get();
+                vkCmdBindDescriptorSets(command_buffers_[frame_idx_], VK_PIPELINE_BIND_POINT_GRAPHICS, output_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+
+                vkCmdBindVertexBuffers(command_buffers_[frame_idx_], 0, 1, &vb, offsets);
+                vkCmdBindIndexBuffer(command_buffers_[frame_idx_], fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(command_buffers_[frame_idx_], 6, 1, 0, 0, 0);         
+
                 EndFrame(vk_app_render->GetDevice(), queue);
 
                 PresentFrame(queue);
@@ -551,6 +622,8 @@ namespace Baikal
             }
 
             vk_app_render->StopRenderThreads();
+
+            vkDeviceWaitIdle(vk_app_render->GetDevice());
 
             glfwDestroyWindow(m_window);
         }
@@ -561,5 +634,4 @@ namespace Baikal
             exit(-1);
         }
     }
-
 }

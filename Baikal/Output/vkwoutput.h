@@ -31,7 +31,7 @@ namespace Baikal
         {
         }
         
-        vkw::RenderTarget& GetRenderTarget() 
+        vkw::RenderTarget const& GetRenderTarget() 
         {
             return render_target_;
         };

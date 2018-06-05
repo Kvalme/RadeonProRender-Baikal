@@ -1,28 +1,28 @@
-static const int kPoint = 0x1;
-static const int kDirectional = 0x2;
-static const int kSpot = 0x3;
-static const int kIbl = 0x4;
-static const int kArea = 0x5;
+const int kPoint = 0x1;
+const int kDirectional = 0x2;
+const int kSpot = 0x3;
+const int kIbl = 0x4;
+const int kArea = 0x5;
 
-struct Light
+struct VkLight
 {
     float4 position;
     float4 direction;
     float4 radiance;
 };
 
-struct Camera
+struct VkCamera
 {
     float4  camera_position;
 
-    mat4    view_projection;
+    matrix    view_projection;
 
-    mat4    inv_view;
-    mat4    inv_projection;
+    matrix    inv_view;
+    matrix    inv_projection;
 };
 
 // Push constants
-struct MaterialConstants
+struct VkMaterialConstants
 {
     int      data[4];   // x - mat_id, xyz - reserved
     float4   diffuse;

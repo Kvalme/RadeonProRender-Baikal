@@ -22,10 +22,10 @@
  ********************************************************************/
 #pragma once
 
-#include "Application/application.h"
 #include "Application/app_utils.h"
 #include "Application/cl_render.h"
 #include "Application/gl_render.h"
+#include "Application/application.h"
 
 #include "SceneGraph/IO/image_io.h"
 

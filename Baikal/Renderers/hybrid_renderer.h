@@ -39,7 +39,10 @@ namespace Baikal
     {
     public:
 
-        HybridRenderer(VkDevice device, vkw::MemoryManager& memory_manager, vkw::RenderTargetManager& render_target_manager);
+        HybridRenderer(VkDevice device, vkw::MemoryManager& memory_manager,
+                                        vkw::ShaderManager& shader_manager,
+                                        vkw::RenderTargetManager& render_target_manager,
+                                        vkw::PipelineManager& pipeline_manager);
 
         ~HybridRenderer() = default;
 
@@ -63,15 +66,24 @@ namespace Baikal
         // Set max number of light bounces
         void SetMaxBounces(std::uint32_t max_bounces);
     protected:
+        void InitializeResources();
         void ResizeRenderTargets(uint32_t width, uint32_t height);
     protected:
-        vkw::MemoryManager& memory_manager_;
-        vkw::RenderTargetManager& render_target_manager_;
+        vkw::VkScopedObject<VkBuffer>       fullscreen_quad_vb_;
+        vkw::VkScopedObject<VkBuffer>       fullscreen_quad_ib_;
+
+        vkw::Shader                         fsq_vert_shader_;
+        vkw::Shader                         mrt_frag_shader_;
+        vkw::GraphicsPipeline               mrt_pipeline_;
+    protected:
+        vkw::MemoryManager&                             memory_manager_;
+        vkw::RenderTargetManager&                       render_target_manager_;
+        vkw::ShaderManager&                             shader_manager_;
+        vkw::PipelineManager&                           pipeline_manager_;
 
         vkw::RenderTarget                               g_buffer_;
 
         std::unique_ptr<vkw::CommandBufferBuilder>      command_buffer_builder_;
-        std::unique_ptr<vkw::PipelineManager>           pipeline_manager_;
 
         VkDevice            device_;
     };

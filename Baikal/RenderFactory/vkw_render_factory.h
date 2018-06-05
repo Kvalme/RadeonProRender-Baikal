@@ -43,7 +43,17 @@ namespace Baikal
     class VkwRenderFactory : public RenderFactory<VkwScene>
     {
     public:
-        VkwRenderFactory(VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index);
+        VkwRenderFactory(
+            VkDevice device
+            , VkPhysicalDevice physical_device
+            , uint32_t queue_family_index
+            , vkw::MemoryAllocator&       memory_allocator
+            , vkw::MemoryManager&         memory_manager
+            , vkw::RenderTargetManager&   render_target_manager
+            , vkw::ShaderManager&         shader_manager
+            , vkw::DescriptorManager&     descriptor_manager
+            , vkw::PipelineManager&       pipeline_manager
+        );
 
         // Create a renderer of specified type
         std::unique_ptr<Renderer<VkwScene>> CreateRenderer(RendererType type) const override;
@@ -57,9 +67,12 @@ namespace Baikal
         std::unique_ptr<SceneController<VkwScene>> CreateSceneController() const override;
 
     private:
-        std::unique_ptr<vkw::MemoryAllocator>       memory_allocator_;
-        std::unique_ptr<vkw::MemoryManager>         memory_manager_;
-        std::unique_ptr<vkw::RenderTargetManager>   render_target_manager_;
+        vkw::MemoryAllocator&       memory_allocator_;
+        vkw::MemoryManager&         memory_manager_;
+        vkw::RenderTargetManager&   render_target_manager_;
+        vkw::ShaderManager&         shader_manager_;
+        vkw::DescriptorManager&     descriptor_manager_;
+        vkw::PipelineManager&       pipeline_manager_;
 
         int                                         queue_family_index_;
         VkDevice                                    device_;

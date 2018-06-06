@@ -128,8 +128,6 @@ namespace Baikal
         mesh_transforms_.clear();
         out.meshes.clear();
 
-        int mat_id = 0;
-
         std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
         for (; mesh_iter->IsValid(); mesh_iter->Next())
         {
@@ -140,10 +138,9 @@ namespace Baikal
                 continue;
             
             // TODO: desc sets and roughness, metallic, diffuse
-            VkwScene::MaterialConstants constants;
-            constants.data[0] = mat_id++;
- 
-            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), VK_NULL_HANDLE, constants };
+            VkwScene::VkwMesh vkw_mesh = {
+                static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()),
+                VK_NULL_HANDLE, mat_collector.GetItemIndex(shape->GetMaterial())};
             out.meshes.push_back(vkw_mesh);
 
             num_vertices += mesh->GetNumVertices();
@@ -241,6 +238,35 @@ namespace Baikal
 
     void VkwSceneController::UpdateMaterials(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
+        // Get new buffer size
+        std::size_t material_buffer_size = mat_collector.GetNumItems();
+        if (material_buffer_size == 0)
+        {
+            return;
+        }
+
+        // Resize texture cache if needed
+        if (out.materials.size() < material_buffer_size)
+        {
+            out.materials.resize(material_buffer_size);
+        }
+
+        // Update material bundle first to be able to track differences
+        out.material_bundle.reset(mat_collector.CreateBundle());
+
+        // Create texture iterator
+        std::unique_ptr<Iterator> mat_iter(mat_collector.CreateIterator());
+
+        // Iterate and serialize
+        std::size_t num_materials_written = 0;
+        for (; mat_iter->IsValid(); mat_iter->Next())
+        {
+            auto mat = mat_iter->ItemAs<Baikal::Material>();
+
+            WriteMaterial(*mat, mat_collector, tex_collector, out.materials.data() + num_materials_written);
+
+            num_materials_written++;
+        }
     }
 
     void VkwSceneController::UpdateVolumes(Scene1 const& scene, Collector& volume_collector, Collector& tex_collector, VkwScene& out) const
@@ -283,6 +309,82 @@ namespace Baikal
 
     void VkwSceneController::WriteMaterial(Material const& material, Collector& mat_collector, Collector& tex_collector, void* data) const
     {
+        VkwScene::Material *mat = static_cast<VkwScene::Material*>(data);
+        const UberV2Material &ubermaterial = static_cast<const UberV2Material&>(material);
+        mat->layers = static_cast<UberV2Material::Layers>(ubermaterial.GetLayers());
+
+        auto input_to_material_value = [&](Material::InputValue input_value) -> VkwScene::Material::Value
+        {
+            assert(input_value.type == Material::InputType::kInputMap);
+            switch(input_value.input_map_value->m_type)
+            {
+                case InputMap::InputMapType::kConstantFloat:
+                {
+                    InputMap_ConstantFloat *i = static_cast<InputMap_ConstantFloat*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = false;
+                    value.color.x = i->GetValue();
+                    return value;
+                }
+                case InputMap::InputMapType::kConstantFloat3:
+                {
+                    InputMap_ConstantFloat3 *i = static_cast<InputMap_ConstantFloat3*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = false;
+                    value.color = i->GetValue();
+                    return value;
+                }
+                case InputMap::InputMapType::kSampler:
+                {
+                    InputMap_Sampler *i = static_cast<InputMap_Sampler*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = true;
+                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
+                    return value;
+                }
+                case InputMap::InputMapType::kSamplerBumpmap:
+                {
+                    InputMap_SamplerBumpMap *i = static_cast<InputMap_SamplerBumpMap*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = true;
+                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
+                    return value;
+                };
+                case InputMap::InputMapType::kRemap:
+                {
+                    //InputMap_SamplerBumpMap *i = static_cast<InputMap_SamplerBumpMap*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    /*value.isTexture = true;
+                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());*/
+                    return value;
+                };
+                default:
+                    assert(!"Unsupported input map type");
+            }
+            return  VkwScene::Material::Value();
+        };
+
+        if ((mat->layers & UberV2Material::Layers::kDiffuseLayer) == UberV2Material::Layers::kDiffuseLayer)
+        {
+            mat->diffuse_color = input_to_material_value(material.GetInputValue("uberv2.diffuse.color"));
+        }
+
+        if ((mat->layers & UberV2Material::Layers::kReflectionLayer) == UberV2Material::Layers::kReflectionLayer)
+        {
+            mat->reflection_color = input_to_material_value(material.GetInputValue("uberv2.reflection.color"));
+            mat->reflection_ior = input_to_material_value(material.GetInputValue("uberv2.reflection.roughness"));
+            mat->reflection_roughness = input_to_material_value(material.GetInputValue("uberv2.reflection.ior"));
+        }
+
+        if ((mat->layers & UberV2Material::Layers::kTransparencyLayer) == UberV2Material::Layers::kTransparencyLayer)
+        {
+            mat->transparency = input_to_material_value(material.GetInputValue("uberv2.transparency"));
+        }
+
+        if ((mat->layers & UberV2Material::Layers::kShadingNormalLayer) == UberV2Material::Layers::kShadingNormalLayer)
+        {
+            mat->shading_normal = input_to_material_value(material.GetInputValue("uberv2.shading_normal"));
+        }
     }
 
     void VkwSceneController::WriteLight(Scene1 const& scene, Light const& light, Collector& tex_collector, void* data) const

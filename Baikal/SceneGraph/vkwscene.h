@@ -8,6 +8,7 @@
 #include "math/matrix.h"
 #include "vk_scoped_object.h"
 #include "vk_texture.h"
+#include "SceneGraph/uberv2material.h"
 
 namespace Baikal
 {
@@ -38,14 +39,37 @@ namespace Baikal
 
         #include "Kernels/VK/common.glsl"
 
+        struct Material
+        {
+            UberV2Material::Layers layers;
+            struct Value
+            {
+                bool isTexture = false;
+                float3 color;
+                uint32_t texture_id;
+            };
+
+            Value diffuse_color;
+
+            Value reflection_color;
+            Value reflection_roughness;
+            Value reflection_ior;
+
+            Value transparency;
+
+            Value shading_normal;
+        };
+
         struct VkwMesh
         {
             uint32_t                index_base;
             uint32_t                index_count;
 
             VkDescriptorSet         descriptor_set;
-            MaterialConstants       material_constants;
+            uint32_t                material_id;
+            //MaterialConstants       material_constants;
         };
+
 
         vkw::VkScopedObject<VkBuffer>   lights;
         vkw::VkScopedObject<VkBuffer>   camera;
@@ -72,6 +96,7 @@ namespace Baikal
 
         std::vector<vkw::Texture>       textures;
         std::vector<VkwMesh>            meshes;
+        std::vector<Material>           materials;
 
         std::unique_ptr<Bundle>         material_bundle;
         std::unique_ptr<Bundle>         volume_bundle;

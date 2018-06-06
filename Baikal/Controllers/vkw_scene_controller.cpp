@@ -311,7 +311,7 @@ namespace Baikal
     {
         VkwScene::Material *mat = static_cast<VkwScene::Material*>(data);
         const UberV2Material &ubermaterial = static_cast<const UberV2Material&>(material);
-        mat->layers = static_cast<UberV2Material::Layers>(ubermaterial.GetLayers());
+        mat->layers = ubermaterial.GetLayers();
 
         auto input_to_material_value = [&](Material::InputValue input_value) -> VkwScene::Material::Value
         {

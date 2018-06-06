@@ -8,7 +8,6 @@
 #include "math/matrix.h"
 #include "vk_scoped_object.h"
 #include "vk_texture.h"
-#include "SceneGraph/uberv2material.h"
 
 namespace Baikal
 {
@@ -41,7 +40,7 @@ namespace Baikal
 
         struct Material
         {
-            UberV2Material::Layers layers;
+            uint32_t layers; //Values from UberV2Material::Layers
             struct Value
             {
                 bool isTexture = false;

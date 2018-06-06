@@ -271,7 +271,7 @@ namespace Baikal
                 Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(0.f, 1.f, 0.f)),
                 Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(-1.f, 1.f, 0.f)),
                 bump_sampler);
-                material->SetInputValue("uberv2.shading_normal", bump_remap);
+            material->SetInputValue("uberv2.shading_normal", bump_sampler);
 
         };
 

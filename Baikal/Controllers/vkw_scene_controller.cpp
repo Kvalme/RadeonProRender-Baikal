@@ -350,14 +350,6 @@ namespace Baikal
                     value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
                     return value;
                 };
-                case InputMap::InputMapType::kRemap:
-                {
-                    //InputMap_SamplerBumpMap *i = static_cast<InputMap_SamplerBumpMap*>(input_value.input_map_value.get());
-                    VkwScene::Material::Value value;
-                    /*value.isTexture = true;
-                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());*/
-                    return value;
-                };
                 default:
                     assert(!"Unsupported input map type");
             }

@@ -85,14 +85,15 @@ namespace Baikal
         const float fovy = atan(sensor_size.y / (2.0f * focal_length));
 
         const float3 up = camera->GetUpVector();
-        const float3 right = -camera->GetRightVector();
-        const float3 forward = camera->GetForwardVector();
+        const float3 right = camera->GetRightVector();
+        const float3 forward = -camera->GetForwardVector();
         const float3 pos = camera->GetPosition();
 
-        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), z_range.x, z_range.y);
+        //const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), z_range.x, z_range.y);
+        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), 0.001f, 1000.0f);
         const float3 ip = float3(-dot(right, pos), -dot(up, pos), -dot(forward, pos));
 
-        const matrix view = matrix(right.x, right.y, right.z, ip.x,
+        matrix view = matrix(right.x, right.y, right.z, ip.x,
             up.x, up.y, up.z, ip.y,
             forward.x, forward.y, forward.z, ip.z,
             0.0f, 0.0f, 0.0f, 1.0f);
@@ -142,14 +143,8 @@ namespace Baikal
             VkMaterialConstants constants;
             constants.data[0] = mat_id++;
 
-            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), VK_NULL_HANDLE, constants };
+            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, constants };
             out.meshes.push_back(vkw_mesh);
-
-            num_vertices += mesh->GetNumVertices();
-            num_indices += mesh->GetNumIndices();
-
-            assert(mesh->GetNumVertices() == mesh->GetNumNormals());
-            assert(mesh->GetNumVertices() == mesh->GetNumUVs());
 
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
             {
@@ -159,10 +154,16 @@ namespace Baikal
 
             for (std::size_t idx = 0; idx < mesh->GetNumIndices(); idx++)
             {
-                index_buffer_.push_back(mesh->GetIndices()[idx]);
+                index_buffer_.push_back(mesh->GetIndices()[idx] + num_vertices);
             }
 
             mesh_transforms_.push_back(mesh->GetTransform());
+
+            num_vertices += mesh->GetNumVertices();
+            num_indices += mesh->GetNumIndices();
+
+            assert(mesh->GetNumVertices() == mesh->GetNumNormals());
+            assert(mesh->GetNumVertices() == mesh->GetNumUVs());
         }
 
         if (out.vertex_count < num_vertices)

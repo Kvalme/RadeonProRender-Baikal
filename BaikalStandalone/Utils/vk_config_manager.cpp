@@ -202,12 +202,14 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*>
     cfg.factory_ = std::make_unique<Baikal::VkwRenderFactory>(cfg.device_.get(),
         cfg.physical_device_,
         cfg.graphics_queue_family_idx_,
+        cfg.compute_queue_family_idx_,
         *cfg.memory_allocator_,
         *cfg.memory_manager_,
         *cfg.render_target_manager_,
         *cfg.shader_manager_,
         *cfg.descriptor_manager_,
-        *cfg.pipeline_manager_);
+        *cfg.pipeline_manager_,
+        *cfg.utils_);
 
     cfg.controller_ = cfg.factory_->CreateSceneController();
     cfg.renderer_ = cfg.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);

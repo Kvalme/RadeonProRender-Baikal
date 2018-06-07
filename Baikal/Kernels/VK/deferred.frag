@@ -6,9 +6,11 @@
 layout (location = 0) in vec2 texCoord;
 layout (location = 0) out vec4 color;
 
+#include "common.glsl"
+
 layout (binding = 1) uniform sampler2D tex;
 
 void main()
 {
-	color = texture(tex, vec2(texCoord.x, 1.0f - texCoord.y));
+	color = texture(tex, texCoord);
 }

@@ -334,13 +334,26 @@ namespace Baikal
     {
         vkCmdEndRenderPass(command_buffers_[frame_idx_]);
 
-        VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        AppVkRender* vk_app_render = dynamic_cast<AppVkRender*>(app_render_.get());
+
+        if (!vk_app_render)
+            throw std::runtime_error("VkApplication: Internal error");
+
+        VkwOutput* vk_output = dynamic_cast<VkwOutput*>(vk_app_render->GetRendererOutput());
+
+        if (!vk_output)
+            throw std::runtime_error("VkApplication: Internal error");
+
+        VkSemaphore render_complete = dynamic_cast<VkwOutput*>(vk_app_render->GetRendererOutput())->GetSemaphore();
+        VkPipelineStageFlags wait_stage[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+        VkSemaphore wait_semaphores[2] = { render_complete, present_semaphores_[frame_idx_] };
 
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &present_semaphores_[frame_idx_];
-        submit_info.pWaitDstStageMask = &wait_stage;
+        submit_info.waitSemaphoreCount = 2;
+        submit_info.pWaitSemaphores = wait_semaphores;
+        submit_info.pWaitDstStageMask = wait_stage;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &command_buffers_[frame_idx_];
         submit_info.signalSemaphoreCount = 1;
@@ -459,30 +472,29 @@ namespace Baikal
             float position[4];
         };
 
-        std::vector<Vertex> vertices =
+        Vertex vertices[4] =
         {
-            { 1.0f, 1.0f, 0.0f, 1.0f },
             { -1.0f, 1.0f, 0.0f, 1.0f },
-            { -1.0f, -1.0f, 0.0f, 1.0f },
-            { 1.0f, -1.0f, 0.0f, 1.0f }
+            { 1.0f, 1.0f, 0.0f, 1.0f },
+            { 1.0f, -1.0f, 0.0f, 1.0f },
+            { -1.0f, -1.0f, 0.0f, 1.0f }
         };
 
-        std::vector<uint32_t> indices = { 1, 0, 2, 3, 2, 0 };
+        uint32_t indices[6] = { 0, 1, 2, 2, 3, 0 };
 
-        fullscreen_quad_vb_ = memory_manager.CreateBuffer(vertices.size() * sizeof(Vertex),
+        fullscreen_quad_vb_ = memory_manager.CreateBuffer(4 * sizeof(Vertex),
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            vertices.data());
+            vertices);
 
-        fullscreen_quad_ib_ = memory_manager.CreateBuffer(indices.size() * sizeof(uint32_t),
+        fullscreen_quad_ib_ = memory_manager.CreateBuffer(6 * sizeof(uint32_t),
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            indices.data());
+            indices);
 
-
-        fsq_vert_shader_    = shader_manager.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/fullscreen_quad.vert.spv");
+        fsq_vert_shader_ = shader_manager.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/fullscreen_quad.vert.spv");
         output_frag_shader_ = shader_manager.CreateShader(VK_SHADER_STAGE_FRAGMENT_BIT, "../Baikal/Kernels/VK/output.frag.spv");
-        output_pipeline_    = pipeline_manager.CreateGraphicsPipeline(fsq_vert_shader_, output_frag_shader_, render_pass_);
+        output_pipeline_ = pipeline_manager.CreateGraphicsPipeline(fsq_vert_shader_, output_frag_shader_, render_pass_);
 
         Output* output = vk_app_render->GetRendererOutput();
 
@@ -588,11 +600,11 @@ namespace Baikal
                 PrepareFrame(vk_app_render->GetDevice(), vk_app_render->GetPhysicalDevice());
 
                 vkCmdBindPipeline(command_buffers_[frame_idx_], VK_PIPELINE_BIND_POINT_GRAPHICS, output_pipeline_.pipeline.get());
-                
+
                 VkDeviceSize offsets[1] = { 0 };
                 VkBuffer vb = fullscreen_quad_vb_.get();
 
-                VkViewport viewport = vkw::Utils::InitializeViewport(
+                VkViewport viewport = vkw::Utils::CreateViewport(
                     static_cast<float>(framebuffer_width_),
                     static_cast<float>(framebuffer_height_),
                     0.f, 1.f);
@@ -612,7 +624,7 @@ namespace Baikal
 
                 vkCmdBindVertexBuffers(command_buffers_[frame_idx_], 0, 1, &vb, offsets);
                 vkCmdBindIndexBuffer(command_buffers_[frame_idx_], fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(command_buffers_[frame_idx_], 6, 1, 0, 0, 0);         
+                vkCmdDrawIndexed(command_buffers_[frame_idx_], 6, 1, 0, 0, 0);
 
                 EndFrame(vk_app_render->GetDevice(), queue);
 

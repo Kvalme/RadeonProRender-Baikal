@@ -46,13 +46,15 @@ namespace Baikal
         VkwRenderFactory(
             VkDevice device
             , VkPhysicalDevice physical_device
-            , uint32_t queue_family_index
+            , uint32_t graphics_queue_family_index
+            , uint32_t compute_queue_family_index
             , vkw::MemoryAllocator&       memory_allocator
             , vkw::MemoryManager&         memory_manager
             , vkw::RenderTargetManager&   render_target_manager
             , vkw::ShaderManager&         shader_manager
             , vkw::DescriptorManager&     descriptor_manager
             , vkw::PipelineManager&       pipeline_manager
+            , vkw::Utils&                 utils
         );
 
         // Create a renderer of specified type
@@ -73,8 +75,10 @@ namespace Baikal
         vkw::ShaderManager&         shader_manager_;
         vkw::DescriptorManager&     descriptor_manager_;
         vkw::PipelineManager&       pipeline_manager_;
+        vkw::Utils&                 utils_;
 
-        int                                         queue_family_index_;
+        uint32_t                                    graphics_queue_family_index_;
+        uint32_t                                    compute_queue_family_index_;
         VkDevice                                    device_;
         VkPhysicalDevice                            physical_device_;
     };

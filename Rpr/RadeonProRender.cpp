@@ -94,7 +94,8 @@ rpr_int rprCreateContext(rpr_int api_version, rpr_int * pluginIDs, size_t plugin
     try
     {
         //TODO: handle other options
-        *out_context = new ClContextObject(creation_flags);
+        //TODO: handle context type that we can't get from arguments atm.
+        *out_context = new VkContextObject(creation_flags);
     }
     catch (Exception& e)
     {

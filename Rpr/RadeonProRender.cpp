@@ -22,6 +22,8 @@ THE SOFTWARE.
 #include "RadeonProRender.h"
 #include "WrapObject/WrapObject.h"
 #include "WrapObject/ContextObject.h"
+#include "WrapObject/ClContextObject.h"
+#include "WrapObject/VkContextObject.h"
 #include "WrapObject/CameraObject.h"
 #include "WrapObject/FramebufferObject.h"
 #include "WrapObject/LightObject.h"
@@ -92,7 +94,8 @@ rpr_int rprCreateContext(rpr_int api_version, rpr_int * pluginIDs, size_t plugin
     try
     {
         //TODO: handle other options
-        *out_context = new ContextObject(creation_flags);
+        //TODO: handle context type that we can't get from arguments atm.
+        *out_context = new VkContextObject(creation_flags);
     }
     catch (Exception& e)
     {
@@ -239,22 +242,13 @@ rpr_int rprContextSetParameter1u(rpr_context in_context, rpr_char const * name, 
         return RPR_ERROR_INVALID_CONTEXT;
     }
 
-    //TODO: handle context parameters
-    return RPR_SUCCESS;
-
-    if (!strcmp(name, "rendermode"))
+    try
     {
-        switch (x)
-        {
-        case RPR_RENDER_MODE_GLOBAL_ILLUMINATION:
-            break;
-        default:
-            UNIMLEMENTED_FUNCTION
-        }
+        context->SetParameter(name, x);
     }
-    else
+    catch (Exception& e)
     {
-        UNIMLEMENTED_FUNCTION
+        return e.m_error;
     }
 
     return RPR_SUCCESS;

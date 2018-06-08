@@ -4,7 +4,7 @@ project(Baikal CXX)
 
 option(BAIKAL_ENABLE_RAYMASK "Enable visibility flags for shapes (slows down an intersector)" OFF)
 option(BAIKAL_ENABLE_DENOISER "Use denoising on output" OFF)
-option(BAIKAL_ENABLE_RPR "Enable RadeonProRender API lib" OFF)
+option(BAIKAL_ENABLE_RPR "Enable RadeonProRender API lib" ON)
 option(BAIKAL_ENABLE_TESTS "Enable tests" ON)
 option(BAIKAL_ENABLE_STANDALONE "Enable standalone application build" ON)
 option(BAIKAL_ENABLE_IO "Enable IO library build" ON)
@@ -18,7 +18,6 @@ option(BAIKAL_ENABLE_FBX "Enable FBX import in BaikalIO. Requires BaikalIO to be
 if (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
     message(FATAL_ERROR "glTF support requires RPR but it's disabled")
 endif (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
-
 
 if (BAIKAL_ENABLE_HYBRID_RENDERER)
     add_subdirectory(RadeonRays/VKW)
@@ -78,6 +77,8 @@ if (BAIKAL_ENABLE_IO)
     add_subdirectory(BaikalIO)
 endif (BAIKAL_ENABLE_IO)
 
+add_subdirectory(BaikalUtils)
+
 if (BAIKAL_ENABLE_RPR)
     set(RprSupport_HEADER "${Baikal_SOURCE_DIR}/3rdparty/RprSupport/include/")
     add_subdirectory(Rpr)
@@ -95,11 +96,9 @@ endif (BAIKAL_ENABLE_STANDALONE)
 if (BAIKAL_ENABLE_TESTS)
     add_subdirectory(Gtest)
     add_subdirectory(BaikalTest)
-# Temporarily remove RprTest from build
-# it will be rewrited in gtest
-#    if (BAIKAL_ENABLE_RPR)
-#        add_subdirectory(RprTest)
-#    endif (BAIKAL_ENABLE_RPR)
+    if (BAIKAL_ENABLE_RPR)
+        add_subdirectory(RprTest)
+    endif (BAIKAL_ENABLE_RPR)
     set(3RDPARTY_DST $<TARGET_FILE_DIR:BaikalTest>)
 endif (BAIKAL_ENABLE_TESTS)
 

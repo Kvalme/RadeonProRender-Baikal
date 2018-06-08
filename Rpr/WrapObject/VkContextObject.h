@@ -19,67 +19,49 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ********************************************************************/
-#ifndef CONFIG_MANAGER_H
-#define CONFIG_MANAGER_H
+#pragma once
 
-#include "CLW.h"
-#include "RenderFactory/clw_render_factory.h"
-#include "Renderers/renderer.h"
+#include "WrapObject/ContextObject.h"
+
+#include "WrapObject/WrapObject.h"
+#include "WrapObject/LightObject.h"
+
+#include "vk_config_manager.h"
+
 #include <vector>
-#include <memory>
+#include "RadeonProRender.h"
+#include "RadeonProRender_GL.h"
 
-namespace Baikal
-{
-    class Renderer;
-}
+class TextureObject;
+class FramebufferObject;
+class SceneObject;
+class MatSysObject;
+class ShapeObject;
+class CameraObject;
+class MaterialObject;
 
-class ConfigManager
+//this class represent rpr_context
+class VkContextObject
+    : public ContextObject
 {
 public:
+    VkContextObject(rpr_creation_flags creation_flags);
+    virtual ~VkContextObject() = default;
 
-    enum DeviceType
-    {
-        kPrimary,
-        kSecondary
-    };
+    //AOV
+    virtual void SetAOV(rpr_int in_aov, FramebufferObject* buffer) override;
+    virtual FramebufferObject* GetAOV(rpr_int in_aov) override;
 
-    enum Mode
-    {
-        kUseAll,
-        kUseGpus,
-        kUseSingleGpu,
-        kUseSingleCpu,
-        kUseCpus
-    };
+    //render
+    virtual void Render() override;
+    virtual void RenderTile(rpr_uint xmin, rpr_uint xmax, rpr_uint ymin, rpr_uint ymax) override;
 
-    struct Config
-    {
-        DeviceType type;
-        std::unique_ptr<Baikal::Renderer> renderer;
-        std::unique_ptr<Baikal::SceneController<Baikal::ClwScene>> controller;
-        std::unique_ptr<Baikal::RenderFactory<Baikal::ClwScene>> factory;
-        CLWContext context;
-        bool caninterop;
-
-        Config() = default;
-
-        Config(Config&& cfg) = default;
-
-        ~Config()
-        {
-        }
-    };
-
-    static void CreateConfigs(
-        Mode mode,
-        bool interop,
-        std::vector<Config>& renderers,
-        int initial_num_bounces,
-        int req_platform_index = -1,
-        int req_device_index = -1);
-
+    //create methods
+    virtual FramebufferObject* CreateFrameBuffer(rpr_framebuffer_format const in_format, rpr_framebuffer_desc const * in_fb_desc) override;
+    virtual FramebufferObject* CreateFrameBufferFromGLTexture(rpr_GLenum target, rpr_GLint miplevel, rpr_GLuint texture) override;
 private:
+    void PrepareScene();
 
+    //render configs
+    VkConfigManager::VkConfig m_cfg;
 };
-
-#endif // CONFIG_MANAGER_H

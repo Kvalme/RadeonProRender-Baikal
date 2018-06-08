@@ -93,45 +93,14 @@ namespace
     { RPR_CONTEXT_GPU6_NAME,{ "gpu6name", "Name of the GPU index 6 in context. Constant value.", RPR_PARAMETER_TYPE_STRING } },
     { RPR_CONTEXT_GPU7_NAME,{ "gpu7name", "Name of the GPU index 7 in context. Constant value.", RPR_PARAMETER_TYPE_STRING } },
     { RPR_CONTEXT_CPU_NAME,{ "cpuname", "Name of the CPU in context. Constant value.", RPR_PARAMETER_TYPE_STRING } },
+    { RPR_CONTEXT_RANDOM_SEED,{ "randseed", "Random seed", RPR_PARAMETER_TYPE_UINT } },
     };
-
-    std::map<uint32_t, Baikal::Renderer::OutputType> kOutputTypeMap = { {RPR_AOV_COLOR, Baikal::Renderer::OutputType::kColor},
-                                                                        {RPR_AOV_GEOMETRIC_NORMAL, Baikal::Renderer::OutputType::kWorldGeometricNormal},
-                                                                        {RPR_AOV_SHADING_NORMAL, Baikal::Renderer::OutputType::kWorldShadingNormal},
-                                                                        {RPR_AOV_UV, Baikal::Renderer::OutputType::kUv},
-                                                                        {RPR_AOV_WORLD_COORDINATE, Baikal::Renderer::OutputType::kWorldPosition}, 
-                                                                        };
 
 }// anonymous
 
 ContextObject::ContextObject(rpr_creation_flags creation_flags)
     : m_current_scene(nullptr)
 {
-    rpr_int result = RPR_SUCCESS;
-
-    bool interop = (creation_flags & RPR_CREATION_FLAGS_ENABLE_GL_INTEROP) != 0;
-    if (creation_flags & RPR_CREATION_FLAGS_ENABLE_GPU0)
-    {
-        try
-        {
-            //TODO: check num_bounces 
-            ConfigManager::CreateConfigs(ConfigManager::kUseSingleGpu, interop, m_cfgs, 5);
-        }
-        catch (...)
-        {
-            // failed to create context with interop
-            result = RPR_ERROR_UNSUPPORTED;
-        }
-    }
-    else
-    {
-        result = RPR_ERROR_UNIMPLEMENTED;
-    }    
-
-    if (result != RPR_SUCCESS)
-    {
-        throw Exception(result, "");
-    }
 }
 
 void ContextObject::GetRenderStatistics(void * out_data, size_t * out_size_ret) const
@@ -156,83 +125,6 @@ void ContextObject::GetRenderStatistics(void * out_data, size_t * out_size_ret) 
         *out_size_ret = sizeof(rpr_render_statistics);
     }
 }
-
-void ContextObject::SetAOV(rpr_int in_aov, FramebufferObject* buffer)
-{
-    FramebufferObject* old_buf = GetAOV(in_aov);
-
-    auto aov = kOutputTypeMap.find(in_aov);
-    if (aov == kOutputTypeMap.end())
-    {
-        throw Exception(RPR_ERROR_UNIMPLEMENTED, "Context: requested AOV not implemented.");
-    }
-    
-    for (auto& c : m_cfgs)
-    {
-        c.renderer->SetOutput(aov->second, buffer->GetOutput());
-    }
-
-    //update registered output framebuffer
-    m_output_framebuffers.erase(old_buf);
-    m_output_framebuffers.insert(buffer);
-}
-
-
-FramebufferObject* ContextObject::GetAOV(rpr_int in_aov)
-{
-    auto aov = kOutputTypeMap.find(in_aov);
-    if (aov == kOutputTypeMap.end())
-    {
-        throw Exception(RPR_ERROR_UNIMPLEMENTED, "Context: requested AOV not implemented.");
-    }
-
-    Baikal::Output* out = m_cfgs[0].renderer->GetOutput(aov->second);
-    if (!out)
-    {
-        return nullptr;
-    }
-    
-    //find framebuffer
-    auto it = find_if(m_output_framebuffers.begin(), m_output_framebuffers.end(), [out](FramebufferObject* buff)
-    {
-        return buff->GetOutput() == out;
-    });
-    if (it == m_output_framebuffers.end())
-    {
-        throw Exception(RPR_ERROR_INTERNAL_ERROR, "Context: unknown framebuffer.");
-    }
-
-    return *it;
-}
-
-void ContextObject::Render()
-{
-    PrepareScene();
-
-    //render
-    for (auto& c : m_cfgs)
-    {
-        auto& scene = c.controller->GetCachedScene(m_current_scene->GetScene());
-        c.renderer->Render(scene);
-    }
-    PostRender();
-}
-
-void ContextObject::RenderTile(rpr_uint xmin, rpr_uint xmax, rpr_uint ymin, rpr_uint ymax)
-{
-    PrepareScene();
-
-    const RadeonRays::int2 origin = { (int)xmin, (int)ymin };
-    const RadeonRays::int2 size = { (int)xmax - (int)xmin, (int)ymax - (int)ymin };
-    //render
-    for (auto& c : m_cfgs)
-    {
-        auto& scene = c.controller->GetCachedScene(m_current_scene->GetScene());
-        c.renderer->RenderTile(scene, origin, size);
-    }
-    PostRender();
-}
-
 
 SceneObject* ContextObject::CreateScene()
 {
@@ -291,43 +183,32 @@ CameraObject* ContextObject::CreateCamera()
     return new CameraObject();
 }
 
-FramebufferObject* ContextObject::CreateFrameBuffer(rpr_framebuffer_format const in_format, rpr_framebuffer_desc const * in_fb_desc)
+void ContextObject::SetParameter(const std::string& input, rpr_uint value)
 {
-    //TODO: implement
-    if (in_format.type != RPR_COMPONENT_TYPE_FLOAT32 || in_format.num_components != 4)
+    auto it = std::find_if(kContextParameterDescriptions.begin(), kContextParameterDescriptions.end(),
+        [input](std::pair<uint32_t, ParameterDesc> desc) { return desc.second.name == input; });
+
+    if (it == kContextParameterDescriptions.end())
     {
-        throw Exception(RPR_ERROR_UNIMPLEMENTED, "ContextObject: only 4 component RPR_COMPONENT_TYPE_FLOAT32 implemented now.");
+        throw Exception(RPR_ERROR_INVALID_TAG, "ContextObject: invalid context input parameter.");
+    }
+    else if (it->second.type != RPR_PARAMETER_TYPE_UINT)
+    {
+        throw Exception(RPR_ERROR_INVALID_PARAMETER_TYPE, "ContextObject: invalid context input type.");
     }
 
-    //TODO:: implement for several devices
-    if (m_cfgs.size() != 1)
+    /*switch (it->first)
     {
-        throw Exception(RPR_ERROR_INTERNAL_ERROR, "ContextObject: invalid config count.");
-    }
-    auto& c = m_cfgs[0];
-    Baikal::Output* out = c.factory->CreateOutput(in_fb_desc->fb_width, in_fb_desc->fb_height).release();
-    FramebufferObject* result = new FramebufferObject(out);
-    return result;
+    case RPR_CONTEXT_RANDOM_SEED:
+        for (auto& c : m_cfgs)
+        {
+            c.renderer->SetRandomSeed(value);
+        }
+        break;
+    default:
+        throw Exception(RPR_ERROR_UNIMPLEMENTED, "ContextObject: requested parameter is not implemented");
+    }*/
 }
-
-FramebufferObject* ContextObject::CreateFrameBufferFromGLTexture(rpr_GLenum target, rpr_GLint miplevel, rpr_GLuint texture)
-{
-    //TODO:: implement for several devices
-    if (m_cfgs.size() != 1)
-    {
-        throw Exception(RPR_ERROR_INTERNAL_ERROR, "ContextObject: invalid config count.");
-    }
-    auto& c = m_cfgs[0];
-    auto copykernel = static_cast<Baikal::MonteCarloRenderer*>(c.renderer.get())->GetCopyKernel();
-    FramebufferObject* result = new FramebufferObject(c.context, copykernel, target, miplevel, texture);
-    std::uint32_t w = static_cast<std::uint32_t>(result->Width());
-    std::uint32_t h = static_cast<std::uint32_t>(result->Height());
-    Baikal::Output* out = c.factory->CreateOutput(w, h).release();
-    result->SetOutput(out);
-    return result;
-}
-
-
 void ContextObject::SetParameter(const std::string& input, float x, float y, float z, float w)
 {
     auto it = std::find_if(kContextParameterDescriptions.begin(), kContextParameterDescriptions.end(), [input](std::pair<uint32_t, ParameterDesc> desc) { return desc.second.name == input; });
@@ -355,19 +236,6 @@ void ContextObject::SetParameter(const std::string& input, const std::string& va
     if (it == kContextParameterDescriptions.end())
     {
         throw Exception(RPR_ERROR_INVALID_PARAMETER_TYPE, "ContextObject: invalid context input type.");
-    }
-}
-
-void ContextObject::PrepareScene()
-{
-    m_current_scene->AddEmissive();
-
-    //if (m_current_scene->IsDirty())
-    {
-        for (auto& c : m_cfgs)
-        {
-            c.controller->CompileScene(m_current_scene->GetScene());
-        }
     }
 }
 

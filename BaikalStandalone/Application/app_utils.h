@@ -25,7 +25,7 @@
 #include <string>
 
 #include "radeon_rays.h"
-#include "Utils/config_manager.h"
+#include "config_manager.h"
 #include "Baikal/Renderers/renderer.h"
 #include "Baikal/Estimators/estimator.h"
 

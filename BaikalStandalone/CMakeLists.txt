@@ -32,11 +32,6 @@ set(IMGUI_SORUCES
 
 set(MAIN_SOURCES main.cpp)
 set(UTILS_SOURCES
-    Utils/cl_config_manager.cpp
-    Utils/cl_config_manager.h
-    Utils/vk_config_manager.cpp
-    Utils/vk_config_manager.h
-    Utils/config_manager.h
     Utils/shader_manager.cpp
     Utils/shader_manager.h)
 
@@ -62,7 +57,7 @@ target_compile_features(BaikalStandalone PRIVATE cxx_std_14)
 target_include_directories(BaikalStandalone
     PRIVATE ${Baikal_SOURCE_DIR}
     PRIVATE .)
-target_link_libraries(BaikalStandalone PRIVATE Baikal BaikalIO glfw3::glfw3 OpenGL::GL GLEW::GLEW)
+target_link_libraries(BaikalStandalone PRIVATE BaikalUtils Baikal BaikalIO glfw3::glfw3 OpenGL::GL GLEW::GLEW BaikalUtils)
 
 if (BAIKAL_ENABLE_DENOISER)
     target_compile_definitions(BaikalStandalone PUBLIC ENABLE_DENOISER)

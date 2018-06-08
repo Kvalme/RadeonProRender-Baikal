@@ -84,7 +84,7 @@ void FramebufferObject::GetData(void* out_data)
 
 void FramebufferObject::Clear()
 {
-    Baikal::ClwOutput* output = dynamic_cast<Baikal::ClwOutput*>(m_output);
+    Baikal::Output* output = dynamic_cast<Baikal::Output*>(m_output);
     output->Clear(RadeonRays::float3(0.f, 0.f, 0.f, 0.f));
 }
 

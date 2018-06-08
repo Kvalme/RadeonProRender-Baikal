@@ -31,7 +31,7 @@
 #include "Renderers/monte_carlo_renderer.h"
 #include "Output/clwoutput.h"
 #include "Application/app_utils.h"
-#include "Utils/cl_config_manager.h"
+#include "cl_config_manager.h"
 #include "Application/gl_render.h"
 #include "SceneGraph/camera.h"
 #include "render.h"

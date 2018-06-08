@@ -12,6 +12,10 @@ set(WRAP_OBJECT_SOURCES
     WrapObject/CameraObject.h
     WrapObject/ContextObject.cpp
     WrapObject/ContextObject.h
+    WrapObject/ClContextObject.cpp
+    WrapObject/ClContextObject.h
+    WrapObject/VkContextObject.cpp
+    WrapObject/VkContextObject.h
     WrapObject/Exception.h
     WrapObject/FramebufferObject.cpp
     WrapObject/FramebufferObject.h
@@ -37,10 +41,6 @@ set(WRAP_OBJECT_SOURCES
     WrapObject/ShapeObject.h
     WrapObject/WrapObject.h)
 
-set(UTILS_SOURCES
-    Utils/config_manager.cpp
-    Utils/config_manager.h
-)
 
 source_group("WrapObject" FILES ${WRAP_OBJECT_SOURCES})
 source_group("Utils" FILES ${UTILS_SOURCES})
@@ -51,6 +51,4 @@ add_library(RadeonProRender SHARED ${SOURCES})
 target_compile_definitions(RadeonProRender PRIVATE RPR_EXPORT_API)
 target_compile_features(RadeonProRender PRIVATE cxx_std_14)
 target_include_directories(RadeonProRender PUBLIC ${Baikal_SOURCE_DIR}/Rpr)
-target_link_libraries(RadeonProRender PUBLIC Baikal BaikalIO OpenGL::GL GLEW::GLEW)
-
-    
+target_link_libraries(RadeonProRender PUBLIC BaikalUtils Baikal BaikalIO OpenGL::GL GLEW::GLEW)

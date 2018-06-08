@@ -316,6 +316,7 @@ namespace Baikal
         auto input_to_material_value = [&](Material::InputValue input_value) -> VkwScene::Material::Value
         {
             assert(input_value.type == Material::InputType::kInputMap);
+            // We only support leaf nodes atm, so proceed them and assert if we have any other node
             switch(input_value.input_map_value->m_type)
             {
                 case InputMap::InputMapType::kConstantFloat:
@@ -450,7 +451,7 @@ namespace Baikal
 
         VkFormat fmt = GetTextureFormat(texture);
 
-        vk_texture.SetTexture(device_, &memory_manager_, size, fmt, texture.GetSizeInBytes(), texture.GetData());
+        vk_texture.SetTexture(&memory_manager_, size, fmt, texture.GetSizeInBytes(), texture.GetData());
     }
 
     void VkwSceneController::WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const

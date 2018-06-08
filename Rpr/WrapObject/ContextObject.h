@@ -24,8 +24,7 @@ THE SOFTWARE.
 #include "WrapObject/WrapObject.h"
 #include "WrapObject/LightObject.h"
 
-#include "Utils/config_manager.h"
-#include "Renderers/monte_carlo_renderer.h"
+#include "config_manager.h"
 
 #include <vector>
 #include "RadeonProRender.h"
@@ -51,43 +50,40 @@ public:
     void SetCurrenScene(SceneObject* scene) { m_current_scene = scene; }
     
     //context info
-    void GetRenderStatistics(void * out_data, size_t * out_size_ret) const;
-    void SetParameter(const std::string& input, float x, float y = 0.f, float z = 0.f, float w = 0.f);
-    void SetParameter(const std::string& input, const std::string& value);
+    virtual void GetRenderStatistics(void * out_data, size_t * out_size_ret) const;
+    virtual void SetParameter(const std::string& input, float x, float y = 0.f, float z = 0.f, float w = 0.f);
+    virtual void SetParameter(const std::string& input, const std::string& value);
 
     //AOV
-    void SetAOV(rpr_int in_aov, FramebufferObject* buffer);
-    FramebufferObject* GetAOV(rpr_int in_aov);
+    virtual void SetAOV(rpr_int in_aov, FramebufferObject* buffer) = 0;
+    virtual FramebufferObject* GetAOV(rpr_int in_aov) = 0;
 
     //render
-    void Render();
-    void RenderTile(rpr_uint xmin, rpr_uint xmax, rpr_uint ymin, rpr_uint ymax);
+    virtual void Render() = 0;
+    virtual void RenderTile(rpr_uint xmin, rpr_uint xmax, rpr_uint ymin, rpr_uint ymax) = 0;
 
     //create methods
-    SceneObject* CreateScene();
-    MatSysObject* CreateMaterialSystem();
-    LightObject* CreateLight(LightObject::Type type);
-    ShapeObject* CreateShape(rpr_float const * in_vertices, size_t in_num_vertices, rpr_int in_vertex_stride,
+    virtual SceneObject* CreateScene();
+    virtual MatSysObject* CreateMaterialSystem();
+    virtual LightObject* CreateLight(LightObject::Type type);
+    virtual ShapeObject* CreateShape(rpr_float const * in_vertices, size_t in_num_vertices, rpr_int in_vertex_stride,
                             rpr_float const * in_normals, size_t in_num_normals, rpr_int in_normal_stride,
                             rpr_float const * in_texcoords, size_t in_num_texcoords, rpr_int in_texcoord_stride,
                             rpr_int const * in_vertex_indices, rpr_int in_vidx_stride,
                             rpr_int const * in_normal_indices, rpr_int in_nidx_stride,
                             rpr_int const * in_texcoord_indices, rpr_int in_tidx_stride,
                             rpr_int const * in_num_face_vertices, size_t in_num_faces);
-    ShapeObject* CreateShapeInstance(ShapeObject* mesh);
-    MaterialObject* CreateImage(rpr_image_format const in_format, rpr_image_desc const * in_image_desc, void const * in_data);
-    MaterialObject* CreateImageFromFile(rpr_char const * in_path);
-    CameraObject* CreateCamera();
-    FramebufferObject* CreateFrameBuffer(rpr_framebuffer_format const in_format, rpr_framebuffer_desc const * in_fb_desc);
-    FramebufferObject* CreateFrameBufferFromGLTexture(rpr_GLenum target, rpr_GLint miplevel, rpr_GLuint texture);
-private:
-    void PrepareScene();
+    virtual ShapeObject* CreateShapeInstance(ShapeObject* mesh);
+    virtual MaterialObject* CreateImage(rpr_image_format const in_format, rpr_image_desc const * in_image_desc, void const * in_data);
+    virtual MaterialObject* CreateImageFromFile(rpr_char const * in_path);
+    virtual CameraObject* CreateCamera();
 
+    virtual FramebufferObject* CreateFrameBuffer(rpr_framebuffer_format const in_format, rpr_framebuffer_desc const * in_fb_desc) = 0;
+    virtual FramebufferObject* CreateFrameBufferFromGLTexture(rpr_GLenum target, rpr_GLint miplevel, rpr_GLuint texture) = 0;
+protected:
     //after render update
-    void PostRender();
+    virtual void PostRender();
 
-    //render configs
-    std::vector<ConfigManager::Config> m_cfgs;
     //know framefubbers used as AOV outputs
     std::set<FramebufferObject*> m_output_framebuffers;
     SceneObject* m_current_scene;

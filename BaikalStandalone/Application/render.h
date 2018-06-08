@@ -25,7 +25,7 @@
 #include "Output/output.h"
 #include "Output/vkwoutput.h"
 #include "SceneGraph/vkwscene.h"
-#include "Utils/vk_config_manager.h"
+#include "vk_config_manager.h"
 #include "math/float3.h"
 #include "app_utils.h"
 

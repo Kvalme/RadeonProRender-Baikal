@@ -22,6 +22,8 @@ THE SOFTWARE.
 #include "RadeonProRender.h"
 #include "WrapObject/WrapObject.h"
 #include "WrapObject/ContextObject.h"
+#include "WrapObject/ClContextObject.h"
+#include "WrapObject/VkContextObject.h"
 #include "WrapObject/CameraObject.h"
 #include "WrapObject/FramebufferObject.h"
 #include "WrapObject/LightObject.h"
@@ -92,7 +94,7 @@ rpr_int rprCreateContext(rpr_int api_version, rpr_int * pluginIDs, size_t plugin
     try
     {
         //TODO: handle other options
-        *out_context = new ContextObject(creation_flags);
+        *out_context = new ClContextObject(creation_flags);
     }
     catch (Exception& e)
     {

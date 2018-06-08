@@ -19,7 +19,6 @@ if (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
     message(FATAL_ERROR "glTF support requires RPR but it's disabled")
 endif (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
 
-
 if (BAIKAL_ENABLE_HYBRID_RENDERER)
     add_definitions(-DHYBRID_RENDERER=1)
     add_subdirectory(RadeonRays/VKW)
@@ -77,6 +76,8 @@ if (BAIKAL_ENABLE_IO)
     endif (BAIKAL_ENABLE_FBX)
     add_subdirectory(BaikalIO)
 endif (BAIKAL_ENABLE_IO)
+
+add_subdirectory(BaikalUtils)
 
 if (BAIKAL_ENABLE_RPR)
     set(RprSupport_HEADER "${Baikal_SOURCE_DIR}/3rdparty/RprSupport/include/")

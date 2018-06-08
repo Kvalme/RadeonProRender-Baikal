@@ -24,7 +24,7 @@
 
 #include "Application/render.h"
 #include "Application/app_utils.h"
-#include "SceneGraph/IO/image_io.h"
+#include "image_io.h"
 
 #include "GLFW/glfw3.h"
 
@@ -66,7 +66,6 @@ namespace Baikal
         int m_num_triangles;
         int m_num_instances;
 
-        int m_shape_id_val;
         int m_current_shape_id;
         std::string m_object_name;
         std::future<int> m_shape_id_future;

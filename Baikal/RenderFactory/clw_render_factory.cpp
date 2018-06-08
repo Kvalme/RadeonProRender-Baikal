@@ -4,8 +4,11 @@
 #include "Renderers/monte_carlo_renderer.h"
 #include "Renderers/adaptive_renderer.h"
 #include "Estimators/path_tracing_estimator.h"
+
+#ifdef ENABLE_DENOISER
 #include "PostEffects/bilateral_denoiser.h"
 #include "PostEffects/wavelet_denoiser.h"
+#endif
 
 #include <memory>
 
@@ -55,6 +58,7 @@ namespace Baikal
     std::unique_ptr<PostEffect> ClwRenderFactory::CreatePostEffect(
                                                     PostEffectType type) const
     {
+#ifdef ENABLE_DENOISER
         switch (type)
         {
             case PostEffectType::kBilateralDenoiser:
@@ -64,8 +68,11 @@ namespace Baikal
                 return std::unique_ptr<PostEffect>(
                                             new WaveletDenoiser(m_context, &m_program_manager));
             default:
-                throw std::runtime_error("PostEffect not supported");
+                throw std::runtime_error("PostEffect is not supported");
         }
+#else
+        throw std::runtime_error("PostEffect is not supported");
+#endif
     }
 
     std::unique_ptr<SceneController<ClwScene>> ClwRenderFactory::CreateSceneController() const

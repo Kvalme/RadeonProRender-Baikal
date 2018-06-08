@@ -23,10 +23,6 @@ set(WRAP_OBJECT_SOURCES
     WrapObject/Materials/ImageMaterialObject.h
     WrapObject/Materials/MaterialObject.cpp
     WrapObject/Materials/MaterialObject.h
-    WrapObject/Materials/MultiBxdfMaterialObject.cpp
-    WrapObject/Materials/MultiBxdfMaterialObject.h
-    WrapObject/Materials/SingleBxdfMaterialObject.cpp
-    WrapObject/Materials/SingleBxdfMaterialObject.h
     WrapObject/Materials/TextureMaterialObject.cpp
     WrapObject/Materials/TextureMaterialObject.h
     WrapObject/Materials/UberMaterialObject.cpp
@@ -55,6 +51,6 @@ add_library(RadeonProRender SHARED ${SOURCES})
 target_compile_definitions(RadeonProRender PRIVATE RPR_EXPORT_API)
 target_compile_features(RadeonProRender PRIVATE cxx_std_14)
 target_include_directories(RadeonProRender PUBLIC ${Baikal_SOURCE_DIR}/Rpr)
-target_link_libraries(RadeonProRender PUBLIC Baikal OpenGL::GL GLEW::GLEW)
+target_link_libraries(RadeonProRender PUBLIC Baikal BaikalIO OpenGL::GL GLEW::GLEW)
 
     

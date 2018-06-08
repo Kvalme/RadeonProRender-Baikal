@@ -25,7 +25,7 @@
 #include "SceneGraph/light.h"
 #include "SceneGraph/shape.h"
 #include "SceneGraph/material.h"
-#include "SceneGraph/IO/image_io.h"
+#include "image_io.h"
 #include "SceneGraph/uberv2material.h"
 #include "SceneGraph/inputmaps.h"
 
@@ -43,8 +43,7 @@ protected:
 
     void LoadTestScene() override
     {
-        auto io = Baikal::SceneIo::CreateSceneIoTest();
-        m_scene = io->LoadScene("sphere+plane+ibl", "");
+        m_scene = Baikal::SceneIo::LoadScene("sphere+plane+ibl.test", "");
     }
 
     void SetUp() override
@@ -61,6 +60,7 @@ protected:
         ClearOutput();
 
         ApplyMaterialToObject(object_name, material);
+        ApplyMaterialToObject("sphere", material);
 
         ASSERT_NO_THROW(m_controller->CompileScene(m_scene));
 
@@ -554,7 +554,7 @@ TEST_F(InputMapsTest, InputMap_Shuffle)
 {
     auto material = Baikal::UberV2Material::Create();
     auto color1 = Baikal::InputMap_ConstantFloat3::Create(float3(1.0f, 0.0f, 0.0f));
-    auto diffuse_color = Baikal::InputMap_Shuffle::Create(color1, {0, 0, 0, 0});
+    auto diffuse_color = Baikal::InputMap_Shuffle::Create(color1, {{0, 0, 0, 0}});
 
     material->SetInputValue("uberv2.diffuse.color", diffuse_color);
     material->SetLayers(Baikal::UberV2Material::Layers::kDiffuseLayer);
@@ -567,7 +567,7 @@ TEST_F(InputMapsTest, InputMap_Shuffle2)
     auto material = Baikal::UberV2Material::Create();
     auto color1 = Baikal::InputMap_ConstantFloat3::Create(float3(1.0f, 0.0f, 0.0f));
     auto color2 = Baikal::InputMap_ConstantFloat3::Create(float3(0.0f, 1.0f, 0.0f));
-    auto diffuse_color = Baikal::InputMap_Shuffle2::Create(color1, color2, {0, 5, 1, 6});
+    auto diffuse_color = Baikal::InputMap_Shuffle2::Create(color1, color2, {{0, 5, 1, 6}});
 
     material->SetInputValue("uberv2.diffuse.color", diffuse_color);
     material->SetLayers(Baikal::UberV2Material::Layers::kDiffuseLayer);

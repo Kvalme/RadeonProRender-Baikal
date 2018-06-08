@@ -20,21 +20,21 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Baikal::DebugReportCallback(
 {
     static const std::map<VkDebugReportFlagsEXT, std::string> vkDebugPrefix =
     {
-        { VK_DEBUG_REPORT_INFORMATION_BIT_EXT, "Info: " },
-        { VK_DEBUG_REPORT_WARNING_BIT_EXT, "Warn: " },
-        { VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "Perf: " },
-        { VK_DEBUG_REPORT_DEBUG_BIT_EXT, "Debug: " },
-        { VK_DEBUG_REPORT_ERROR_BIT_EXT, "Error: " }
+        {VK_DEBUG_REPORT_INFORMATION_BIT_EXT, "Info: "},
+        {VK_DEBUG_REPORT_WARNING_BIT_EXT, "Warn: "},
+        {VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "Perf: "},
+        {VK_DEBUG_REPORT_DEBUG_BIT_EXT, "Debug: "},
+        {VK_DEBUG_REPORT_ERROR_BIT_EXT, "Error: "}
     };
 
     auto prefix_it = vkDebugPrefix.find(flags);
     if (prefix_it == vkDebugPrefix.end())
     {
-        std::cerr << "VK: " << pLayerPrefix << " : " << pMessage << std::endl;
+        std::cerr << "VK: " <<pLayerPrefix <<" : "<< pMessage << std::endl;
     }
     else
     {
-        std::cerr << prefix_it->second.c_str() << pLayerPrefix << " : " << pMessage << std::endl;
+        std::cerr << prefix_it->second.c_str() << pLayerPrefix << " : "<< pMessage << std::endl;
     }
 
     return VK_FALSE;
@@ -53,9 +53,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
 }
 
 VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
-    VkInstance                                  instance,
-    VkDebugReportCallbackEXT                    callback,
-    const VkAllocationCallbacks*                pAllocator)
+     VkInstance                                  instance,
+     VkDebugReportCallbackEXT                    callback,
+     const VkAllocationCallbacks*                pAllocator)
 {
     static PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
         reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT"));

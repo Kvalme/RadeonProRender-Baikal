@@ -93,11 +93,8 @@ namespace Baikal
         // Write out single light at data pointer.
         // Collector is required to convert texture pointers into indices.
         void WriteLight(Scene1 const& scene, Light const& light, Collector& tex_collector, void* data) const;
-        // Write out single texture header at data pointer.
-        // Header requires texture data offset, so it is passed in.
-        void WriteTexture(Texture const& texture, std::size_t data_offset, void* data) const;
-        // Write out texture data at data pointer.
-        void WriteTextureData(Texture const& texture, void* data) const;
+        // Write out single texture at data pointer.
+        void WriteTexture(Texture const& texture, vkw::Texture &vk_texture) const;
         // Write single volume at data pointer
         void WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const;
         // Write single input map leaf at data pointer
@@ -125,5 +122,6 @@ namespace Baikal
         mutable std::vector<Vertex>                     vertex_buffer_;
         mutable std::vector<uint32_t>                   index_buffer_;
         mutable std::vector<RadeonRays::matrix>         mesh_transforms_;
+        mutable std::vector<char>                       texture_data_;
     };
 }

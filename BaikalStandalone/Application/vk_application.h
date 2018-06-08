@@ -26,7 +26,7 @@
 #include "Application/app_utils.h"
 #include "Application/vk_render.h"
 
-#include "SceneGraph/IO/image_io.h"
+#include "image_io.h"
 
 #include <future>
 #include <memory>

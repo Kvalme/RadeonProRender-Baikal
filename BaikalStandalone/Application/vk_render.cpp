@@ -20,8 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ********************************************************************/
 #include "vk_render.h"
-#include "SceneGraph/IO/scene_io.h"
-#include "SceneGraph/IO/material_io.h"
+#include "scene_io.h"
+#include "material_io.h"
 #include "Output/vkwoutput.h"
 
 namespace Baikal

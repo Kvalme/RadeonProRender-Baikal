@@ -68,6 +68,7 @@ namespace Baikal
 
         VkDevice            GetDevice() { return m_cfg.device_.get(); }
         VkInstance          GetInstance() { return m_cfg.instance_.get(); }
+
         VkPhysicalDevice    GetPhysicalDevice() { return m_cfg.physical_device_; }
         uint32_t            GetGraphicsQueueFamilyIndex() { return m_cfg.graphics_queue_family_idx_; }
         Output*             GetRendererOutput() { return m_output.output.get(); }

@@ -48,7 +48,7 @@ namespace Baikal
     }
 
     VkwSceneController::VkwSceneController(vkw::MemoryAllocator& memory_allocator, vkw::MemoryManager& memory_manager, VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
-        : default_material_(SingleBxdf::Create(SingleBxdf::BxdfType::kLambert))
+        : default_material_(UberV2Material::Create())
         , device_(device)
         , physical_device_(physical_device)
         , memory_allocator_(memory_allocator)
@@ -119,16 +119,14 @@ namespace Baikal
 
     void VkwSceneController::UpdateShapes(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const
     {
-        size_t num_shapes = scene.GetNumShapes();
-        size_t num_vertices = 0;
-        size_t num_indices = 0;
+        uint32_t num_shapes = static_cast<uint32_t>(scene.GetNumShapes());
+        uint32_t num_vertices = 0;
+        uint32_t num_indices = 0;
 
         vertex_buffer_.clear();
         index_buffer_.clear();
         mesh_transforms_.clear();
         out.meshes.clear();
-
-        int mat_id = 0;
 
         std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
         for (; mesh_iter->IsValid(); mesh_iter->Next())
@@ -139,11 +137,7 @@ namespace Baikal
             if (mesh == nullptr)
                 continue;
 
-            // TODO: desc sets and roughness, metallic, diffuse
-            VkMaterialConstants constants;
-            constants.data[0] = mat_id++;
-
-            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, constants };
+            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, mat_collector.GetItemIndex(shape->GetMaterial()) };
             out.meshes.push_back(vkw_mesh);
 
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
@@ -159,8 +153,8 @@ namespace Baikal
 
             mesh_transforms_.push_back(mesh->GetTransform());
 
-            num_vertices += mesh->GetNumVertices();
-            num_indices += mesh->GetNumIndices();
+            num_vertices += static_cast<uint32_t>(mesh->GetNumVertices());
+            num_indices += static_cast<uint32_t>(mesh->GetNumIndices());
 
             assert(mesh->GetNumVertices() == mesh->GetNumNormals());
             assert(mesh->GetNumVertices() == mesh->GetNumUVs());
@@ -206,7 +200,7 @@ namespace Baikal
 
     void VkwSceneController::UpdateShapeProperties(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& volume_collector, VkwScene& out) const
     {
-        size_t num_shapes = scene.GetNumShapes();
+        uint32_t num_shapes = static_cast<uint32_t>(scene.GetNumShapes());
 
         mesh_transforms_.clear();
 
@@ -242,18 +236,145 @@ namespace Baikal
 
     void VkwSceneController::UpdateMaterials(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
+        // Get new buffer size
+        std::size_t material_buffer_size = mat_collector.GetNumItems();
+        if (material_buffer_size == 0)
+        {
+            return;
+        }
+
+        // Resize texture cache if needed
+        if (out.materials.size() < material_buffer_size)
+        {
+            out.materials.resize(material_buffer_size);
+        }
+
+        // Update material bundle first to be able to track differences
+        out.material_bundle.reset(mat_collector.CreateBundle());
+
+        // Create texture iterator
+        std::unique_ptr<Iterator> mat_iter(mat_collector.CreateIterator());
+
+        // Iterate and serialize
+        std::size_t num_materials_written = 0;
+        for (; mat_iter->IsValid(); mat_iter->Next())
+        {
+            auto mat = mat_iter->ItemAs<Baikal::Material>();
+
+            WriteMaterial(*mat, mat_collector, tex_collector, out.materials.data() + num_materials_written);
+
+            num_materials_written++;
+        }
     }
 
     void VkwSceneController::UpdateVolumes(Scene1 const& scene, Collector& volume_collector, Collector& tex_collector, VkwScene& out) const
     {
     }
 
+
     void VkwSceneController::UpdateTextures(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
+        // Get new buffer size
+        std::size_t tex_buffer_size = tex_collector.GetNumItems();
+        if (tex_buffer_size == 0)
+        {
+            return;
+        }
+
+        // Resize texture cache if needed
+        if (out.textures.size() < tex_buffer_size)
+        {
+            out.textures.resize(tex_buffer_size);
+        }
+
+        // Update material bundle first to be able to track differences
+        out.texture_bundle.reset(tex_collector.CreateBundle());
+
+        // Create texture iterator
+        std::unique_ptr<Iterator> tex_iter(tex_collector.CreateIterator());
+
+        // Iterate and serialize
+        std::size_t num_textures_written = 0;
+        for (; tex_iter->IsValid(); tex_iter->Next())
+        {
+            auto tex = tex_iter->ItemAs<Texture>();
+
+            WriteTexture(*tex, out.textures[num_textures_written]);
+
+            ++num_textures_written;
+        }
     }
 
     void VkwSceneController::WriteMaterial(Material const& material, Collector& mat_collector, Collector& tex_collector, void* data) const
     {
+        VkwScene::Material *mat = static_cast<VkwScene::Material*>(data);
+        const UberV2Material &ubermaterial = static_cast<const UberV2Material&>(material);
+        mat->layers = ubermaterial.GetLayers();
+
+        auto input_to_material_value = [&](Material::InputValue input_value) -> VkwScene::Material::Value
+        {
+            assert(input_value.type == Material::InputType::kInputMap);
+            switch(input_value.input_map_value->m_type)
+            {
+                case InputMap::InputMapType::kConstantFloat:
+                {
+                    InputMap_ConstantFloat *i = static_cast<InputMap_ConstantFloat*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = false;
+                    value.color.x = i->GetValue();
+                    return value;
+                }
+                case InputMap::InputMapType::kConstantFloat3:
+                {
+                    InputMap_ConstantFloat3 *i = static_cast<InputMap_ConstantFloat3*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = false;
+                    value.color = i->GetValue();
+                    return value;
+                }
+                case InputMap::InputMapType::kSampler:
+                {
+                    InputMap_Sampler *i = static_cast<InputMap_Sampler*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = true;
+                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
+                    return value;
+                }
+                case InputMap::InputMapType::kSamplerBumpmap:
+                {
+                    InputMap_SamplerBumpMap *i = static_cast<InputMap_SamplerBumpMap*>(input_value.input_map_value.get());
+                    VkwScene::Material::Value value;
+                    value.isTexture = true;
+                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
+                    return value;
+                };
+                default:
+                    assert(!"Unsupported input map type");
+            }
+            return  VkwScene::Material::Value();
+        };
+
+        if ((mat->layers & UberV2Material::Layers::kDiffuseLayer) == UberV2Material::Layers::kDiffuseLayer)
+        {
+            mat->diffuse_color = input_to_material_value(material.GetInputValue("uberv2.diffuse.color"));
+        }
+
+        if ((mat->layers & UberV2Material::Layers::kReflectionLayer) == UberV2Material::Layers::kReflectionLayer)
+        {
+            mat->reflection_color = input_to_material_value(material.GetInputValue("uberv2.reflection.color"));
+            mat->reflection_ior = input_to_material_value(material.GetInputValue("uberv2.reflection.roughness"));
+            mat->reflection_roughness = input_to_material_value(material.GetInputValue("uberv2.reflection.ior"));
+        }
+
+        if ((mat->layers & UberV2Material::Layers::kTransparencyLayer) == UberV2Material::Layers::kTransparencyLayer)
+        {
+            mat->transparency = input_to_material_value(material.GetInputValue("uberv2.transparency"));
+        }
+
+        if ((mat->layers & UberV2Material::Layers::kShadingNormalLayer) == UberV2Material::Layers::kShadingNormalLayer)
+        {
+            mat->shading_normal = input_to_material_value(material.GetInputValue("uberv2.shading_normal"));
+        }
     }
 
     void VkwSceneController::WriteLight(Scene1 const& scene, Light const& light, Collector& tex_collector, void* data) const
@@ -262,7 +383,7 @@ namespace Baikal
 
     void VkwSceneController::UpdateLights(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
-        auto num_lights = scene.GetNumLights();
+        uint32_t num_lights = static_cast<uint32_t>(scene.GetNumLights());
 
         std::vector<VkLight> lights_internal(static_cast<size_t>(num_lights));
 
@@ -305,12 +426,29 @@ namespace Baikal
         memory_manager_.WriteBuffer(out.lights.get(), 0u, sizeof(VkLight) * num_lights, &lights_internal);
     }
 
-    void VkwSceneController::WriteTexture(Texture const& texture, std::size_t data_offset, void* data) const
+
+    VkFormat GetTextureFormat(const Texture &texture)
     {
+        switch (texture.GetFormat())
+        {
+            case Texture::Format::kRgba8: return VK_FORMAT_R8G8B8A8_UNORM;
+            case Texture::Format::kRgba16: return VK_FORMAT_R16G16B16A16_UNORM;
+            case Texture::Format::kRgba32: return VK_FORMAT_R32G32B32A32_SFLOAT;
+            default: return VK_FORMAT_R8G8B8A8_UNORM;
+        }
     }
 
-    void VkwSceneController::WriteTextureData(Texture const& texture, void* data) const
+    void VkwSceneController::WriteTexture(Texture const& texture, vkw::Texture &vk_texture) const
     {
+        auto sz = texture.GetSize();
+        VkExtent3D size;
+        size.width = sz.x;
+        size.height = sz.y;
+        size.depth = sz.z;
+
+        VkFormat fmt = GetTextureFormat(texture);
+
+        vk_texture.SetTexture(&memory_manager_, size, fmt, texture.GetSizeInBytes(), texture.GetData());
     }
 
     void VkwSceneController::WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const

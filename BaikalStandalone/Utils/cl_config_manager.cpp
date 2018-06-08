@@ -163,7 +163,7 @@ void ClConfigManager::CreateConfigs(
         configs[0].type = kPrimary;
     }
 
-    for (int i = 0; i < configs.size(); ++i)
+    for (std::size_t i = 0; i < configs.size(); ++i)
     {
         configs[i].factory_ = std::make_unique<Baikal::ClwRenderFactory>(configs[i].context, "cache");
         configs[i].controller_ = configs[i].factory_->CreateSceneController();

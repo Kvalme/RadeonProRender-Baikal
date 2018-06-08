@@ -385,15 +385,15 @@ namespace Baikal
     }
 
     VkApplication::VkApplication(int argc, char * argv[])
-        : Application()
-        , window_surface_(VK_NULL_HANDLE)
-        , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
-        , swapchain_(VK_NULL_HANDLE)
-        , render_pass_(VK_NULL_HANDLE)
-        , back_buffer_count_(0)
-        , framebuffer_width_(0)
-        , framebuffer_height_(0)
-        , frame_idx_(0)
+    : Application()
+    , frame_idx_(0)
+    , framebuffer_width_(0)
+    , framebuffer_height_(0)
+    , window_surface_(VK_NULL_HANDLE)
+    , swapchain_(VK_NULL_HANDLE)
+    , render_pass_(VK_NULL_HANDLE)
+    , default_present_mode_(VK_PRESENT_MODE_MAILBOX_KHR)
+    , back_buffer_count_(0)
     {
         if (glfwInit() != GL_TRUE)
         {
@@ -533,9 +533,9 @@ namespace Baikal
             command_buffers_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
             command_buffers_create_info.commandPool = command_pools_[i];
             command_buffers_create_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            command_buffers_create_info.commandBufferCount = num_queued_frames_;
+            command_buffers_create_info.commandBufferCount = 1;
 
-            if (vkAllocateCommandBuffers(vk_app_render->GetDevice(), &command_buffers_create_info, command_buffers_) != VK_SUCCESS)
+            if (vkAllocateCommandBuffers(vk_app_render->GetDevice(), &command_buffers_create_info, &command_buffers_[i]) != VK_SUCCESS)
                 throw std::runtime_error("VkApplication: Failed to allocate command buffers");
         }
     }
@@ -647,3 +647,4 @@ namespace Baikal
         }
     }
 }
+

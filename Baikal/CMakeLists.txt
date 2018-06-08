@@ -20,7 +20,9 @@ set(POSTEFFECT_SOURCES
     PostEffects/clw_post_effect.h
     PostEffects/post_effect.h
     PostEffects/bilateral_denoiser.h
-    PostEffects/wavelet_denoiser.h)
+    PostEffects/wavelet_denoiser.h
+    PostEffects/AreaMap33.h
+    )
     
 set(RENDERERS_SOURCES
     Renderers/adaptive_renderer.cpp
@@ -60,6 +62,8 @@ set(UTILS_SOURCES
     Utils/cl_program.h
     Utils/cl_program_manager.cpp
     Utils/cl_program_manager.h
+    Utils/cl_uberv2_generator.h
+    Utils/cl_uberv2_generator.cpp
     Utils/vulkandebug.cpp
     Utils/vulkandebug.h
 )
@@ -90,28 +94,13 @@ set(SCENEGRAPH_SOURCES
 set(SCENEGRAPH_COLLECTOR_SOURCES
     SceneGraph/Collector/collector.cpp
     SceneGraph/Collector/collector.h)
-    
-set(SCENEGRAPH_IO_SOURCES
-    SceneGraph/IO/image_io.cpp
-    SceneGraph/IO/image_io.h
-    SceneGraph/IO/material_io.cpp
-    SceneGraph/IO/material_io.h
-    SceneGraph/IO/scene_binary_io.cpp
-    SceneGraph/IO/scene_binary_io.h
-    SceneGraph/IO/scene_fbx_io.cpp
-    SceneGraph/IO/scene_gltf_io.cpp
-    SceneGraph/IO/scene_io.cpp
-    SceneGraph/IO/scene_io.h
-    SceneGraph/IO/scene_test_io.cpp
-    )
-    
+
 set(XML_SOURCES
     XML/tinyxml2.cpp
     XML/tinyxml2.h)
 
 set(KERNELS_SOURCES
     Kernels/CL/bxdf.cl
-    Kernels/CL/bxdf_basic.cl
     Kernels/CL/bxdf_uberv2.cl
     Kernels/CL/bxdf_uberv2_bricks.cl
     Kernels/CL/common.cl
@@ -120,7 +109,6 @@ set(KERNELS_SOURCES
     Kernels/CL/integrator_bdpt.cl
     Kernels/CL/isect.cl
     Kernels/CL/light.cl
-    Kernels/CL/material.cl
     Kernels/CL/monte_carlo_renderer.cl
     Kernels/CL/normalmap.cl
     Kernels/CL/path.cl
@@ -134,7 +122,10 @@ set(KERNELS_SOURCES
     Kernels/CL/utils.cl
     Kernels/CL/vertex.cl
     Kernels/CL/volumetrics.cl
-    Kernels/CL/wavelet_denoise.cl)
+    Kernels/CL/wavelet_denoise.cl
+    Kernels/CL/path_tracing_estimator_uberv2.cl
+    Kernels/CL/fill_aovs_uberv2.cl
+    )
 
 set(SOURCES
     ${CONTROLLERS_SOURCES}
@@ -160,7 +151,6 @@ source_group("RenderFactory" FILES ${RENDERFACTORY_SOURCES})
 source_group("Utils" FILES ${UTILS_SOURCES})
 source_group("SceneGraph" FILES ${SCENEGRAPH_SOURCES})
 source_group("SceneGraph\\Collector" FILES ${SCENEGRAPH_COLLECTOR_SOURCES})
-source_group("SceneGraph\\IO" FILES ${SCENEGRAPH_IO_SOURCES})
 source_group("XML" FILES ${XML_SOURCES})
 source_group("Kernels\\CL" FILES ${KERNELS_SOURCES})
 
@@ -174,13 +164,15 @@ if (BAIKAL_ENABLE_RAYMASK)
     target_compile_definitions(Baikal PUBLIC ENABLE_RAYMASK)
 endif (BAIKAL_ENABLE_RAYMASK)
 
-if (BAIKAL_ENABLE_UBERV2)
-    target_compile_definitions(Baikal PUBLIC ENABLE_UBERV2)
-endif (BAIKAL_ENABLE_UBERV2)
-
 find_package(Vulkan)
 
 target_compile_features(Baikal PRIVATE cxx_std_14)
 target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/Baikal")
 target_include_directories(Baikal PUBLIC "${Baikal_SOURCE_DIR}/RadeonRays/VKW")
 target_link_libraries(Baikal PUBLIC RadeonRays VKW OpenImageIO::OpenImageIO Vulkan::Vulkan)
+target_link_libraries(Baikal PUBLIC RadeonRays)
+if (WIN32)
+    target_compile_options(Baikal PUBLIC /WX)
+elseif (UNIX)
+    target_compile_options(Baikal PUBLIC -Wall -Werror)
+endif (WIN32)

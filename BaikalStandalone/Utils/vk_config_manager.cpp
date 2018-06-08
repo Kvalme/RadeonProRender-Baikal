@@ -43,6 +43,7 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
 
     std::vector<const char*> extensions(requested_extensions);
     std::vector<const char*> layers;
+
 #ifndef NDEBUG
 #ifndef __APPLE__
 
@@ -65,14 +66,35 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
 
     VkInstance instance = nullptr;
     VkResult res = vkCreateInstance(&instance_info, nullptr, &instance);
+
     if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
     {
         throw std::runtime_error("Cannot find a compatible Vulkan ICD\n");
     }
     else if (res)
     {
-        throw std::runtime_error("Unknown error\n");
+        throw std::runtime_error("vkCreateInstance: Unknown error\n");
     }
+
+#ifndef NDEBUG
+#ifndef __APPLE__
+    VkDebugReportCallbackCreateInfoEXT debugReportCallback;
+    debugReportCallback.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    debugReportCallback.pfnCallback = &(Baikal::DebugReportCallback);
+    debugReportCallback.flags =
+        VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+
+    VkDebugReportCallbackEXT debug_report_callback_;
+    vkCreateDebugReportCallbackEXT(instance, &debugReportCallback, nullptr, &debug_report_callback_);
+
+    return vkw::VkScopedObject<VkInstance>(instance,
+        [debug_report_callback_](VkInstance instance)
+    {
+        vkDestroyInstance(instance, nullptr);
+        vkDestroyDebugReportCallbackEXT(instance, debug_report_callback_, nullptr);
+    });
+#endif
+#endif
 
     return vkw::VkScopedObject<VkInstance>(instance,
         [](VkInstance instance)

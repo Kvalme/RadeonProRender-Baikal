@@ -19,27 +19,23 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ********************************************************************/
-#pragma once
+#include "scene_io.h"
+#include <vector>
+#include <memory>
 
-#include "MaterialObject.h"
+#define _USE_MATH_DEFINES
+#include <math.h>
 
-
-//materials represented as Baikal::MultiBxdf
-class MultiBxdfMaterialObject
-    : public MaterialObject
+namespace Baikal
 {
-public:
-    MultiBxdfMaterialObject(MaterialObject::Type mat_type, Baikal::MultiBxdf::Type type);
-
-    void SetInputF(const std::string& input_name, const RadeonRays::float4& val) override;
-    Baikal::Material::Ptr GetMaterial() override;
-
-protected:
-    void Update(MaterialObject* mat) override;
-    void SetInputMaterial(const std::string& input_name, MaterialObject* input) override;
-    void SetInputTexture(const std::string& input_name, TextureMaterialObject* input) override;
-private:
-
-
-    Baikal::Material::Ptr m_mat;
-};
+    // Create fake test IO
+    class SceneBinaryIo : public SceneIo::Loader
+    {
+    public:
+        SceneBinaryIo() : SceneIo::Loader("bin", this)
+        {}
+        // Load scene (this class uses filename to determine what scene to generate)
+        Scene1::Ptr LoadScene(std::string const& filename, std::string const& basepath) const override;
+        void SaveScene(Scene1 const& scene, std::string const& filename, std::string const& basepath) const override;
+    };
+}

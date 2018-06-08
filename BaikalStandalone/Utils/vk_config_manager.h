@@ -63,6 +63,7 @@ public:
 
         uint32_t                        compute_queue_family_idx_;
         uint32_t                        graphics_queue_family_idx_;
+        VkDebugReportCallbackEXT        debug_report_callback_;
     };
 
     static void CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions);

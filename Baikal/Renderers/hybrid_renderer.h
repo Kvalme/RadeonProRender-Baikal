@@ -88,6 +88,8 @@ namespace Baikal
         vkw::Shader                                     fsq_vert_shader_;
         vkw::Shader                                     deferred_frag_shader_;
         vkw::GraphicsPipeline                           deferred_pipeline_;
+
+        static const uint32_t                           num_queued_frames_ = 2;
     protected:
         vkw::MemoryManager&                             memory_manager_;
         vkw::RenderTargetManager&                       render_target_manager_;
@@ -105,8 +107,8 @@ namespace Baikal
 
         vkw::Utils                                      utils_;
 
-        vkw::CommandBuffer                              g_buffer_cmd_;
-        vkw::CommandBuffer                              deferred_cmd_;
+        vkw::CommandBuffer                              g_buffer_cmd_[num_queued_frames_];
+        vkw::CommandBuffer                              deferred_cmd_[num_queued_frames_];
 
         VkViewport                                      viewport_;
         VkRect2D                                        scissor_;
@@ -119,5 +121,7 @@ namespace Baikal
 
         VkQueue                                         graphics_queue_;
         VkQueue                                         compute_queue_;
+
+        uint32_t                                        frame_idx_;
     };
 }

@@ -27,8 +27,8 @@ THE SOFTWARE.
 #include "SceneGraph/scene1.h"
 #include "SceneGraph/camera.h"
 #include "SceneGraph/material.h"
-#include "SceneGraph/IO/scene_io.h"
-#include "SceneGraph/IO/material_io.h"
+#include "scene_io.h"
+#include "material_io.h"
 #include "SceneGraph/material.h"
 
 #include "Renderers/monte_carlo_renderer.h"
@@ -39,8 +39,9 @@ THE SOFTWARE.
 #include <thread>
 #include <chrono>
 
-
+#ifdef ENABLE_DENOISER
 #include "PostEffects/wavelet_denoiser.h"
+#endif
 #include "Utils/clw_class.h"
 
 namespace Baikal
@@ -76,7 +77,7 @@ namespace Baikal
 
         std::cout << "Running on devices: \n";
 
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
             std::cout << i << ": " << m_cfgs[i].context.GetDevice(0).GetName() << "\n";
         }
@@ -86,11 +87,11 @@ namespace Baikal
         m_outputs.resize(m_cfgs.size());
         m_ctrl.reset(new ControlData[m_cfgs.size()]);
 
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
             if (m_cfgs[i].type == ConfigManager::kPrimary)
             {
-                m_primary = i;
+                m_primary = static_cast<int>(i);
 
                 if (m_cfgs[i].caninterop)
                 {
@@ -102,7 +103,7 @@ namespace Baikal
             m_ctrl[i].clear.store(1);
             m_ctrl[i].stop.store(0);
             m_ctrl[i].newdata.store(0);
-            m_ctrl[i].idx = i;
+            m_ctrl[i].idx = static_cast<int>(i);
         }
 
         if (force_disable_itnerop)
@@ -122,8 +123,7 @@ namespace Baikal
         }
 
         //create renderer
-#pragma omp parallel for
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
             m_outputs[i].output = m_cfgs[i].factory_->CreateOutput(m_width, m_height);
 
@@ -160,12 +160,11 @@ namespace Baikal
         m_cfgs[m_primary].renderer_->Clear(RadeonRays::float3(0, 0, 0), *m_shape_id_data.output);
     }
 
-
     void AppClRender::UpdateScene()
     {
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
-            if (i == m_primary)
+            if (i == static_cast<std::size_t>(m_primary))
             {
                 m_cfgs[i].controller_->CompileScene(m_scene);
                 m_cfgs[i].renderer_->Clear(float3(0, 0, 0), *m_outputs[i].output);
@@ -187,7 +186,7 @@ namespace Baikal
     {
         //if (std::chrono::duration_cast<std::chrono::seconds>(time - updatetime).count() > 1)
         //{
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
             if (m_cfgs[i].type == ConfigManager::kPrimary)
                 continue;
@@ -298,7 +297,7 @@ namespace Baikal
             // copy shape id elem from OpenCl
             float4 shape_id;
             m_shape_id_data.output->GetData((float3*)&shape_id, offset, 1);
-            m_promise.set_value(shape_id.x);
+            m_promise.set_value(static_cast<int>(shape_id.x));
             // clear output to stop tracking shape id map in openCl
             m_cfgs[m_primary].renderer_->SetOutput(OutputType::kShapeId, nullptr);
             m_shape_id_requested = false;
@@ -323,7 +322,7 @@ namespace Baikal
             auto normal_sensitivity = 0.1f + (radius / 10.f) * 0.15f;
             auto color_sensitivity = (radius / 10.f) * 2.f;
             auto albedo_sensitivity = 0.5f + (radius / 10.f) * 0.5f;
-            m_outputs[m_primary].denoiser->SetParameter("radius", radius);
+            m_outputs[m_primary].denoiser->SetParameter("radius", static_cast<float>(radius));
             m_outputs[m_primary].denoiser->SetParameter("color_sensitivity", color_sensitivity);
             m_outputs[m_primary].denoiser->SetParameter("normal_sensitivity", normal_sensitivity);
             m_outputs[m_primary].denoiser->SetParameter("position_sensitivity", position_sensitivity);
@@ -442,9 +441,9 @@ namespace Baikal
 
     void AppClRender::StartRenderThreads()
     {
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
-            if (i != m_primary)
+            if (i != static_cast<std::size_t>(m_primary))
             {
                 m_renderthreads.push_back(std::thread(&AppClRender::RenderThread, this, std::ref(m_ctrl[i])));
                 m_renderthreads.back().detach();
@@ -456,9 +455,9 @@ namespace Baikal
 
     void AppClRender::StopRenderThreads()
     {
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
-            if (i == m_primary)
+            if (i == static_cast<std::size_t>(m_primary))
                 continue;
 
             m_ctrl[i].stop.store(true);
@@ -514,7 +513,7 @@ namespace Baikal
 
     void AppClRender::SetNumBounces(int num_bounces)
     {
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
             static_cast<Baikal::MonteCarloRenderer*>(m_cfgs[i].renderer_.get())->SetMaxBounces(num_bounces);
         }
@@ -522,7 +521,7 @@ namespace Baikal
 
     void AppClRender::SetOutputType(OutputType type)
     {
-        for (int i = 0; i < m_cfgs.size(); ++i)
+        for (std::size_t i = 0; i < m_cfgs.size(); ++i)
         {
             m_cfgs[i].renderer_->SetOutput(m_output_type, nullptr);
             m_cfgs[i].renderer_->SetOutput(type, m_outputs[i].output.get());
@@ -559,7 +558,7 @@ namespace Baikal
         for (auto iter = m_scene->CreateShapeIterator(); iter->IsValid(); iter->Next())
         {
             auto shape = iter->ItemAs<Shape>();
-            if (shape->GetId() == shape_id)
+            if (shape->GetId() == static_cast<std::size_t>(shape_id))
                 return shape;
         }
         return nullptr;

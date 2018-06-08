@@ -1,13 +1,13 @@
 #include "scene_io.h"
 #include "image_io.h"
-#include "../scene1.h"
-#include "../shape.h"
-#include "../material.h"
-#include "../light.h"
-#include "../texture.h"
+#include "SceneGraph/scene1.h"
+#include "SceneGraph/shape.h"
+#include "SceneGraph/material.h"
+#include "SceneGraph/light.h"
+#include "SceneGraph/texture.h"
+#include "SceneGraph/uberv2material.h"
+#include "SceneGraph/inputmaps.h"
 #include "math/mathutils.h"
-#include "../uberv2material.h"
-#include "../inputmaps.h"
 
 #include <vector>
 #include <memory>
@@ -18,18 +18,17 @@
 namespace Baikal
 {
     // Create fake test IO
-    class SceneIoTest : public SceneIo
+    class SceneIoTest : public SceneIo::Loader
     {
     public:
         // Load scene (this class uses filename to determine what scene to generate)
         Scene1::Ptr LoadScene(std::string const& filename, std::string const& basepath) const override;
+        SceneIoTest() : SceneIo::Loader("test", this)
+        {}
     };
 
-    // Create test IO
-    std::unique_ptr<SceneIo> SceneIo::CreateSceneIoTest()
-    {
-        return std::unique_ptr<SceneIo>(new SceneIoTest());
-    }
+    // Create static object to register loader. This object will be used as loader
+    static SceneIoTest scene_io_test_loader;
 
     // Create spehere mesh
     auto CreateSphere(std::uint32_t lat, std::uint32_t lon, float r, RadeonRays::float3 const& c)
@@ -148,8 +147,10 @@ namespace Baikal
 
         auto scene = Scene1::Create();
         auto image_io(ImageIo::CreateImageIo());
+        std::string fname = filename.substr(0, filename.rfind(".test"));
+        fname = fname.substr(fname.find(basepath) + basepath.length());
 
-        if (filename == "quad+spot")
+        if (fname == "quad+spot")
         {
             auto quad = CreateQuad(
             {
@@ -171,7 +172,7 @@ namespace Baikal
             //light->SetConeShape
             scene->AttachLight(light);
         }
-        else if (filename == "quad+ibl")
+        else if (fname == "quad+ibl")
         {
             auto quad = CreateQuad(
             {
@@ -191,23 +192,30 @@ namespace Baikal
             ibl->SetMultiplier(1.f);
             scene->AttachLight(ibl);
 
-            auto green = SingleBxdf::Create(SingleBxdf::BxdfType::kLambert);
-            green->SetInputValue("albedo", float4(0.1f, 0.2f, 0.1f, 1.f));
+            auto mat = UberV2Material::Create();
+            mat->SetLayers(UberV2Material::Layers::kDiffuseLayer |
+                UberV2Material::Layers::kReflectionLayer);
+            mat->SetInputValue("uberv2.diffuse.color",
+                InputMap_ConstantFloat3::Create(float3(0.1f, 0.2f, 0.1f)));
+            mat->SetInputValue("uberv2.reflection.color",
+                InputMap_ConstantFloat3::Create(float3(0.9f, 0.9f, 0.9f)));
+            mat->SetInputValue("uberv2.reflection.roughness",
+                InputMap_ConstantFloat::Create(0.002f));
+            mat->SetInputValue("uberv2.reflection.ior",
+                InputMap_ConstantFloat::Create(1.33f));
 
-            auto spec = SingleBxdf::Create(SingleBxdf::BxdfType::kMicrofacetGGX);
-            spec->SetInputValue("albedo", float4(0.9f, 0.9f, 0.9f, 1.f));
-            spec->SetInputValue("roughness", float4(0.002f, 0.002f, 0.002f, 1.f));
-
-            auto mix = MultiBxdf::Create(MultiBxdf::Type::kFresnelBlend);
-            mix->SetInputValue("base_material", green);
-            mix->SetInputValue("top_material", spec);
-            mix->SetInputValue("ior", float4(1.33f, 1.33f, 1.33f, 1.33f));
-
-            quad->SetMaterial(mix);
+            quad->SetMaterial(mat);
         }
-        else if (filename == "sphere+ibl")
+        else if (fname == "sphere+ibl")
         {
             auto mesh = CreateSphere(64, 32, 2.f, float3());
+
+            auto mat = UberV2Material::Create();
+            mat->SetLayers(UberV2Material::Layers::kDiffuseLayer);
+            mat->SetInputValue("uberv2.diffuse.color",
+                InputMap_ConstantFloat3::Create(float3(0.8f, 0.8f, 0.8f)));
+            
+            mesh->SetMaterial(mat);
             scene->AttachShape(mesh);
 
             auto ibl_texture = image_io->LoadImage("../Resources/Textures/studio015.hdr");
@@ -217,10 +225,17 @@ namespace Baikal
             ibl->SetMultiplier(1.f);
             scene->AttachLight(ibl);
         }
-        else if (filename == "sphere+plane")
+        else if (fname == "sphere+plane")
         {
             auto mesh = CreateSphere(64, 32, 2.f, float3(0.f, 2.5f, 0.f));
             scene->AttachShape(mesh);
+
+            auto mat = UberV2Material::Create();
+            mat->SetLayers(UberV2Material::Layers::kDiffuseLayer);
+            mat->SetInputValue("uberv2.diffuse.color",
+                InputMap_ConstantFloat3::Create(float3(0.8f, 0.8f, 0.8f)));
+
+            mesh->SetMaterial(mat);
 
             auto floor = CreateQuad(
             {
@@ -230,9 +245,10 @@ namespace Baikal
                 RadeonRays::float3(-8, 0, 8),
             }
             , false);
+            floor->SetMaterial(mat);
             scene->AttachShape(floor);
         }
-        else if (filename == "sphere+plane+area")
+        else if (fname == "sphere+plane+area")
         {
             auto mesh = CreateSphere(64, 32, 2.f, float3(0.f, 2.5f, 0.f));
             scene->AttachShape(mesh);
@@ -247,8 +263,10 @@ namespace Baikal
                                     , false);
             scene->AttachShape(floor);
 
-            auto emissive = SingleBxdf::Create(SingleBxdf::BxdfType::kEmissive);
-            emissive->SetInputValue("albedo", 1.f * float4(3.1f, 3.f, 2.8f, 1.f));
+            auto emissive = UberV2Material::Create();
+            emissive->SetLayers(UberV2Material::Layers::kEmissionLayer);
+            emissive->SetInputValue("uberv2.emission.color",
+                InputMap_ConstantFloat3::Create(1.f * float3(3.1f, 3.f, 2.8f)));
 
             auto light = CreateQuad(
                                      {
@@ -268,7 +286,7 @@ namespace Baikal
             scene->AttachLight(l1);
             scene->AttachLight(l2);
         }
-        else if (filename == "sphere+plane+area+ibl")
+        else if (fname == "sphere+plane+area+ibl")
         {
             auto mesh = CreateSphere(64, 32, 2.f, float3(0.f, 2.5f, 0.f));
             scene->AttachShape(mesh);
@@ -283,22 +301,16 @@ namespace Baikal
             , false);
             scene->AttachShape(floor);
 
-            auto emissive = SingleBxdf::Create(SingleBxdf::BxdfType::kEmissive);
-            emissive->SetInputValue("albedo", 1.f * float4(3.1f, 3.f, 2.8f, 1.f));
+            auto emissive = UberV2Material::Create();
+            emissive->SetLayers(UberV2Material::Layers::kEmissionLayer);
+            emissive->SetInputValue("uberv2.emission.color",
+                InputMap_ConstantFloat3::Create(1.f * float3(3.1f, 3.f, 2.8f)));
 
-            auto reflect = SingleBxdf::Create(SingleBxdf::BxdfType::kLambert);
-            reflect->SetInputValue("albedo", float4(0.4f, 0.7f, 0.4f, 1.f));
-            auto transparent = SingleBxdf::Create(SingleBxdf::BxdfType::kPassthrough);
-            transparent->SetInputValue("albedo", float4(0.4f, 0.7f, 0.4f, 1.f));
-            transparent->SetInputValue("ior", float4(1.3f, 1.3f, 1.3f, 1.3f));
-
-            
-            auto mix = MultiBxdf::Create(MultiBxdf::Type::kFresnelBlend);
-            mix->SetInputValue("base_material", transparent);
-            mix->SetInputValue("top_material", reflect);
-            mix->SetInputValue("ior", float4(1.3f, 1.3f, 1.3f, 1.5f));
-            //mix->SetThin(true);
-            
+            auto transparent = UberV2Material::Create();
+            transparent->SetLayers(UberV2Material::Layers::kTransparencyLayer);
+            transparent->SetInputValue("uberv2.transparency",
+                InputMap_ConstantFloat3::Create(1.f));
+           
             mesh->SetMaterial(transparent);
 
             auto volume = VolumeMaterial::Create();
@@ -332,25 +344,26 @@ namespace Baikal
             ibl->SetMultiplier(1.f);
             scene->AttachLight(ibl);
         }
-        else if (filename == "sphere+plane+ibl")
+        else if (fname == "sphere+plane+ibl")
         {
             auto mesh = CreateSphere(64, 32, 2.f, float3(0.f, 2.2f, 0.f));
             scene->AttachShape(mesh);
 
-            auto refract = SingleBxdf::Create(SingleBxdf::BxdfType::kIdealRefract);
-            refract->SetInputValue("albedo", float4(0.7f, 1.f, 0.7f, 1.f));
-            refract->SetInputValue("ior", float4(1.5f, 1.5f, 1.5f, 1.f));
-            //refract->SetInputValue("roughness", float4(0.02f, 0.02f, 0.02f, 1.f));
-
-
-            auto spec = SingleBxdf::Create(SingleBxdf::BxdfType::kMicrofacetGGX);
-            spec->SetInputValue("albedo", float4(0.7f, 1.f, 0.7f, 1.f));
-            spec->SetInputValue("roughness", float4(0.02f, 0.02f, 0.02f, 1.f));
-
-            auto mix = MultiBxdf::Create(MultiBxdf::Type::kFresnelBlend);
-            mix->SetInputValue("base_material", refract);
-            mix->SetInputValue("top_material", spec);
-            mix->SetInputValue("ior", float4(1.5f, 1.5f, 1.5f, 1.5f));
+            auto mix = UberV2Material::Create();
+            mix->SetLayers(UberV2Material::Layers::kRefractionLayer/* |
+                UberV2Material::Layers::kReflectionLayer*/);
+            mix->SetInputValue("uberv2.refraction.color",
+                InputMap_ConstantFloat3::Create(float3(0.7f, 1.f, 0.7f)));
+            mix->SetInputValue("uberv2.refraction.ior",
+                InputMap_ConstantFloat3::Create(1.5f));
+            mix->SetInputValue("uberv2.refraction.roughness",
+                InputMap_ConstantFloat3::Create(0.1f));
+            mix->SetInputValue("uberv2.reflection.color",
+                InputMap_ConstantFloat3::Create(float3(0.7f, 1.f, 0.7f)));
+            mix->SetInputValue("uberv2.reflection.roughness",
+                InputMap_ConstantFloat3::Create(0.02f));
+            mix->SetInputValue("uberv2.reflection.ior",
+                InputMap_ConstantFloat3::Create(1.5f));
 
             mesh->SetMaterial(mix);
 
@@ -364,6 +377,11 @@ namespace Baikal
                                      , false);
 
             scene->AttachShape(floor);
+            auto diffuse = UberV2Material::Create();
+            diffuse->SetLayers(UberV2Material::Layers::kDiffuseLayer);
+            diffuse->SetInputValue("uberv2.diffuse.color",
+                InputMap_ConstantFloat3::Create(float3(0.8f, 0.8f, 0.8f)));
+            floor->SetMaterial(diffuse);
 
             auto ibl_texture = image_io->LoadImage("../Resources/Textures/studio015.hdr");
 
@@ -372,109 +390,7 @@ namespace Baikal
             ibl->SetMultiplier(1.f);
             scene->AttachLight(ibl);
         }
-        else if (filename == "100spheres+plane+ibl+disney")
-        {
-            auto mesh = CreateSphere(64, 32, 0.9f, float3(0.f, 1.0f, 0.f));
-            scene->AttachShape(mesh);
-
-            std::vector<std::string> params =
-            {
-                "metallic",
-                "roughness",
-                "anisotropy",
-                "subsurface",
-                "specular",
-                "specular_tint",
-                "clearcoat",
-                "clearcoat_gloss",
-                "sheen",
-                "sheen_tint"
-            };
-
-            for (int i = 0; i < 10; ++i)
-            {
-                auto color = 0.5f * float3(rand_float(), rand_float(), rand_float()) +
-                float3(0.5f, 0.5f, 0.5f);
-                for (int j = 0; j < 10; ++j)
-                {
-                    auto disney = DisneyBxdf::Create();
-                    disney->SetInputValue("albedo", color);
-
-                    if (params[i] == "roughness")
-                        disney->SetInputValue("metallic", float4(1.0f));
-
-                    if (params[i] == "metallic")
-                        disney->SetInputValue("roughness", float4(0.2f));
-
-                    if (params[i] == "anisotropy")
-                    {
-                        disney->SetInputValue("roughness", float4(0.4f));
-                        disney->SetInputValue("metallic", float4(0.75f));
-                        disney->SetInputValue("specular", float4(0.f));
-                        disney->SetInputValue("clearcoat", float4(0.f));
-                    }
-
-                    if (params[i] == "subsurface")
-                    {
-                        disney->SetInputValue("roughness", float4(0.5f));
-                        disney->SetInputValue("metallic", float4(0.f));
-                        disney->SetInputValue("specular", float4(0.f));
-                        disney->SetInputValue("clearcoat", float4(0.f));
-                    }
-
-                    if (params[i] == "clearcoat" || params[i] == "clearcoat_gloss")
-                    {
-                        disney->SetInputValue("roughness", float4(0.0f));
-                        disney->SetInputValue("metallic", float4(0.0f));
-                        disney->SetInputValue("clearcoat", float4(1.0f));
-                        disney->SetInputValue("clearcoat_gloss", float4(0.5f));
-                        disney->SetInputValue("specular", float4(0.f));
-                    }
-
-                    if (params[i] == "specular" || params[i] == "specular_tint")
-                    {
-                        disney->SetInputValue("roughness", float4(0.f));
-                        disney->SetInputValue("metallic", float4(0.f));
-                        disney->SetInputValue("clearcoat", float4(0.f));
-                        disney->SetInputValue("specular", float4(1.f));
-                    }
-
-                    if (params[i] == "sheen" || params[i] == "sheen_tint")
-                    {
-                        disney->SetInputValue("roughness", float4(0.f));
-                        disney->SetInputValue("metallic", float4(0.0f));
-                        disney->SetInputValue("clearcoat", float4(0.f));
-                        disney->SetInputValue("specular", float4(0.f));
-                    }
-
-                    float3 value = float3( j / 10.f, j / 10.f, j / 10.f);
-                    disney->SetInputValue(params[i], value);
-
-                    auto instance = Instance::Create(mesh);
-                    matrix t = RadeonRays::translation(float3(i * 2.f - 9.f, 0.f, j * 2.f - 9.f));
-                    instance->SetTransform(t);
-                    scene->AttachShape(instance);
-                    instance->SetMaterial(disney);
-                }
-            }
-
-
-            auto floor = CreateQuad(
-                                     {
-                                         RadeonRays::float3(-15, 0, -15),
-                                         RadeonRays::float3(15, 0, -15),
-                                         RadeonRays::float3(15, 0, 15),
-                                         RadeonRays::float3(-15, 0, 15),
-                                     }
-                                     , false);
-            scene->AttachShape(floor);
-
-            auto ibl_texture = image_io->LoadImage("../Resources/Textures/studio015.hdr");
-            auto ibl = ImageBasedLight::Create();
-            ibl->SetTexture(ibl_texture);
-            ibl->SetMultiplier(1.f);
-        }
-        else if (filename == "uberv2_test_spheres")
+        else if (fname == "uberv2_test_spheres")
         {
             auto mesh = CreateSphere(64, 32, 0.9f, float3(0.f, 1.0f, 0.f));
             scene->AttachShape(mesh);
@@ -530,7 +446,9 @@ namespace Baikal
                         uberv2->SetLayers(UberV2Material::Layers::kDiffuseLayer | UberV2Material::Layers::kReflectionLayer | UberV2Material::Layers::kTransparencyLayer);
                         break;
                     }
-                    auto instance = Instance::Create(mesh);
+                    // Uncomment when instancing will be fixed
+                    //auto instance = Instance::Create(mesh);
+                    auto instance = CreateSphere(64, 32, 0.9f, float3(0.f, 1.0f, 0.f));
                     t = RadeonRays::translation(float3(j * 2.f - 9.f, i * 2.f - 3.f, -10.f));
                     instance->SetTransform(t);
                     scene->AttachShape(instance);
@@ -544,7 +462,7 @@ namespace Baikal
             ibl->SetMultiplier(1.f);
             scene->AttachLight(ibl);
         }
-        else if (filename == "sphere+uberv2+ibl")
+        else if (fname == "sphere+uberv2+ibl")
         {
             auto mesh = CreateSphere(64, 32, 2.f, float3());
             scene->AttachShape(mesh);
@@ -573,7 +491,7 @@ namespace Baikal
             scene->AttachLight(ibl);
 
         }
-        else if (filename == "shere+plane_uberv2+ibl+normalmap")
+        else if (fname == "shere+plane_uberv2+ibl+normalmap")
         {
             auto image_io(Baikal::ImageIo::CreateImageIo());
             auto bump_texture = image_io->LoadImage("../Resources/Textures/test_normal.jpg");
@@ -625,6 +543,38 @@ namespace Baikal
             light->SetEmittedRadiance(RadeonRays::float3(100.f, 100.f, 100.f));
             light->SetConeShape(RadeonRays::float2(0.05f, 0.1f));
             scene->AttachLight(light);
+        }
+        else if (fname == "4kmaterials")
+        {
+            auto mesh = CreateSphere(64, 32, 0.1f, float3(0.f, 0.0f, 0.f));
+            scene->AttachShape(mesh);
+            auto roughness = InputMap_ConstantFloat::Create(0.05f);
+
+            auto uberv2 = UberV2Material::Create();
+            uberv2->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(float3(1.0f, 1.0f, 1.0f, 0.0f)));
+            uberv2->SetLayers(UberV2Material::Layers::kDiffuseLayer);
+            mesh->SetMaterial(uberv2);
+            matrix t = RadeonRays::translation(float3(0, 0, -10.f));
+            mesh->SetTransform(t);
+
+            for (int a = 0 ; a < 400; ++a)
+            {
+                auto instance = Instance::Create(mesh);
+                auto uberv2 = UberV2Material::Create();
+                uberv2->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(float3(1.0f, 1.0f, 1.0f, 0.0f)));
+                uberv2->SetLayers(UberV2Material::Layers::kDiffuseLayer);
+                instance->SetMaterial(uberv2);
+                matrix t = RadeonRays::translation(float3((a/1024-512)/512.f, 0.f, -10.f));
+                instance->SetTransform(t);
+                scene->AttachShape(instance);
+            }
+
+            auto ibl_texture = image_io->LoadImage("../Resources/Textures/studio015.hdr");
+
+            auto ibl = ImageBasedLight::Create();
+            ibl->SetTexture(ibl_texture);
+            ibl->SetMultiplier(1.f);
+            scene->AttachLight(ibl);
         }
 
 

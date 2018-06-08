@@ -52,6 +52,7 @@ public:
     //context info
     virtual void GetRenderStatistics(void * out_data, size_t * out_size_ret) const;
     virtual void SetParameter(const std::string& input, float x, float y = 0.f, float z = 0.f, float w = 0.f);
+    void SetParameter(const std::string& input, rpr_uint value);
     virtual void SetParameter(const std::string& input, const std::string& value);
 
     //AOV

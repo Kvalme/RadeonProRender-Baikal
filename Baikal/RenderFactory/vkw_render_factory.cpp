@@ -21,17 +21,17 @@ namespace Baikal
         , vkw::ShaderManager&         shader_manager
         , vkw::DescriptorManager&     descriptor_manager
         , vkw::PipelineManager&       pipeline_manager
-        , vkw::Utils&                 utils)            : device_(device)
-                                                        , physical_device_(physical_device)
-                                                        , graphics_queue_family_index_(graphics_queue_family_index)
-                                                        , compute_queue_family_index_(compute_queue_family_index)
-                                                        , memory_allocator_(memory_allocator)
+        , vkw::Utils&                 utils)            : memory_allocator_(memory_allocator)
                                                         , memory_manager_(memory_manager)
                                                         , render_target_manager_(render_target_manager)
                                                         , shader_manager_(shader_manager)
                                                         , descriptor_manager_(descriptor_manager)
                                                         , pipeline_manager_(pipeline_manager)
                                                         , utils_(utils)
+                                                        , graphics_queue_family_index_(graphics_queue_family_index)
+                                                        , compute_queue_family_index_(compute_queue_family_index)
+                                                        , device_(device)
+                                                        , physical_device_(physical_device)
     {
     }
 

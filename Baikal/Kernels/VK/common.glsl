@@ -13,7 +13,7 @@ struct VkLight
 
 struct VkCamera
 {
-    float4  camera_position;
+    float4    camera_position;
 
     matrix    view_projection;
 

@@ -78,18 +78,16 @@ namespace Baikal
         void DrawDeferredPass(VkwOutput const& output);
 
     protected:
-        vkw::VkScopedObject<VkBuffer>					fullscreen_quad_vb_;
-        vkw::VkScopedObject<VkBuffer>					fullscreen_quad_ib_;
+        vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_vb_;
+        vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_ib_;
 
-        vkw::Shader										mrt_vert_shader_;
-        vkw::Shader										mrt_frag_shader_;
+        vkw::Shader                                     mrt_vert_shader_;
+        vkw::Shader                                     mrt_frag_shader_;
         vkw::GraphicsPipeline							mrt_pipeline_;
 
-        vkw::Shader                                     fsq_vert_shader_;
+        vkw::Shader                                     deferred_vert_shader_;
         vkw::Shader                                     deferred_frag_shader_;
         vkw::GraphicsPipeline                           deferred_pipeline_;
-
-        static const uint32_t                           num_queued_frames_ = 2;
     protected:
         vkw::MemoryManager&                             memory_manager_;
         vkw::RenderTargetManager&                       render_target_manager_;
@@ -107,8 +105,8 @@ namespace Baikal
 
         vkw::Utils                                      utils_;
 
-        vkw::CommandBuffer                              g_buffer_cmd_[num_queued_frames_];
-        vkw::CommandBuffer                              deferred_cmd_[num_queued_frames_];
+        vkw::CommandBuffer                              g_buffer_cmd_;
+        vkw::CommandBuffer                              deferred_cmd_;
 
         VkViewport                                      viewport_;
         VkRect2D                                        scissor_;
@@ -122,6 +120,6 @@ namespace Baikal
         VkQueue                                         graphics_queue_;
         VkQueue                                         compute_queue_;
 
-        uint32_t                                        frame_idx_;
+        bool                                            cmd_buffers_initialized_;
     };
 }

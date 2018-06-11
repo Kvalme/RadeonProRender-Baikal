@@ -90,8 +90,8 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
     return vkw::VkScopedObject<VkInstance>(instance,
         [debug_report_callback_](VkInstance instance)
     {
-        vkDestroyInstance(instance, nullptr);
         vkDestroyDebugReportCallbackEXT(instance, debug_report_callback_, nullptr);
+        vkDestroyInstance(instance, nullptr);
     });
 #endif
 #endif

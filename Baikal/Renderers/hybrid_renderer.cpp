@@ -18,7 +18,7 @@ namespace Baikal
         , compute_queue_index_(compute_queue_index)
         , framebuffer_width_(0)
         , framebuffer_height_(0)
-        , frame_idx_(0)
+        , cmd_buffers_initialized_(false)
     {
         command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, graphics_queue_index_));
 
@@ -46,81 +46,79 @@ namespace Baikal
 
         VkDeviceSize offsets[1] = { 0 };
 
-        for (uint32_t i = 0; i < num_queued_frames_; i++)
-        {
-            command_buffer_builder_->BeginCommandBuffer();
+        command_buffer_builder_->BeginCommandBuffer();
 
-            VkCommandBuffer command_buffer2 = command_buffer_builder_->GetCurrentCommandBuffer();
+        VkCommandBuffer command_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
 
-            vkCmdBindPipeline(command_buffer2, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_pipeline_.pipeline.get());
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_pipeline_.pipeline.get());
 
-            command_buffer_builder_->BeginRenderPass(clear_values, output.GetRenderTarget());
+        command_buffer_builder_->BeginRenderPass(clear_values, output.GetRenderTarget());
 
-            vkCmdSetViewport(command_buffer2, 0, 1, &viewport_);
-            vkCmdSetScissor(command_buffer2, 0, 1, &scissor_);
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
+        vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
 
-            VkDescriptorSet desc_set = deferred_frag_shader_.descriptor_set.get();
-            vkCmdBindDescriptorSets(command_buffer2, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+        VkDescriptorSet desc_set = deferred_frag_shader_.descriptor_set.get();
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
 
-            VkBuffer vb = fullscreen_quad_vb_.get();
-            vkCmdBindVertexBuffers(command_buffer2, 0, 1, &vb, offsets);
-            vkCmdBindIndexBuffer(command_buffer2, fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(command_buffer2, 6, 1, 0, 0, 0);
+        VkBuffer vb = fullscreen_quad_vb_.get();
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
+        vkCmdBindIndexBuffer(command_buffer, fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(command_buffer, 6, 1, 0, 0, 0);
 
-            command_buffer_builder_->EndRenderPass();
+        command_buffer_builder_->EndRenderPass();
 
-            deferred_cmd_[i] = command_buffer_builder_->EndCommandBuffer();
-        }
+        deferred_cmd_ = command_buffer_builder_->EndCommandBuffer();
     }
 
     void HybridRenderer::BuildGbufferCommandBuffer(VkwScene const& scene)
     {
         static std::vector<VkClearValue> clear_values =
         {
-            { 0.f, 0.f, 0.f, 1.0f },
+            { 0.f, 0.f, 0.f, 0.0f },
             { 0.f, 0.f, 0.f, 1.0f },
             { 0.f, 0.f, 0.f, 1.0f },
             { 1.0f, 0.f }
         };
 
-        for (uint32_t i = 0; i < num_queued_frames_; i++)
+        command_buffer_builder_->BeginCommandBuffer();
+
+        VkCommandBuffer command_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.pipeline.get());
+
+        VkDeviceSize offsets[1] = { 0 };
+
+        VkBuffer vb = scene.mesh_vertex_buffer.get();
+        command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
+
+        VkDescriptorSet desc_set = mrt_vert_shader_.descriptor_set.get();
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
+        vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
+
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
+        vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
+
+        uint32_t mesh_id = 0;
+        for (auto mesh : scene.meshes)
         {
-            command_buffer_builder_->BeginCommandBuffer();
+            uint32_t push_constants[4] = { mesh_id++, 0, 0, 0 };
+            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t) * 4, push_constants);
 
-            VkCommandBuffer command_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
-
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.pipeline.get());
-
-            VkDeviceSize offsets[1] = { 0 };
-
-            VkBuffer vb = scene.mesh_vertex_buffer.get();
-            command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
-
-            VkDescriptorSet desc_set = mrt_vert_shader_.descriptor_set.get();
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
-
-            vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
-            vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
-
-            vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
-            vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
-
-            for (auto mesh : scene.meshes)
-            {
-                vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
-            }
-
-            command_buffer_builder_->EndRenderPass();
-
-            g_buffer_cmd_[i] = command_buffer_builder_->EndCommandBuffer();
+            vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
         }
+
+        command_buffer_builder_->EndRenderPass();
+
+        g_buffer_cmd_ = command_buffer_builder_->EndCommandBuffer();
     }
 
     void HybridRenderer::DrawDeferredPass(VkwOutput const& output)
     {
         VkPipelineStageFlags stage_wait_bits = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-        VkCommandBuffer deferred_cmd_buf = deferred_cmd_[frame_idx_].get();
+        VkCommandBuffer deferred_cmd_buf = deferred_cmd_.get();
 
         VkSemaphore g_buffer_finised = gbuffer_signal_.get();
         VkSemaphore render_finished = output.GetSemaphore();
@@ -141,7 +139,7 @@ namespace Baikal
 
     void HybridRenderer::DrawGbufferPass()
     {
-        VkCommandBuffer g_buffer_cmd = g_buffer_cmd_[frame_idx_].get();
+        VkCommandBuffer g_buffer_cmd = g_buffer_cmd_.get();
         VkSemaphore g_buffer_finised = gbuffer_signal_.get();
 
         VkSubmitInfo submit_info = {};
@@ -158,7 +156,7 @@ namespace Baikal
     void HybridRenderer::Render(VkwScene const& scene)
     {
         Output* output = GetOutput(OutputType::kColor);
-        
+
         if (output == nullptr)
             throw std::runtime_error("HybridRenderer: output buffer is not set");
 
@@ -167,8 +165,17 @@ namespace Baikal
         if (vk_output == nullptr)
             throw std::runtime_error("HybridRenderer: Internal error");
 
+        deferred_frag_shader_.SetArg(0, scene.camera.get());
+        deferred_frag_shader_.CommitArgs();
+
         mrt_vert_shader_.SetArg(0, scene.camera.get());
         mrt_vert_shader_.CommitArgs();
+
+        if (!cmd_buffers_initialized_)
+        {
+            BuildDeferredCommandBuffer(*vk_output);
+            cmd_buffers_initialized_ = true;
+        }
 
         if (scene.rebuild_cmd_buffers_)
         {
@@ -178,8 +185,6 @@ namespace Baikal
 
         DrawGbufferPass();
         DrawDeferredPass(*vk_output);
-
-        frame_idx_ = (frame_idx_ + 1) % num_queued_frames_;
     }
 
     void HybridRenderer::RenderTile(VkwScene const& scene,
@@ -209,7 +214,7 @@ namespace Baikal
 
                 scissor_ =
                 {
-                    {0, 0},
+                    { 0, 0 },
                     { output->width(), output->height() }
                 };
             }
@@ -221,12 +226,14 @@ namespace Baikal
                 if (vk_output == nullptr)
                     throw std::runtime_error("HybridRenderer: Internal error");
 
-                deferred_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(fsq_vert_shader_, deferred_frag_shader_, vk_output->GetRenderTarget().render_pass.get());
+                deferred_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(deferred_vert_shader_, deferred_frag_shader_, vk_output->GetRenderTarget().render_pass.get());
 
-                deferred_frag_shader_.SetArg(1, g_buffer_.attachments[1].view.get(), nearest_sampler_.get());
+                for (uint32_t idx = 0; idx < static_cast<uint32_t>(g_buffer_.attachments.size()); idx++)
+                {
+                    deferred_frag_shader_.SetArg(idx + 1, g_buffer_.attachments[idx].view.get(), nearest_sampler_.get());
+                }
+
                 deferred_frag_shader_.CommitArgs();
-
-                BuildDeferredCommandBuffer(*vk_output);
             }
         }
     }
@@ -266,7 +273,7 @@ namespace Baikal
         mrt_vert_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/mrt.vert.spv");
         mrt_frag_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_FRAGMENT_BIT, "../Baikal/Kernels/VK/mrt.frag.spv");
 
-        fsq_vert_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/fullscreen_quad.vert.spv");
+        deferred_vert_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/deferred.vert.spv");
         deferred_frag_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_FRAGMENT_BIT, "../Baikal/Kernels/VK/deferred.frag.spv");
     }
 
@@ -278,10 +285,10 @@ namespace Baikal
     void HybridRenderer::ResizeRenderTargets(uint32_t width, uint32_t height)
     {
         static std::vector<vkw::RenderTargetCreateInfo> attachments = {
-            { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
-            { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
-            { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
-            { width, height, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
+            { width, height, VK_FORMAT_R16G16B16A16_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },   // xy - packed normals, next 24 bits - depth, 8 bits - mesh id
+            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },      // albedo
+            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },      // xy - motion, zw - roughness, metaliness
+            { width, height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
         };
 
         std::vector<VkPipelineColorBlendAttachmentState> blend_attachment_states;

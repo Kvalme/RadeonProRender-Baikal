@@ -1,1 +1,1 @@
-mrt.frag.spv: mrt.frag
+mrt.frag.spv: mrt.frag utils.glsl

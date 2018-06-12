@@ -18,7 +18,6 @@ namespace Baikal
         , compute_queue_index_(compute_queue_index)
         , framebuffer_width_(0)
         , framebuffer_height_(0)
-        , cmd_buffers_initialized_(false)
     {
         command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, graphics_queue_index_));
 
@@ -165,21 +164,17 @@ namespace Baikal
         if (vk_output == nullptr)
             throw std::runtime_error("HybridRenderer: Internal error");
 
-        deferred_frag_shader_.SetArg(0, scene.camera.get());
-        deferred_frag_shader_.CommitArgs();
-
-        mrt_vert_shader_.SetArg(0, scene.camera.get());
-        mrt_vert_shader_.CommitArgs();
-
-        if (!cmd_buffers_initialized_)
-        {
-            BuildDeferredCommandBuffer(*vk_output);
-            cmd_buffers_initialized_ = true;
-        }
-
         if (scene.rebuild_cmd_buffers_)
         {
+            deferred_frag_shader_.SetArg(0, scene.camera.get());
+            deferred_frag_shader_.CommitArgs();
+
+            mrt_vert_shader_.SetArg(0, scene.camera.get());
+            mrt_vert_shader_.CommitArgs();
+
+            BuildDeferredCommandBuffer(*vk_output);
             BuildGbufferCommandBuffer(scene);
+
             scene.rebuild_cmd_buffers_ = false;
         }
 

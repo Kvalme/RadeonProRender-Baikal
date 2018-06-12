@@ -119,7 +119,5 @@ namespace Baikal
 
         VkQueue                                         graphics_queue_;
         VkQueue                                         compute_queue_;
-
-        bool                                            cmd_buffers_initialized_;
     };
 }

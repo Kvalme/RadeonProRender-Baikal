@@ -71,7 +71,6 @@ namespace Baikal
             VkDescriptorSet         descriptor_set;
 
             uint32_t                material_id;
-            //MaterialConstants       material_constants;
         };
 
 

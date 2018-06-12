@@ -71,7 +71,7 @@ namespace Baikal
     protected:
         void InitializeResources();
         void ResizeRenderTargets(uint32_t width, uint32_t height);
-        void BuildDeferredCommandBuffer(VkwOutput const& output);
+        void BuildDeferredCommandBuffer(VkwOutput const& output, VkDeferredPushConstants const& push_consts);
         void BuildGbufferCommandBuffer(VkwScene const& scene);
 
         void DrawGbufferPass();

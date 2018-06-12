@@ -36,7 +36,7 @@ namespace Baikal
 
     }
 
-    void HybridRenderer::BuildDeferredCommandBuffer(VkwOutput const& output)
+    void HybridRenderer::BuildDeferredCommandBuffer(VkwOutput const& output, VkDeferredPushConstants const& push_consts)
     {
         static std::vector<VkClearValue> clear_values =
         {
@@ -62,6 +62,9 @@ namespace Baikal
         VkBuffer vb = fullscreen_quad_vb_.get();
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
         vkCmdBindIndexBuffer(command_buffer, fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
+        
+        vkCmdPushConstants(command_buffer, deferred_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VkDeferredPushConstants), &push_consts);
+        
         vkCmdDrawIndexed(command_buffer, 6, 1, 0, 0, 0);
 
         command_buffer_builder_->EndRenderPass();
@@ -99,7 +102,7 @@ namespace Baikal
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
         vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
 
-        uint32_t mesh_id = 0;
+        uint32_t mesh_id = 1;
         for (auto mesh : scene.meshes)
         {
             uint32_t push_constants[4] = { mesh_id++, 0, 0, 0 };
@@ -166,13 +169,16 @@ namespace Baikal
 
         if (scene.rebuild_cmd_buffers_)
         {
-            deferred_frag_shader_.SetArg(0, scene.camera.get());
+            deferred_frag_shader_.SetArg(4, scene.camera.get());
+            deferred_frag_shader_.SetArg(5, scene.lights.get());
             deferred_frag_shader_.CommitArgs();
 
             mrt_vert_shader_.SetArg(0, scene.camera.get());
             mrt_vert_shader_.CommitArgs();
 
-            BuildDeferredCommandBuffer(*vk_output);
+            VkDeferredPushConstants push_consts = { static_cast<int>(scene.light_count) };
+
+            BuildDeferredCommandBuffer(*vk_output, push_consts);
             BuildGbufferCommandBuffer(scene);
 
             scene.rebuild_cmd_buffers_ = false;
@@ -225,7 +231,7 @@ namespace Baikal
 
                 for (uint32_t idx = 0; idx < static_cast<uint32_t>(g_buffer_.attachments.size()); idx++)
                 {
-                    deferred_frag_shader_.SetArg(idx + 1, g_buffer_.attachments[idx].view.get(), nearest_sampler_.get());
+                    deferred_frag_shader_.SetArg(idx, g_buffer_.attachments[idx].view.get(), nearest_sampler_.get());
                 }
 
                 deferred_frag_shader_.CommitArgs();

@@ -90,7 +90,7 @@ namespace Baikal
         const float3 pos = camera->GetPosition();
 
         //const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), z_range.x, z_range.y);
-        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), 0.001f, 1000.0f);
+        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), 0.1f, 2000.0f);
         const float3 ip = float3(-dot(right, pos), -dot(up, pos), -dot(forward, pos));
 
         matrix view = matrix(right.x, right.y, right.z, ip.x,
@@ -102,13 +102,15 @@ namespace Baikal
 
         VkCamera camera_internal;
         camera_internal.camera_position = camera->GetPosition();
-        camera_internal.view_projection = view_proj;
+        camera_internal.view_proj = view_proj;
         camera_internal.inv_view = inverse(view);
-        camera_internal.inv_projection = inverse(proj);
+        camera_internal.inv_proj = inverse(proj);
+        camera_internal.proj = proj;
 
         if (out.camera == VK_NULL_HANDLE)
         {
             out.camera.reset();
+
             out.camera = memory_manager_.CreateBuffer(sizeof(VkCamera),
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &camera_internal);
@@ -137,7 +139,7 @@ namespace Baikal
             if (mesh == nullptr)
                 continue;
 
-            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, mat_collector.GetItemIndex(shape->GetMaterial()) };
+            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, /*mat_collector.GetItemIndex(shape->GetMaterial())*/ };
             out.meshes.push_back(vkw_mesh);
 
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
@@ -271,7 +273,6 @@ namespace Baikal
     {
     }
 
-
     void VkwSceneController::UpdateTextures(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
         // Get new buffer size
@@ -386,7 +387,8 @@ namespace Baikal
     {
         uint32_t num_lights = static_cast<uint32_t>(scene.GetNumLights());
 
-        std::vector<VkLight> lights_internal(static_cast<size_t>(num_lights));
+        std::vector<VkLight> lights_internal;
+        lights_internal.reserve(static_cast<size_t>(num_lights));
 
         std::unique_ptr<Iterator> light_iter(scene.CreateLightIterator());
 
@@ -398,18 +400,60 @@ namespace Baikal
 
             switch (light_type)
             {
-            case kSpot:
-            {
-                VkLight spot_light = { light->GetPosition(), light->GetDirection(), light->GetEmittedRadiance() };
-                lights_internal.push_back(spot_light);
+                case kPoint:
+                {
+                    float3 p = light->GetPosition();
 
-                break;
-            };
+                    VkLight point_light = { float4(p.x, p.y, p.z, static_cast<float>(kPoint)), float4(0.f, 0.f, 0.f, 0.f), light->GetEmittedRadiance() };
+                    lights_internal.push_back(point_light);
 
-            default:
-            {
-                break;
-            };
+                    break;
+                };
+
+                case kDirectional:
+                {
+                    VkLight directional_light = { float4(0.f, 0.f, 0.f, static_cast<float>(kDirectional)), light->GetDirection(), light->GetEmittedRadiance() };
+                    lights_internal.push_back(directional_light);
+
+                    break;
+                };
+
+                case kSpot:
+                {
+                    float3 p = light->GetPosition();
+                    float3 d = light->GetDirection();
+                    float3 r = light->GetEmittedRadiance();
+
+                    auto cone_shape = static_cast<SpotLight const&>(*light).GetConeShape();
+
+                    VkLight spot_light = { float4(p.x, p.y, p.z, static_cast<float>(kSpot)), float4(d.x, d.y, d.z, cone_shape.x), float4(r.x, r.y, r.z, cone_shape.y) };
+                    lights_internal.push_back(spot_light);
+
+                    break;
+                };
+
+                case kIbl:
+                {
+                    // not supported yet
+                    VkLight ibl_light = { float4(0.f, 0.f, 0.f, static_cast<float>(kIbl)), float4(0.f, 0.f, 0.f, 0.f), float4(0.f, 0.f, 0.f, 0.f) };
+                    lights_internal.push_back(ibl_light);
+
+                    break;
+                };
+
+                case kArea:
+                {
+                    // not supported yet
+                    VkLight area_light = { float4(0.f, 0.f, 0.f, static_cast<float>(kArea)), float4(0.f, 0.f, 0.f, 0.f), float4(0.f, 0.f, 0.f, 0.f) };
+                    lights_internal.push_back(area_light);
+
+                    break;
+                };
+
+                default:
+                {
+                    break;
+                };
             }
         }
 
@@ -419,12 +463,12 @@ namespace Baikal
 
             out.lights = memory_manager_.CreateBuffer(sizeof(VkLight) * num_lights,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &lights_internal);
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, lights_internal.data());
         }
 
         out.light_count = num_lights;
 
-        memory_manager_.WriteBuffer(out.lights.get(), 0u, sizeof(VkLight) * num_lights, &lights_internal);
+        memory_manager_.WriteBuffer(out.lights.get(), 0u, sizeof(VkLight) * num_lights, lights_internal.data());
     }
 
 

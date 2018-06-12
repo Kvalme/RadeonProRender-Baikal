@@ -26,7 +26,7 @@ out gl_PerVertex
 
 void main()
 {
-	proj_pos 	= inPosition * camera.data.view_projection;
+	proj_pos 	= inPosition * camera.data.view_proj;
 	normal 		= inNormal;
 	uv			= inUV.xy;
 

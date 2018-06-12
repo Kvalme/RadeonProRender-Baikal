@@ -13,7 +13,7 @@ namespace Baikal
 {
     using namespace RadeonRays;
 
-#include "Kernels/VK/common.glsl"
+    #include "Kernels/VK/common.glsl"
 
     struct VkwScene
     {

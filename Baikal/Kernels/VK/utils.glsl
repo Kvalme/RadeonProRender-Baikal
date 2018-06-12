@@ -39,10 +39,10 @@ vec3 ReconstructVSPositionFromDepth(mat4 inv_proj, vec2 uv, float depth)
 {
     uv = uv * vec2(2.0f, 2.0f) - vec2(1.0f, 1.0f);
 
-    vec4 projPos = vec4(uv, depth, 1.0f);
-    vec4 viewPos = projPos * inv_proj;
+    vec4 proj_pos = vec4(uv, depth, 1.0f);
+    vec4 view_pos = proj_pos * inv_proj;
 
-    return viewPos.xyz / viewPos.w;
+    return view_pos.xyz / view_pos.w;
 }
 
 // From http://www.thetenthplanet.de/archives/1180

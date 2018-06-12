@@ -8,11 +8,11 @@ namespace Baikal
         vkw::PipelineManager& pipeline_manager,
         uint32_t graphics_queue_index,
         uint32_t compute_queue_index)
-        : device_(device)
-        , memory_manager_(memory_manager)
+        : memory_manager_(memory_manager)
         , render_target_manager_(render_target_manager)
         , shader_manager_(shader_manager)
         , pipeline_manager_(pipeline_manager)
+        , device_(device)
         , utils_(device_)
         , graphics_queue_index_(graphics_queue_index)
         , compute_queue_index_(compute_queue_index)

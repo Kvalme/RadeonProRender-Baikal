@@ -48,11 +48,11 @@ namespace Baikal
     }
 
     VkwSceneController::VkwSceneController(vkw::MemoryAllocator& memory_allocator, vkw::MemoryManager& memory_manager, VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
-        : default_material_(UberV2Material::Create())
+        : memory_allocator_(memory_allocator)
+        , memory_manager_(memory_manager)
         , device_(device)
         , physical_device_(physical_device)
-        , memory_allocator_(memory_allocator)
-        , memory_manager_(memory_manager)
+        , default_material_(UberV2Material::Create())
     {
     }
 

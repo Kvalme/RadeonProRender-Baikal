@@ -139,7 +139,13 @@ namespace Baikal
             if (mesh == nullptr)
                 continue;
 
-            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, /*mat_collector.GetItemIndex(shape->GetMaterial())*/ };
+            auto material = shape->GetMaterial();
+            if (!material)
+            {
+                material = GetDefaultMaterial();
+            }
+
+            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, mat_collector.GetItemIndex(material) };
             out.meshes.push_back(vkw_mesh);
 
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
@@ -515,5 +521,6 @@ namespace Baikal
     void Baikal::VkwSceneController::WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const
     {
     }
+
 
 }

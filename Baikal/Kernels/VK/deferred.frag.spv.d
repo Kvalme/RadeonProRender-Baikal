@@ -1,1 +1,1 @@
-deferred.frag.spv: deferred.frag common.glsl utils.glsl
+deferred.frag.spv: deferred.frag common_structures.glsl utils.glsl brdf.glsl common.glsl

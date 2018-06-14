@@ -101,11 +101,10 @@ namespace Baikal
         const matrix view_proj = proj * view;
 
         VkCamera camera_internal;
-        camera_internal.camera_position = camera->GetPosition();
+        camera_internal.position = camera->GetPosition();
         camera_internal.view_proj = view_proj;
         camera_internal.inv_view = inverse(view);
         camera_internal.inv_proj = inverse(proj);
-        camera_internal.proj = proj;
 
         if (out.camera == VK_NULL_HANDLE)
         {
@@ -139,11 +138,7 @@ namespace Baikal
             if (mesh == nullptr)
                 continue;
 
-            auto material = shape->GetMaterial();
-            if (!material)
-            {
-                material = GetDefaultMaterial();
-            }
+            auto material = (shape->GetMaterial() == nullptr) ? GetDefaultMaterial() : shape->GetMaterial();
 
             VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, mat_collector.GetItemIndex(material) };
             out.meshes.push_back(vkw_mesh);

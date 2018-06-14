@@ -1,1 +1,1 @@
-deferred.vert.spv: deferred.vert common.glsl
+deferred.vert.spv: deferred.vert common_structures.glsl

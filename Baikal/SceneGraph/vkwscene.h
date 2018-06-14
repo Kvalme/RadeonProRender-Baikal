@@ -13,7 +13,7 @@ namespace Baikal
 {
     using namespace RadeonRays;
 
-    #include "Kernels/VK/common.glsl"
+    #include "Kernels/VK/common_structures.glsl"
 
     struct VkwScene
     {
@@ -38,8 +38,6 @@ namespace Baikal
         {}
 
         typedef matrix mat4;
-
-        #include "Kernels/VK/common.glsl"
 
         struct Material
         {

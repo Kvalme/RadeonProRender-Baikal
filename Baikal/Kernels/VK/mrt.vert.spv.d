@@ -1,1 +1,1 @@
-mrt.vert.spv: mrt.vert common.glsl
+mrt.vert.spv: mrt.vert common_structures.glsl

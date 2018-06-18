@@ -65,9 +65,6 @@ namespace Baikal
             uint32_t                index_base;
             uint32_t                index_count;
             uint32_t				vertex_count;
-
-            VkDescriptorSet         descriptor_set;
-
             uint32_t                material_id;
         };
 

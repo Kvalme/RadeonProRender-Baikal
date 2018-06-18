@@ -90,7 +90,7 @@ namespace Baikal
         const float3 pos = camera->GetPosition();
 
         //const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), z_range.x, z_range.y);
-        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), 0.1f, 2000.0f);
+        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), 1.0f, 4000.0f);
         const float3 ip = float3(-dot(right, pos), -dot(up, pos), -dot(forward, pos));
 
         matrix view = matrix(right.x, right.y, right.z, ip.x,
@@ -103,6 +103,7 @@ namespace Baikal
         VkCamera camera_internal;
         camera_internal.position = camera->GetPosition();
         camera_internal.view_proj = view_proj;
+        camera_internal.view = view;
         camera_internal.inv_view = inverse(view);
         camera_internal.inv_proj = inverse(proj);
 
@@ -140,7 +141,7 @@ namespace Baikal
 
             auto material = (shape->GetMaterial() == nullptr) ? GetDefaultMaterial() : shape->GetMaterial();
 
-            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), VK_NULL_HANDLE, mat_collector.GetItemIndex(material) };
+            VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), mat_collector.GetItemIndex(material) };
             out.meshes.push_back(vkw_mesh);
 
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)

@@ -4,6 +4,7 @@ const int kSpot = 0x3;
 const int kIbl = 0x4;
 const int kArea = 0x5;
 
+const int kMaxTextures = 64;
 const int kMaxLights = 4;
 
 struct VkLight
@@ -27,6 +28,7 @@ struct VkCamera
     float4    position;
 
     matrix    view_proj;
+    matrix    view;
     matrix    inv_view;
     matrix    inv_proj;
 };

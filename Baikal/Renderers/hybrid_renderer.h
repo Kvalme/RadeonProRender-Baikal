@@ -81,9 +81,8 @@ namespace Baikal
         vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_vb_;
         vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_ib_;
 
-        vkw::Shader                                     mrt_vert_shader_;
-        vkw::Shader                                     mrt_frag_shader_;
-        vkw::GraphicsPipeline							mrt_pipeline_;
+        vkw::Shader                                     mrt_shader_;
+        vkw::GraphicsPipeline                           mrt_pipeline_;
 
         vkw::Shader                                     deferred_vert_shader_;
         vkw::Shader                                     deferred_frag_shader_;
@@ -101,9 +100,12 @@ namespace Baikal
         VkDevice                                        device_;
 
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
+        vkw::VkScopedObject<VkSampler>                  linear_sampler_;
         vkw::VkScopedObject<VkSemaphore>                gbuffer_signal_;
 
         vkw::Utils                                      utils_;
+        
+        vkw::Texture                                    null_texture_;
 
         vkw::CommandBuffer                              g_buffer_cmd_;
         vkw::CommandBuffer                              deferred_cmd_;

@@ -23,11 +23,18 @@ namespace Baikal
 
         InitializeResources();
 
-        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        linear_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+
         gbuffer_signal_ = utils_.CreateSemaphore();
 
         vkGetDeviceQueue(device_, graphics_queue_index, 0, &graphics_queue_);
         vkGetDeviceQueue(device_, compute_queue_index, 0, &compute_queue_);
+
+        VkExtent3D tex_size = {2, 2, 1};
+        float tex_data[4] = { 0.f, 0.f, 0.f, 0.f };
+
+        null_texture_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, sizeof(tex_data), &tex_data);
     }
 
     void HybridRenderer::Clear(RadeonRays::float3 const& val,
@@ -93,7 +100,8 @@ namespace Baikal
         VkBuffer vb = scene.mesh_vertex_buffer.get();
         command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
 
-        VkDescriptorSet desc_set = mrt_vert_shader_.descriptor_set.get();
+        //VkDescriptorSet desc_set = mrt_vert_shader_.descriptor_set.get();
+        VkDescriptorSet desc_set = mrt_shader_.descriptor_set.get();
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
 
         vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
@@ -103,10 +111,40 @@ namespace Baikal
         vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
 
         uint32_t mesh_id = 1;
-        for (auto mesh : scene.meshes)
+        for (auto const& mesh : scene.meshes)
         {
-            uint32_t push_constants[4] = { mesh_id++, 0, 0, 0 };
-            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t) * 4, push_constants);
+            struct VkMaterialConstants
+            {
+                uint32_t data[4];
+                
+                float4 diffuse_data;              
+                float4 reflection_data;
+                float4 roughness_data;
+                float4 ior_data;
+                float4 shading_normal;
+            };
+
+            VkwScene::Material::Value const diffuse     = scene.materials[mesh.material_id].diffuse_color;
+            VkwScene::Material::Value const reflection  = scene.materials[mesh.material_id].reflection_color;
+            VkwScene::Material::Value const ior         = scene.materials[mesh.material_id].reflection_ior;
+            VkwScene::Material::Value const roughness   = scene.materials[mesh.material_id].reflection_roughness;
+            VkwScene::Material::Value const normal      = scene.materials[mesh.material_id].shading_normal;
+
+            float diffuse_tex_id = diffuse.isTexture ? static_cast<float>(diffuse.texture_id) : -1;
+            float reflection_tex_id = reflection.isTexture ? static_cast<float>(reflection.texture_id) : -1;
+            float ior_tex_id = ior.isTexture ? static_cast<float>(ior.texture_id) : -1;
+            float roughness_tex_id = roughness.isTexture ? static_cast<float>(roughness.texture_id) : -1;
+            float shading_normal_tex_id = normal.isTexture ? static_cast<float>(normal.texture_id) : -1;
+
+            VkMaterialConstants push_constants;
+            push_constants.data[0] = mesh_id++;
+            push_constants.diffuse_data     = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
+            push_constants.reflection_data  = float4(reflection.color.x, reflection.color.y, reflection.color.z, reflection_tex_id);
+            push_constants.ior_data         = float4(ior.color.x, ior.color.y, ior.color.z, ior_tex_id);
+            push_constants.roughness_data   = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
+            push_constants.shading_normal   = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
+
+            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VkMaterialConstants), &push_constants);
 
             vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
         }
@@ -169,12 +207,27 @@ namespace Baikal
 
         if (scene.rebuild_cmd_buffers_)
         {
+            std::vector<VkImageView> texture_image_views;
+            texture_image_views.reserve(kMaxTextures);
+
+            for (auto const& tex : scene.textures)
+            {
+                texture_image_views.push_back(tex.GetImageView());
+            }
+
+            // Fill array with dummy textures to make validation layer happy
+            while (texture_image_views.size() < kMaxTextures)
+            {
+                texture_image_views.push_back(null_texture_.GetImageView());
+            }
+
             deferred_frag_shader_.SetArg(4, scene.camera.get());
             deferred_frag_shader_.SetArg(5, scene.lights.get());
             deferred_frag_shader_.CommitArgs();
-
-            mrt_vert_shader_.SetArg(0, scene.camera.get());
-            mrt_vert_shader_.CommitArgs();
+            
+            mrt_shader_.SetArg(0, scene.camera.get());
+            mrt_shader_.SetArgArray(1, texture_image_views, linear_sampler_.get());
+            mrt_shader_.CommitArgs();
 
             VkDeferredPushConstants push_consts = { static_cast<int>(scene.light_count) };
 
@@ -271,11 +324,10 @@ namespace Baikal
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             indices);
 
-        mrt_vert_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/mrt.vert.spv");
-        mrt_frag_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_FRAGMENT_BIT, "../Baikal/Kernels/VK/mrt.frag.spv");
-
         deferred_vert_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_VERTEX_BIT, "../Baikal/Kernels/VK/deferred.vert.spv");
         deferred_frag_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_FRAGMENT_BIT, "../Baikal/Kernels/VK/deferred.frag.spv");
+
+        mrt_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/mrt.vert.spv", "../Baikal/Kernels/VK/mrt.frag.spv");
     }
 
     void HybridRenderer::SetMaxBounces(std::uint32_t max_bounces)
@@ -327,6 +379,6 @@ namespace Baikal
         pipeline_state.rasterization_state = &rasterization_state;
 
         g_buffer_ = render_target_manager_.CreateRenderTarget(attachments);
-        mrt_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(mrt_vert_shader_, mrt_frag_shader_, g_buffer_.render_pass.get(), &pipeline_state);
+        mrt_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(mrt_shader_, g_buffer_.render_pass.get(), &pipeline_state);
     }
 }

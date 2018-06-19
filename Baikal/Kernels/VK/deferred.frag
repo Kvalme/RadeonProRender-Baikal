@@ -30,11 +30,14 @@ layout(push_constant) uniform PushConsts {
     uvec4 num_lights;
 } push_constants;
 
+
+
 void main()
 {
-	uvec4 data = texture(g_buffer_0, uv);
+	uvec4 	data 		 = texture(g_buffer_0, uv);
+	vec4 	buffer_data1 = texture(g_buffer_1, uv);
 
-	vec3 N 				= DecodeNormal(data.xy);
+	vec3 N 				= (vec4(DecodeNormal(data.xy), 0.f) * camera.data.inv_view).xyz;
 	vec2 depth_mesh_id 	= DecodeDepthAndMeshID(data.zw);
 
 	float depth			= depth_mesh_id.x;
@@ -49,8 +52,8 @@ void main()
 	uint num_lights = push_constants.num_lights.x;
 	
 	BRDFInputs brdf_inputs;
-	brdf_inputs.albedo = vec3(1.f, 1.f, 1.f);
-	brdf_inputs.roughness = 0.f;
+	brdf_inputs.albedo = buffer_data1.xyz;
+	brdf_inputs.roughness = buffer_data1.w;
 	brdf_inputs.metallic = 0.f;
 	brdf_inputs.transparency = 0.f;
 
@@ -129,9 +132,7 @@ void main()
 		}
 	}
 
-	//color	= vec4(n, 1.f);
-	//color	= vec4(p, 1.f);
-	//color	= vec4(mesh_id.xxx / 8, 1.f);
-	color	= pow(vec4(lighting, 1.f), vec4(1.f / 2.2f));
-	//color = vec4(world_pos, 1.0f);
+	vec3 ambient = buffer_data1.xyz * 0.01f;
+	vec3 final = lighting + ambient;
+	color	= pow(vec4(final, 1.f), vec4(1.f / 2.2f));
 }

@@ -12,7 +12,8 @@ layout(location = 2) in vec2 inUV;
 layout (location = 0) out vec4 proj_pos;
 layout (location = 1) out vec4 normal;
 layout (location = 2) out vec2 uv;
-layout (location = 3) out vec3 view_vector;
+layout (location = 3) out vec3 position;
+layout (location = 4) out matrix view;
 
 layout (binding = 0) uniform CameraInfo
 {
@@ -30,7 +31,8 @@ void main()
 	normal 		= inNormal;
 	uv			= inUV.xy;
 
-	view_vector = camera.data.position.xyz - inPosition.xyz;
+	view		= camera.data.view;
+	position 	= inPosition.xyz;
 
 	gl_Position = proj_pos;
 }

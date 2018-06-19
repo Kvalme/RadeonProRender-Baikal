@@ -1,3 +1,4 @@
+
 // Spheremap Transform
 uvec2 EncodeNormal(vec3 n)
 {
@@ -63,4 +64,25 @@ mat3 CotangentFrame( vec3 N, vec3 p, vec2 uv )
     // construct a scale-invariant frame 
     float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) );
     return mat3( T * invmax, B * invmax, N );
+}
+
+vec3 ConvertBumpToNormal(sampler2D bump, vec2 uv)
+{  
+    
+    ivec2 size = textureSize(bump, 0);
+    vec2 inv_size = vec2(1.0f, 1.0f) / size;
+
+    float heights[4] = {
+        texture(bump, uv + vec2(0.0f, 0.f) * inv_size).x,
+        texture(bump, uv + vec2(1.0f, 0.f) * inv_size).x,
+        texture(bump, uv + vec2(0.0f, 1.f) * inv_size).x,
+        texture(bump, uv + vec2(1.0f, 1.f) * inv_size).x
+    };
+
+    //vec4 heights = textureGather(bump, uv);
+
+    float du = (heights[1] - heights[0]);
+    float dv = (heights[3] - heights[0]);
+    
+    return normalize(vec3(du, dv, 1.0f/3.0f));
 }

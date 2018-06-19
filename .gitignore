@@ -27,5 +27,8 @@
 *.png
 *.pbxproj
 *.make
-/build
+build/
+.vs/
+CMakeSettings.json
+CppProperties.json
 /bin

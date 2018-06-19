@@ -1,5 +1,12 @@
 /* This is an auto-generated file. Do not edit manually*/
 
+
+std::map<std::string, std::string> kernels =
+{
+{"../Baikal/Kernels/CL/path.cl", "<path_cl_source>"}
+}
+
+
 static const char g_bxdf_opencl[]= \
 "/********************************************************************** \n"\
 "Copyright (c) 2016 Advanced Micro Devices, Inc. All rights reserved. \n"\

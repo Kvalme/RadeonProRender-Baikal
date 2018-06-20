@@ -20,7 +20,7 @@ if (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
 endif (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
 
 if (BAIKAL_ENABLE_HYBRID_RENDERER)
-    add_subdirectory(RadeonRays/VKW)
+    add_subdirectory(VKW)
     add_definitions(-DHYBRID_RENDERER=1)
 endif()
 

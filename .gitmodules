@@ -2,3 +2,6 @@
 	path = RadeonRays
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/RadeonRays_SDK.git
 	branch = master
+[submodule "VKW"]
+	path = VKW
+	url = https://github.com/Radeon-Pro/RadeonProVulkanWrapper.git

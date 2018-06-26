@@ -131,6 +131,8 @@ if (BAIKAL_ENABLE_STANDALONE)
     find_package(GLFW3 REQUIRED)
 
     add_subdirectory(BaikalStandalone)
+    add_subdirectory(BaikalStandaloneRPR)
+
 endif (BAIKAL_ENABLE_STANDALONE)
 
 if (BAIKAL_ENABLE_TESTS)

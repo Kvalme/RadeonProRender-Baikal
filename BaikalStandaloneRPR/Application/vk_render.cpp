@@ -75,6 +75,13 @@ namespace BaikalRPR
         return img_view;
     }
 
+    VkSemaphore AppVkRender::GetSemaphore()
+    {
+        VkSemaphore s;
+        rprFrameBufferGetInfo(m_framebuffer, RPR_VK_SEMAPHORE_OBJECT, sizeof(VkSemaphore), &s, 0);
+        return s;
+    }
+
     void AppVkRender::Render(int sample_cnt)
     {
         //m_cfg.renderer_->Render(scene);

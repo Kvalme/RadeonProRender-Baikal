@@ -133,8 +133,10 @@ namespace BaikalRPR
         float aspect = (float)settings.width / settings.height;
         settings.camera_sensor_size.y = settings.camera_sensor_size.x / aspect;
 
-        CHECK(rprCameraSetSensorSize(m_camera, settings.camera_sensor_size.x, settings.camera_sensor_size.y));
+        CHECK(rprCameraLookAt(m_camera, -5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f));
+        CHECK(rprCameraSetSensorSize(m_camera, settings.camera_sensor_size.x * 1000.f, settings.camera_sensor_size.y * 1000.f));
         CHECK(rprSceneSetCamera(m_scene, m_camera));
+
 
         m_sphere = AddSphere("sphere", 64, 32, 2.0f, RadeonRays::float3(0.0f, 0.0f, 0.0f));
         rprSceneAttachShape(m_scene, m_sphere);
@@ -146,7 +148,7 @@ namespace BaikalRPR
         CHECK(rprContextCreatePointLight(m_context, &light));
         RadeonRays::matrix lightm = translation(RadeonRays::float3(3.0f, 6.0f, 0.0f));
         CHECK(rprLightSetTransform(light, true, &lightm.m00));
-        CHECK(rprPointLightSetRadiantPower3f(light, 3.0f, 2.5f, 2.5f));
+        CHECK(rprPointLightSetRadiantPower3f(light, 300.0f, 200.5f, 200.5f));
         CHECK(rprSceneAttachLight(m_scene, light));
 
 

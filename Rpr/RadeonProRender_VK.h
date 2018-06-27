@@ -29,10 +29,9 @@ extern "C" {
 /* rpr_framebuffer_properties */
 #define RPR_VK_IMAGE_OBJECT 0x5001
 #define RPR_VK_IMAGE_VIEW_OBJECT 0x5002
+#define RPR_VK_SEMAPHORE_OBJECT 0x5003
 
-/* rpr_context_properties */
-#define RPR_VK_CONTEXT_INSTANCE (uint64_t)0x1
-#define RPR_VK_CONTEXT_DEVICE (uint64_t)0x2
+
 
 #ifdef __cplusplus
 }

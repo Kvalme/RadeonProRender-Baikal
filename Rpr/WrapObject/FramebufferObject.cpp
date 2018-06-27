@@ -101,6 +101,12 @@ void FramebufferObject::GetData(uint32_t data_type, void *out_data)
         auto rt = output->GetRenderTarget();
         *img = rt.attachments[0].view.get();
     }
+    else if (data_type == RPR_VK_SEMAPHORE_OBJECT)
+    {
+        VkSemaphore *semaphore = static_cast<VkSemaphore*>(out_data);
+        Baikal::VkwOutput* output = dynamic_cast<Baikal::VkwOutput*>(m_output);
+        *semaphore = output->GetSemaphore();
+    }
 }
 
 void FramebufferObject::Clear()

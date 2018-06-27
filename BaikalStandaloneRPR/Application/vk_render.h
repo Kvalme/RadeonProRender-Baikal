@@ -70,6 +70,7 @@ namespace BaikalRPR
         uint32_t            GetGraphicsQueueFamilyIndex() { return m_cfg.graphics_queue_family_idx_; }
         //Baikal::Output*             GetRendererOutput() { return m_output.output.get(); }
         VkImageView GetRendererImageView();
+        VkSemaphore GetSemaphore();
         
         vkw::MemoryManager& GetMemoryManager() { return *m_cfg.memory_manager_; }
         vkw::ShaderManager& GetShaderManager() { return *m_cfg.shader_manager_; }

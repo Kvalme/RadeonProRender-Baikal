@@ -2117,6 +2117,7 @@ rpr_int rprFrameBufferGetInfo(rpr_framebuffer in_frame_buffer, rpr_framebuffer_i
     }
     case RPR_VK_IMAGE_OBJECT:
     case RPR_VK_IMAGE_VIEW_OBJECT:
+    case RPR_VK_SEMAPHORE_OBJECT:
     {
         std::size_t buff_size = sizeof(void*);
         if (out_size)

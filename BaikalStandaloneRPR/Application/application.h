@@ -46,8 +46,6 @@ namespace BaikalRPR
         
         //update app state according to gui
         // return: true if scene update required
-        bool UpdateGui();
-        void CollectSceneStats();
 
         virtual void SaveToFile(std::chrono::high_resolution_clock::time_point time) const = 0;
 

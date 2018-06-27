@@ -39,6 +39,8 @@ THE SOFTWARE.
 #include "RenderFactory/render_factory.h"
 #include "Renderers/renderer.h"
 
+#include "RadeonProRender_VK.h"
+
 namespace
 {
 
@@ -51,7 +53,7 @@ namespace
 
 }// anonymous
 
-VkContextObject::VkContextObject(rpr_creation_flags creation_flags)
+VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_context_properties *props)
     : ContextObject(creation_flags)
 {
     rpr_int result = RPR_SUCCESS;
@@ -66,8 +68,11 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags)
         try
         {
             //TODO: check num_bounces 
-
-            VkConfigManager::CreateConfig(m_cfg, std::vector<const char*>());
+            const rpr_context_properties *p = props;
+            VkInstance instance = static_cast<VkInstance>(p[0]);
+            VkDevice device = static_cast<VkDevice>(p[1]);
+            VkPhysicalDevice physical_device = static_cast<VkPhysicalDevice>(p[2]);
+            VkConfigManager::CreateConfig(m_cfg, instance, device, physical_device);
         }
         catch (...)
         {

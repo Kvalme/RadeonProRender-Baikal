@@ -37,6 +37,8 @@ THE SOFTWARE.
 #include "math/matrix.h"
 #include "math/mathutils.h"
 
+#include "RadeonProRender_VK.h"
+
 //defines behavior for unimplemented API part
 //#define UNIMLEMENTED_FUNCTION return RPR_SUCCESS;
 #define UNIMLEMENTED_FUNCTION return RPR_ERROR_UNIMPLEMENTED;
@@ -95,7 +97,14 @@ rpr_int rprCreateContext(rpr_int api_version, rpr_int * pluginIDs, size_t plugin
     {
         //TODO: handle other options
         //TODO: handle context type that we can't get from arguments atm.
-        *out_context = new VkContextObject(creation_flags);
+        if ((creation_flags & RPR_CREATION_FLAGS_ENABLE_VK_INTEROP) == RPR_CREATION_FLAGS_ENABLE_VK_INTEROP)
+        {
+            *out_context = new VkContextObject(creation_flags, props);
+        }
+        else
+        {
+            *out_context = new ClContextObject(creation_flags);
+        }
     }
     catch (Exception& e)
     {
@@ -2087,10 +2096,11 @@ rpr_int rprFrameBufferGetInfo(rpr_framebuffer in_frame_buffer, rpr_framebuffer_i
     {
         return RPR_ERROR_INVALID_PARAMETER;
     }
-    std::size_t buff_size = sizeof(RadeonRays::float3) * buff->Width() * buff->Height();
     switch (in_info)
     {
     case RPR_FRAMEBUFFER_DATA:
+    {
+        std::size_t buff_size = sizeof(RadeonRays::float3) * buff->Width() * buff->Height();
         if (out_size)
         {
             *out_size = buff_size;
@@ -2104,6 +2114,25 @@ rpr_int rprFrameBufferGetInfo(rpr_framebuffer in_frame_buffer, rpr_framebuffer_i
             buff->GetData(static_cast<RadeonRays::float3*>(out_data));
         }
         break;
+    }
+    case RPR_VK_IMAGE_OBJECT:
+    case RPR_VK_IMAGE_VIEW_OBJECT:
+    {
+        std::size_t buff_size = sizeof(void*);
+        if (out_size)
+        {
+            *out_size = buff_size;
+        }
+        if (out_data && in_size < buff_size)
+        {
+            return RPR_ERROR_INVALID_PARAMETER;
+        }
+        if (out_data)
+        {
+            buff->GetData(in_info, static_cast<RadeonRays::float3*>(out_data));
+        }
+        break;
+    }
     default:
         UNIMLEMENTED_FUNCTION
     }
@@ -2560,4 +2589,3 @@ rpr_int rprContextCreateHeteroVolume(rpr_context context, rpr_hetero_volume * ou
 {
     UNSUPPORTED_FUNCTION
 }
-

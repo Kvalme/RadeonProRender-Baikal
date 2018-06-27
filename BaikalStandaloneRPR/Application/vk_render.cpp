@@ -24,25 +24,33 @@ THE SOFTWARE.
 #include "material_io.h"
 #include "Output/vkwoutput.h"
 
+#include "RadeonProRender_VK.h"
+
 namespace BaikalRPR
 {
-    AppVkRender::AppVkRender(AppSettings& settings)
+    #define CHECK(x) if ((x) != RPR_SUCCESS) assert(false);
+
+    AppVkRender::AppVkRender(AppSettings& settings) :
+        m_settings(settings)
     {
         InitVk(settings);
         LoadScene(settings);
+
+        rpr_framebuffer_desc desc = {(rpr_uint)m_settings.width, (rpr_uint)m_settings.height };
+        rpr_framebuffer_format fmt = { 4, RPR_COMPONENT_TYPE_FLOAT32 };
+
+        rprContextCreateFrameBuffer(m_context, fmt, &desc, &m_framebuffer);
+        rprContextSetAOV(m_context, RPR_AOV_COLOR, m_framebuffer);
     }
 
     void AppVkRender::InitVk(AppSettings& settings)
     {
         VkConfigManager::CreateConfig(m_cfg, settings.vk_required_extensions);
+        void *params[3] = { m_cfg.instance_.get(), m_cfg.device_.get(), m_cfg.physical_device_};
 
-        m_output.output = m_cfg.factory_->CreateOutput(settings.width, settings.height);
-        m_output.fdata.resize(settings.width * settings.height);
-        m_output.udata.resize(settings.width * settings.height * 4);
+        CHECK(rprCreateContext(RPR_API_VERSION, nullptr, 0, RPR_CREATION_FLAGS_ENABLE_GPU0 | RPR_CREATION_FLAGS_ENABLE_VK_INTEROP, params, nullptr, &m_context));
+        CHECK(rprContextCreateMaterialSystem(m_context, 0, &m_matsys));
 
-        m_output_type = OutputType::kColor;
-
-        SetOutputType(OutputType::kColor);
     }
 
     void AppVkRender::Update(AppSettings& settings)
@@ -51,14 +59,27 @@ namespace BaikalRPR
 
     void AppVkRender::UpdateScene()
     {
-        m_cfg.controller_->CompileScene(m_scene);
-        m_cfg.renderer_->Clear(float3(0, 0, 0), *m_output.output);
+        m_cfg.renderer_->Clear(RadeonRays::float3(0, 0, 0), *m_output.output);
+
+        /*rpr_framebuffer_desc desc = {(rpr_uint)m_settings.width, (rpr_uint)m_settings.height };
+        rpr_framebuffer_format fmt = { 4, RPR_COMPONENT_TYPE_FLOAT32 };
+
+        rprContextCreateFrameBuffer(m_context, fmt, &desc, &m_framebuffer);
+        rprContextSetAOV(m_context, RPR_AOV_COLOR, m_framebuffer);*/
+    }
+
+    VkImageView AppVkRender::GetRendererImageView()
+    {
+        VkImageView img_view;
+        rprFrameBufferGetInfo(m_framebuffer, RPR_VK_IMAGE_VIEW_OBJECT, sizeof(VkImageView), &img_view, 0);
+        return img_view;
     }
 
     void AppVkRender::Render(int sample_cnt)
     {
-        auto& scene = m_cfg.controller_->GetCachedScene(m_scene);
-        m_cfg.renderer_->Render(scene);
+        //m_cfg.renderer_->Render(scene);
+        rpr_int result = rprContextRender(m_context);
+        assert(result == RPR_SUCCESS);
     }
 
     void AppVkRender::StartRenderThreads()
@@ -79,13 +100,6 @@ namespace BaikalRPR
     void AppVkRender::SetNumBounces(int num_bounces)
     {
 
-    }
-
-    void AppVkRender::SetOutputType(OutputType type)
-    {
-        m_cfg.renderer_->SetOutput(type, m_output.output.get());
-
-        m_output_type = type;
     }
 
     void AppVkRender::SaveFrameBuffer(AppSettings& settings)

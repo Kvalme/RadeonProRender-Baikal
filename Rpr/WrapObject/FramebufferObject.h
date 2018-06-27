@@ -45,6 +45,7 @@ public:
     std::size_t Width();
     std::size_t Height();
     void GetData(void* out_data);
+    void GetData(uint32_t data_type, void *out_data);
 
     void Clear();
     void SaveToFile(const char* path);

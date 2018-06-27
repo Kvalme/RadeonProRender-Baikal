@@ -336,19 +336,19 @@ namespace BaikalRPR
         if (!vk_app_render)
             throw std::runtime_error("VkApplication: Internal error");
 
-        VkwOutput* vk_output = dynamic_cast<VkwOutput*>(vk_app_render->GetRendererOutput());
+        //Baikal::VkwOutput* vk_output = dynamic_cast<Baikal::VkwOutput*>(vk_app_render->GetRendererOutput());
 
-        if (!vk_output)
-            throw std::runtime_error("VkApplication: Internal error");
+        /*if (!vk_output)
+            throw std::runtime_error("VkApplication: Internal error");*/
 
-        VkSemaphore render_complete = dynamic_cast<VkwOutput*>(vk_app_render->GetRendererOutput())->GetSemaphore();
+        //VkSemaphore render_complete = dynamic_cast<Baikal::VkwOutput*>(vk_app_render->GetRendererOutput())->GetSemaphore();
         VkPipelineStageFlags wait_stage[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
-        VkSemaphore wait_semaphores[2] = { render_complete, present_semaphores_[frame_idx_] };
+        VkSemaphore wait_semaphores[1] = { /*render_complete,*/ present_semaphores_[frame_idx_] };
 
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.waitSemaphoreCount = 2;
+        submit_info.waitSemaphoreCount = 1;
         submit_info.pWaitSemaphores = wait_semaphores;
         submit_info.pWaitDstStageMask = wait_stage;
         submit_info.commandBufferCount = 1;
@@ -493,11 +493,12 @@ namespace BaikalRPR
         output_frag_shader_ = shader_manager.CreateShader(VK_SHADER_STAGE_FRAGMENT_BIT, "../Baikal/Kernels/VK/output.frag.spv");
         output_pipeline_ = pipeline_manager.CreateGraphicsPipeline(fsq_vert_shader_, output_frag_shader_, render_pass_);
 
-        Output* output = vk_app_render->GetRendererOutput();
+        //Baikal::Output* output = vk_app_render->GetRendererOutput();
 
-        VkwOutput* vkw_output = dynamic_cast<VkwOutput*>(output);
+        //Baikal::VkwOutput* vkw_output = dynamic_cast<Baikal::VkwOutput*>(output);
+        auto img_view = vk_app_render->GetRendererImageView();
 
-        output_frag_shader_.SetArg(1, vkw_output->GetRenderTarget().attachments[0].view.get(), sampler_.get());
+        output_frag_shader_.SetArg(1, img_view, sampler_.get());
         output_frag_shader_.CommitArgs();
 
         for (uint32_t i = 0; i < num_queued_frames_; i++)
@@ -572,8 +573,6 @@ namespace BaikalRPR
 
     void VkApplication::Run()
     {
-        CollectSceneStats();
-
         try
         {
             AppVkRender* vk_app_render = dynamic_cast<AppVkRender*>(app_render_.get());

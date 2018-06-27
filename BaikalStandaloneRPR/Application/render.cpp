@@ -26,6 +26,8 @@
 #include "material_io.h"
 #include "math/mathutils.h"
 
+#include "RadeonProRender_VK.h"
+
 namespace BaikalRPR
 {
 #define CHECK(x) if ((x) != RPR_SUCCESS) assert(false);
@@ -121,8 +123,6 @@ namespace BaikalRPR
     {
         RadeonRays::rand_init();
 
-        CHECK(rprCreateContext(RPR_API_VERSION, nullptr, 0, RPR_CREATION_FLAGS_ENABLE_GPU0, nullptr, nullptr, &m_context));
-        CHECK(rprContextCreateMaterialSystem(m_context, 0, &m_matsys));
         CHECK(rprContextCreateScene(m_context, &m_scene));
         CHECK(rprContextSetScene(m_context, m_scene));
         CHECK(rprContextCreateCamera(m_context, &m_camera));
@@ -141,6 +141,13 @@ namespace BaikalRPR
 
         m_material = AddDiffuseMaterial("sphere_mtl", RadeonRays::float3(0.8f, 0.8f, 0.8f));
         CHECK(rprShapeSetMaterial(m_sphere, m_material));
+
+        rpr_light light = nullptr;
+        CHECK(rprContextCreatePointLight(m_context, &light));
+        RadeonRays::matrix lightm = translation(RadeonRays::float3(3.0f, 6.0f, 0.0f));
+        CHECK(rprLightSetTransform(light, true, &lightm.m00));
+        CHECK(rprPointLightSetRadiantPower3f(light, 3.0f, 2.5f, 2.5f));
+        CHECK(rprSceneAttachLight(m_scene, light));
 
 
 

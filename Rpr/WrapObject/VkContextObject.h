@@ -45,7 +45,7 @@ class VkContextObject
     : public ContextObject
 {
 public:
-    VkContextObject(rpr_creation_flags creation_flags);
+    VkContextObject(rpr_creation_flags creation_flags, const rpr_context_properties *props);
     virtual ~VkContextObject() = default;
 
     //AOV

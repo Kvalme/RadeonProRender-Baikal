@@ -26,7 +26,7 @@ int main(int argc, char * argv[])
 {
     try
     {
-        Baikal::VkApplication app(argc, argv);
+        BaikalRPR::VkApplication app(argc, argv);
         app.Run();
     }
     catch (std::exception& ex)

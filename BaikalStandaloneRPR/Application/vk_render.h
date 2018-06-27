@@ -68,7 +68,8 @@ namespace BaikalRPR
 
         VkPhysicalDevice    GetPhysicalDevice() { return m_cfg.physical_device_; }
         uint32_t            GetGraphicsQueueFamilyIndex() { return m_cfg.graphics_queue_family_idx_; }
-        Output*             GetRendererOutput() { return m_output.output.get(); }
+        //Baikal::Output*             GetRendererOutput() { return m_output.output.get(); }
+        VkImageView GetRendererImageView();
         
         vkw::MemoryManager& GetMemoryManager() { return *m_cfg.memory_manager_; }
         vkw::ShaderManager& GetShaderManager() { return *m_cfg.shader_manager_; }
@@ -83,7 +84,10 @@ namespace BaikalRPR
 
         VkConfigManager::VkConfig m_cfg;
 
+
+        AppSettings m_settings;
         OutputData m_output;
         std::promise<int> m_promise;
+        rpr_framebuffer m_framebuffer;
     };
 }

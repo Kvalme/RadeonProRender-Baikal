@@ -387,7 +387,7 @@ namespace Baikal
     void HybridRenderer::ResizeRenderTargets(uint32_t width, uint32_t height)
     {
         static std::vector<vkw::RenderTargetCreateInfo> attachments = {
-            { width, height, VK_FORMAT_R16G16B16A16_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },   // xy - packed normals, next 24 bits - depth, 8 bits - mesh id
+            { width, height, VK_FORMAT_R16G16B16A16_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},   // xy - packed normals, next 24 bits - depth, 8 bits - mesh id
             { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },      // albedo
             { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },      // xy - motion, zw - roughness, metaliness
             { width, height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },

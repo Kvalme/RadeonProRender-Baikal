@@ -40,12 +40,16 @@ namespace Baikal
     {
         assert(vertices);
         assert(num_vertices != 0);
-        
+
         // Resize internal array and copy data
         m_vertices.resize(num_vertices);
 
-        std::copy(vertices, vertices + num_vertices, &m_vertices[0]);
-        for (std::size_t a = 0; a < num_vertices; ++a) m_vertices[a].w = 1.0f;
+        // Replace vertex.w with 1.0f
+        for (std::size_t a = 0; a < num_vertices; ++a)
+        {
+            m_vertices[a] = vertices[a];
+            m_vertices[a].w = 1.0f;
+        }
 
         SetDirty(true);
     }

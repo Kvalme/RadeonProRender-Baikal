@@ -14,3 +14,4 @@ target_include_directories(BaikalUtils
     PUBLIC "${Baikal_SOURCE_DIR}/BaikalUtils"
     PUBLIC $<TARGET_PROPERTY:Baikal,INCLUDE_DIRECTORIES>
     )
+target_link_libraries(BaikalUtils PRIVATE GLEW::GLEW)

@@ -13,6 +13,7 @@ UberMaterialObject::UberMaterialObject() :
     MaterialObject(kUberV2)
 {
     m_mat = UberV2Material::Create();
+    m_mat->SetLayers(UberV2Material::Layers::kDiffuseLayer);
 }
 
 void UberMaterialObject::SetInputF(const std::string & input_name, const RadeonRays::float4 & val)
@@ -87,20 +88,20 @@ void UberMaterialObject::SetInputTexture(const std::string & input_name, Texture
         if (input_name == "uberv2.bump")
         {
             auto sampler = Baikal::InputMap_SamplerBumpMap::Create(input->GetTexture());
-            auto remap = Baikal::InputMap_Remap::Create(
+/*            auto remap = Baikal::InputMap_Remap::Create(
                 Baikal::InputMap_ConstantFloat3::Create(float3(0.0f, 1.0f, 0.0f)),
                 Baikal::InputMap_ConstantFloat3::Create(float3(-1.0f, 1.0f, 0.0f)),
-                sampler);
-            m_mat->SetInputValue("uberv2.shading_normal", remap);
+                sampler);*/
+            m_mat->SetInputValue("uberv2.shading_normal", sampler);
         }
         else if (input_name == "uberv2.normal")
         {
             auto sampler = Baikal::InputMap_Sampler::Create(input->GetTexture());
-            auto remap = Baikal::InputMap_Remap::Create(
+/*            auto remap = Baikal::InputMap_Remap::Create(
                 Baikal::InputMap_ConstantFloat3::Create(float3(0.0f, 1.0f, 0.0f)),
                 Baikal::InputMap_ConstantFloat3::Create(float3(-1.0f, 1.0f, 0.0f)),
-                sampler);
-            m_mat->SetInputValue("uberv2.shading_normal", remap);
+                sampler);*/
+            m_mat->SetInputValue("uberv2.shading_normal", sampler);
         }
         else
         {

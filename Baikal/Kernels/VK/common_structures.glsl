@@ -5,22 +5,26 @@ const int kIbl = 0x4;
 const int kArea = 0x5;
 
 const int kMaxTextures = 64;
-const int kMaxLights = 4;
+const int kMaxLights = 20;
+const int kMaxTransforms = 1024;
 
-struct VkLight
+struct VkPointLight
 {
-    // w - type
-    // xyz - position for spot and point lights
-    // x - texture index for image based light
-    float4 data0;
+    float4 position;    // xyz - position, w - inner attenuation
+    float4 radiance;
+};
 
-    // xyz - direction for spot and directional lights
-    // w - inner attenuation for spot light
-    float4 data1;
+struct VkSpotLight
+{
+    float4 position;    // xyz - position, w - inner attenuation
+    float4 direction;   // xyz - direction, w - outer attenuations
+    float4 radiance;
+};
 
-    // xyz - radiance for analytical types of lights
-    // w - outer attenuation for spot light
-    float4 data2;
+struct VkDirectionalLight
+{
+    float4 direction;
+    float4 radiance;
 };
 
 struct VkCamera
@@ -35,5 +39,6 @@ struct VkCamera
 
 struct VkDeferredPushConstants
 {
-    int num_lights;
+    int         num_lights[4];
+    float4      cascade_splits;
 };

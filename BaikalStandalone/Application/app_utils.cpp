@@ -240,5 +240,8 @@ namespace Baikal
         , platform_index(-1)
         , device_index(-1)
     {
+        #ifdef HYBRID_RENDERER
+            camera_zcap = RadeonRays::float2(1.0f, 800.0f);
+        #endif
     }
 }

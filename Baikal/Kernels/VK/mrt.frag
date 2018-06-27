@@ -17,15 +17,15 @@ layout (location = 1) out vec4 out_gbuffer_1;   // albedo
 layout (location = 2) out vec4 out_gbuffer_2;   // xy - motion, zw - roughness, metaliness
 
 layout(push_constant) uniform PushConsts {
-    uvec4 	data; 			// mesh id
-	vec4 	diffuse;		// xyz - color, w - texture id
-	vec4 	reflection;
-    vec4 	roughness;
-    vec4 	ior;
-    vec4	normal;
+    layout(offset = 16) uvec4 	data; 			// mesh id
+						vec4 	diffuse;		// xyz - color, w - texture id
+						vec4 	reflection;
+						vec4 	roughness;
+						vec4 	ior;
+						vec4	normal;
 } consts;
 
-layout (binding = 1) uniform sampler2D textures[kMaxTextures];
+layout (binding = 2) uniform sampler2D textures[kMaxTextures];
 
 void main()
 {

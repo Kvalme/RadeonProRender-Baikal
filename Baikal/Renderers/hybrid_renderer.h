@@ -25,13 +25,14 @@ THE SOFTWARE.
 #include "renderer.h"
 
 #include "SceneGraph/vkwscene.h"
-#include "Controllers/vkw_scene_controller.h"
+//#include "Controllers/vkw_scene_controller.h"
 
 #include "VKW.h"
 
 #include <memory>
 
 #include "Output/vkwoutput.h"
+
 
 namespace Baikal
 {
@@ -75,7 +76,7 @@ namespace Baikal
         void BuildGbufferCommandBuffer(VkwScene const& scene);
 
         void DrawGbufferPass();
-        void DrawDeferredPass(VkwOutput const& output);
+        void DrawDeferredPass(VkwOutput const& output, VkwScene const& scene);
 
     protected:
         vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_vb_;
@@ -105,10 +106,13 @@ namespace Baikal
 
         vkw::Utils                                      utils_;
         
-        vkw::Texture                                    null_texture_;
+        vkw::Texture                                    black_pixel_;
+        vkw::Texture                                    inf_pixel_;
 
         vkw::CommandBuffer                              g_buffer_cmd_;
         vkw::CommandBuffer                              deferred_cmd_;
+
+        vkw::VkScopedObject<VkBuffer>                   dummy_buffer_;
 
         VkViewport                                      viewport_;
         VkRect2D                                        scissor_;

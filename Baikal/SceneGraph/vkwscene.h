@@ -6,8 +6,11 @@
 #include "SceneGraph/Collector/collector.h"
 
 #include "math/matrix.h"
+#include "math/bbox.h"
+
 #include "vk_scoped_object.h"
 #include "vk_texture.h"
+#include "vk_render_target_manager.h"
 
 namespace Baikal
 {
@@ -17,8 +20,17 @@ namespace Baikal
 
     struct VkwScene
     {
+        typedef std::vector<vkw::VkScopedObject<VkSemaphore>> SemaphoreArray;
+        typedef std::vector<vkw::RenderTarget> RenderTargetArray;
+
         VkwScene()
-            : lights(VK_NULL_HANDLE)
+            //: lights(VK_NULL_HANDLE)
+            : point_lights(VK_NULL_HANDLE)
+            , spot_lights(VK_NULL_HANDLE)
+            , directional_lights(VK_NULL_HANDLE)
+            , point_lights_transforms(VK_NULL_HANDLE)
+            , spot_lights_transforms(VK_NULL_HANDLE)
+            , directional_lights_transforms(VK_NULL_HANDLE)
             , camera(VK_NULL_HANDLE)
             , mesh_transforms(VK_NULL_HANDLE)
             , mesh_vertex_buffer(VK_NULL_HANDLE)
@@ -33,8 +45,11 @@ namespace Baikal
             , index_count(0)
             , shapes_count(0)
             , light_count(0)
+            , num_point_lights(0)
+            , num_spot_lights(0)
+            , num_directional_lights(0)
             , sh_count(0)
-            , rebuild_cmd_buffers_(true)
+            , rebuild_cmd_buffers(true)
         {}
 
         typedef matrix mat4;
@@ -68,10 +83,17 @@ namespace Baikal
             uint32_t                material_id;
         };
 
+        vkw::VkScopedObject<VkBuffer>   point_lights;
+        vkw::VkScopedObject<VkBuffer>   spot_lights;
+        vkw::VkScopedObject<VkBuffer>   directional_lights;
 
-        vkw::VkScopedObject<VkBuffer>   lights;
+        vkw::VkScopedObject<VkBuffer>   point_lights_transforms;
+        vkw::VkScopedObject<VkBuffer>   spot_lights_transforms;
+        vkw::VkScopedObject<VkBuffer>   directional_lights_transforms;
+
         vkw::VkScopedObject<VkBuffer>   camera;
 
+        vkw::VkScopedObject<VkBuffer>   mesh_bound_volumes;
         vkw::VkScopedObject<VkBuffer>   mesh_transforms;
         vkw::VkScopedObject<VkBuffer>   mesh_vertex_buffer;
         vkw::VkScopedObject<VkBuffer>   mesh_index_buffer;
@@ -90,11 +112,17 @@ namespace Baikal
         uint32_t                        index_count;
         uint32_t                        shapes_count;
         uint32_t                        light_count;
+        uint32_t                        num_point_lights;
+        uint32_t                        num_spot_lights;
+        uint32_t                        num_directional_lights;
         uint32_t                        sh_count;
 
         std::vector<vkw::Texture>       textures;
         std::vector<VkwMesh>            meshes;
         std::vector<Material>           materials;
+
+        mutable SemaphoreArray          shadows_finished_signal;
+        RenderTargetArray               shadows;
 
         std::unique_ptr<Bundle>         material_bundle;
         std::unique_ptr<Bundle>         volume_bundle;
@@ -102,6 +130,9 @@ namespace Baikal
         std::unique_ptr<Bundle>         input_map_leafs_bundle;
         std::unique_ptr<Bundle>         input_map_bundle;
 
-        mutable bool                    rebuild_cmd_buffers_;
+        RadeonRays::float4              cascade_splits_dist;
+        RadeonRays::bbox                scene_bounds;
+
+        mutable bool                    rebuild_cmd_buffers;
     };
 }

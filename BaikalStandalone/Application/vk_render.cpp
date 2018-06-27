@@ -51,8 +51,8 @@ namespace Baikal
 
     void AppVkRender::UpdateScene()
     {
-        m_cfg.controller_->CompileScene(m_scene);
-        m_cfg.renderer_->Clear(float3(0, 0, 0), *m_output.output);
+        VkwScene& scene = m_cfg.controller_->CompileScene(m_scene);
+        m_cfg.controller_->PostUpdate(*m_scene.get(), scene);
     }
 
     void AppVkRender::Render(int sample_cnt)

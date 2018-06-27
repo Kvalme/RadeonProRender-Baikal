@@ -29,6 +29,7 @@
 #pragma once
 
 #include "scene_controller.h"
+#include "vkw_shadow_controller.h"
 
 #include "SceneGraph/vkwscene.h"
 
@@ -58,7 +59,14 @@ namespace Baikal
     {
     public:
         // Constructor
-        VkwSceneController(vkw::MemoryAllocator& memory_allocator, vkw::MemoryManager& memory_manager, VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index);
+        VkwSceneController( VkDevice device, 
+                            vkw::MemoryAllocator& memory_allocator, 
+                            vkw::MemoryManager& memory_manager,
+                            vkw::ShaderManager& shader_manager,
+                            vkw::RenderTargetManager& render_target_manager,
+                            vkw::PipelineManager& pipeline_manager,
+                            uint32_t graphics_queue_index,
+                            uint32_t compute_queue_index);
         // Destructor
         virtual ~VkwSceneController();
 
@@ -100,6 +108,8 @@ namespace Baikal
         // Write single input map leaf at data pointer
         // Collectore is required to convert texture pointers into indices.
         void WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const;
+
+        void PostUpdate(Scene1 const& scene, VkwScene& out) const;
     protected:
         struct Vertex
         {
@@ -112,16 +122,27 @@ namespace Baikal
         vkw::MemoryAllocator&                           memory_allocator_;
         // Memory manager
         vkw::MemoryManager&                             memory_manager_;
+        vkw::RenderTargetManager&                       render_target_manager_;
+        vkw::ShaderManager&                             shader_manager_;
+        vkw::PipelineManager&                           pipeline_manager_;
         // Vulkan logical device
         VkDevice                                        device_;
         // Vulkan physical device
         VkPhysicalDevice                                physical_device_;
         // Default material
         Material::Ptr                                   default_material_;
+        // Controller responsible for shadow updates 
+        std::unique_ptr<VkwShadowController>            shadow_controller_;
         // Storage to prevent re-allocations on each scene update
         mutable std::vector<Vertex>                     vertex_buffer_;
         mutable std::vector<uint32_t>                   index_buffer_;
+        mutable std::vector<RadeonRays::bbox>           mesh_bound_volumes_;
         mutable std::vector<RadeonRays::matrix>         mesh_transforms_;
         mutable std::vector<char>                       texture_data_;
+
+        // TODO: flags needed for shadows post-update. Find better solution
+        mutable bool                                    shapes_changed_;
+        mutable bool                                    camera_changed_;
+        mutable std::vector<bool>                       lights_changed_;
     };
 }

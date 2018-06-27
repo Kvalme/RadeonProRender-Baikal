@@ -23,7 +23,7 @@ namespace Baikal
 
         InitializeResources();
 
-        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         linear_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
         gbuffer_signal_ = utils_.CreateSemaphore();
@@ -32,9 +32,14 @@ namespace Baikal
         vkGetDeviceQueue(device_, compute_queue_index, 0, &compute_queue_);
 
         VkExtent3D tex_size = {2, 2, 1};
-        float tex_data[4] = { 0.f, 0.f, 0.f, 0.f };
+        
+        float black_pixel_data[4] = { 0.f, 0.f, 0.f, 0.f };
+        float inf_pixel_data[4] = { 1e20f, 1e20f, 1e20f, 1e20f };
 
-        null_texture_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, sizeof(tex_data), &tex_data);
+        black_pixel_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, sizeof(black_pixel_data), &black_pixel_data);
+        inf_pixel_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, sizeof(inf_pixel_data), &inf_pixel_data);
+
+        dummy_buffer_ = memory_manager.CreateBuffer(sizeof(RadeonRays::matrix), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     }
 
     void HybridRenderer::Clear(RadeonRays::float3 const& val,
@@ -100,7 +105,6 @@ namespace Baikal
         VkBuffer vb = scene.mesh_vertex_buffer.get();
         command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
 
-        //VkDescriptorSet desc_set = mrt_vert_shader_.descriptor_set.get();
         VkDescriptorSet desc_set = mrt_shader_.descriptor_set.get();
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
 
@@ -144,7 +148,9 @@ namespace Baikal
             push_constants.roughness_data   = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
             push_constants.shading_normal   = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
 
-            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VkMaterialConstants), &push_constants);
+            uint32_t vs_push_data[4] = { push_constants.data[0], 0, 0, 0 };
+            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_push_data), &vs_push_data);
+            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vs_push_data), sizeof(VkMaterialConstants), &push_constants);
 
             vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
         }
@@ -154,22 +160,30 @@ namespace Baikal
         g_buffer_cmd_ = command_buffer_builder_->EndCommandBuffer();
     }
 
-    void HybridRenderer::DrawDeferredPass(VkwOutput const& output)
+    void HybridRenderer::DrawDeferredPass(VkwOutput const& output, VkwScene const& scene)
     {
-        VkPipelineStageFlags stage_wait_bits = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
         VkCommandBuffer deferred_cmd_buf = deferred_cmd_.get();
 
         VkSemaphore g_buffer_finised = gbuffer_signal_.get();
         VkSemaphore render_finished = output.GetSemaphore();
 
+        std::vector<VkSemaphore> wait_semaphores = { g_buffer_finised };
+        std::vector<VkPipelineStageFlags> stage_wait_bits = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+        for (auto const& shadow_semaphore : scene.shadows_finished_signal)
+        {
+            wait_semaphores.push_back(shadow_semaphore.get());
+            stage_wait_bits.push_back(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+        }
+        scene.shadows_finished_signal.clear();
+
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.pSignalSemaphores = &render_finished;
         submit_info.signalSemaphoreCount = 1;
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &g_buffer_finised;
-        submit_info.pWaitDstStageMask = &stage_wait_bits;
+        submit_info.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size());
+        submit_info.pWaitSemaphores = wait_semaphores.data();
+        submit_info.pWaitDstStageMask = stage_wait_bits.data();
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &deferred_cmd_buf;
 
@@ -205,10 +219,17 @@ namespace Baikal
         if (vk_output == nullptr)
             throw std::runtime_error("HybridRenderer: Internal error");
 
-        if (scene.rebuild_cmd_buffers_)
+        if (scene.rebuild_cmd_buffers)
         {
             std::vector<VkImageView> texture_image_views;
             texture_image_views.reserve(kMaxTextures);
+
+            std::vector<VkImageView> shadow_image_views;
+
+            for (auto const& tex : scene.shadows)
+            {
+                shadow_image_views.push_back(tex.attachments[0].view.get());
+            }
 
             for (auto const& tex : scene.textures)
             {
@@ -218,27 +239,55 @@ namespace Baikal
             // Fill array with dummy textures to make validation layer happy
             while (texture_image_views.size() < kMaxTextures)
             {
-                texture_image_views.push_back(null_texture_.GetImageView());
+                texture_image_views.push_back(black_pixel_.GetImageView());
             }
 
+            // Fill array with dummy textures to make validation layer happy
+            while (shadow_image_views.size() < kMaxLights)
+            {
+                shadow_image_views.push_back(inf_pixel_.GetImageView());
+            }
+
+            VkBuffer point_lights = scene.point_lights != VK_NULL_HANDLE ? scene.point_lights.get() 
+                                                                         : dummy_buffer_.get();
+
+            VkBuffer spot_lights = scene.spot_lights != VK_NULL_HANDLE ? scene.spot_lights.get() 
+                                                                       : dummy_buffer_.get();
+
+            VkBuffer directional_lights = scene.directional_lights != VK_NULL_HANDLE ? scene.directional_lights.get() 
+                                                                                     : dummy_buffer_.get();
+
             deferred_frag_shader_.SetArg(4, scene.camera.get());
-            deferred_frag_shader_.SetArg(5, scene.lights.get());
+            deferred_frag_shader_.SetArgArray(5, shadow_image_views, nearest_sampler_.get());
+            deferred_frag_shader_.SetArg(6, point_lights);
+            deferred_frag_shader_.SetArg(7, spot_lights);
+            deferred_frag_shader_.SetArg(8, directional_lights);
+            deferred_frag_shader_.SetArg(9, scene.point_lights_transforms.get());
+            deferred_frag_shader_.SetArg(10, scene.spot_lights_transforms.get());
+            deferred_frag_shader_.SetArg(11, scene.directional_lights_transforms.get());
             deferred_frag_shader_.CommitArgs();
             
             mrt_shader_.SetArg(0, scene.camera.get());
-            mrt_shader_.SetArgArray(1, texture_image_views, linear_sampler_.get());
+            mrt_shader_.SetArg(1, scene.mesh_transforms.get());
+            mrt_shader_.SetArgArray(2, texture_image_views, linear_sampler_.get());
             mrt_shader_.CommitArgs();
 
-            VkDeferredPushConstants push_consts = { static_cast<int>(scene.light_count) };
+            VkDeferredPushConstants push_consts = { 
+                static_cast<int>(scene.light_count), 
+                static_cast<int>(scene.num_point_lights),
+                static_cast<int>(scene.num_spot_lights),
+                static_cast<int>(scene.num_directional_lights),
+                scene.cascade_splits_dist
+            };
 
             BuildDeferredCommandBuffer(*vk_output, push_consts);
             BuildGbufferCommandBuffer(scene);
 
-            scene.rebuild_cmd_buffers_ = false;
+            scene.rebuild_cmd_buffers = false;
         }
 
         DrawGbufferPass();
-        DrawDeferredPass(*vk_output);
+        DrawDeferredPass(*vk_output, scene);
     }
 
     void HybridRenderer::RenderTile(VkwScene const& scene,

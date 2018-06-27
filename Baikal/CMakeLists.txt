@@ -3,6 +3,10 @@ set(CONTROLLERS_SOURCES
     Controllers/clw_scene_controller.h
     Controllers/vkw_scene_controller.cpp
     Controllers/vkw_scene_controller.h
+    Controllers/vkw_shadow_controller.cpp
+    Controllers/vkw_shadow_controller.h
+    Controllers/vkw_scene_helpers.cpp
+    Controllers/vkw_scene_helpers.h
     Controllers/scene_controller.h
     Controllers/scene_controller.inl)
     

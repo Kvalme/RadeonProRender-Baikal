@@ -98,8 +98,8 @@ namespace Baikal
         virtual void UpdateVolumes(Scene1 const& scene, Collector& volume_collector, Collector& tex_collector, CompiledScene& out) const = 0;
         // If scene attributes changed
         virtual void UpdateSceneAttributes(Scene1 const& scene, Collector& tex_collector, CompiledScene& out) const = 0;
-
-
+        // Actions after all updates happened
+        virtual void PostUpdate(Scene1 const& scene, CompiledScene& out) const = 0;
     private:
         mutable Scene1::Ptr m_current_scene;
         // Scene cache map (CPU scene -> GPU scene mapping)

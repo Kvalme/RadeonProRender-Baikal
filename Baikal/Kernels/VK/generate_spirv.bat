@@ -4,3 +4,5 @@ glslc -c -MD mrt.vert -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD mrt.frag -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD deferred.vert -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD deferred.frag -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD depth_only.vert -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD depth_only.frag -Dfloat4=vec4 -Dmatrix=mat4

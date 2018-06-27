@@ -45,6 +45,7 @@ namespace Baikal
         m_vertices.resize(num_vertices);
 
         std::copy(vertices, vertices + num_vertices, &m_vertices[0]);
+        for (std::size_t a = 0; a < num_vertices; ++a) m_vertices[a].w = 1.0f;
 
         SetDirty(true);
     }

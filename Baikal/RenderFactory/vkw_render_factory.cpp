@@ -71,6 +71,13 @@ namespace Baikal
 
     std::unique_ptr<SceneController<VkwScene>> VkwRenderFactory::CreateSceneController() const
     {
-        return std::make_unique<VkwSceneController>(memory_allocator_, memory_manager_, device_, physical_device_, graphics_queue_family_index_);
+        return std::make_unique<VkwSceneController>(device_,
+                                                    memory_allocator_,
+                                                    memory_manager_,
+                                                    shader_manager_,
+                                                    render_target_manager_,
+                                                    pipeline_manager_,
+                                                    graphics_queue_family_index_,
+                                                    compute_queue_family_index_);
     }
 }

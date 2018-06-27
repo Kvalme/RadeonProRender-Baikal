@@ -20,6 +20,15 @@ layout (binding = 0) uniform CameraInfo
 	VkCamera data;
 } camera;
 
+layout (binding = 1) uniform TransformInfo
+{
+	matrix data[1024];
+} transforms;
+
+layout(push_constant) uniform VsPushConsts {
+    uvec4 	data; // mesh id
+} vs_consts;
+
 out gl_PerVertex
 {
     vec4 gl_Position;
@@ -27,8 +36,11 @@ out gl_PerVertex
 
 void main()
 {
-	proj_pos 	= inPosition * camera.data.view_proj;
-	normal 		= inNormal;
+	uint transform_idx 	= max(0, vs_consts.data.x - 1);
+	matrix	transform 	= transforms.data[transform_idx];
+
+	proj_pos 	= inPosition * transform * camera.data.view_proj;
+	normal 		= inNormal * transform;
 	uv			= inUV.xy;
 
 	view		= camera.data.view;

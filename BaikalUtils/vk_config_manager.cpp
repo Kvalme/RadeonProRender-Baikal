@@ -165,6 +165,19 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
         queue_create_infos[i].queueFamilyIndex = queue_family_idx[i];
     }
 
+    VkPhysicalDeviceFeatures device_features;
+    vkGetPhysicalDeviceFeatures(gpus[0], &device_features);
+
+    VkPhysicalDeviceFeatures enabled_features = {};
+
+    if (device_features.samplerAnisotropy) {
+        enabled_features.samplerAnisotropy = VK_TRUE;
+    }
+
+    if (device_features.depthClamp) {
+        enabled_features.depthClamp = VK_TRUE;
+    }
+
     int device_extension_count = 1;
     const char* device_extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
@@ -178,7 +191,7 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
     device_create_info.ppEnabledLayerNames = nullptr;
     device_create_info.enabledExtensionCount = device_extension_count;
     device_create_info.ppEnabledExtensionNames = device_extensions;
-    device_create_info.pEnabledFeatures = nullptr;
+    device_create_info.pEnabledFeatures = &enabled_features;
 
     VkDevice device = nullptr;
     res = vkCreateDevice(gpus[0], &device_create_info, nullptr, &device);

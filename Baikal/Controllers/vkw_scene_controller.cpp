@@ -1,4 +1,7 @@
 #include "Controllers/vkw_scene_controller.h"
+
+#include "Controllers/vkw_scene_helpers.h"
+
 #include "SceneGraph/scene1.h"
 #include "SceneGraph/camera.h"
 #include "SceneGraph/light.h"
@@ -12,6 +15,7 @@
 #include "Utils/distribution1d.h"
 #include "Utils/log.h"
 
+#include "math/bbox.h"
 
 #include <chrono>
 #include <memory>
@@ -23,37 +27,23 @@ using namespace RadeonRays;
 
 namespace Baikal
 {
-    static int GetLightType(Light const& light)
-    {
-        if (dynamic_cast<PointLight const*>(&light))
-        {
-            return kPoint;
-        }
-        else if (dynamic_cast<DirectionalLight const*>(&light))
-        {
-            return kDirectional;
-        }
-        else if (dynamic_cast<SpotLight const*>(&light))
-        {
-            return kSpot;
-        }
-        else if (dynamic_cast<ImageBasedLight const*>(&light))
-        {
-            return kIbl;
-        }
-        else
-        {
-            return kArea;
-        }
-    }
-
-    VkwSceneController::VkwSceneController(vkw::MemoryAllocator& memory_allocator, vkw::MemoryManager& memory_manager, VkDevice device, VkPhysicalDevice physical_device, uint32_t queue_family_index)
+    VkwSceneController::VkwSceneController(VkDevice device, vkw::MemoryAllocator& memory_allocator,
+        vkw::MemoryManager& memory_manager,
+        vkw::ShaderManager& shader_manager,
+        vkw::RenderTargetManager& render_target_manager,
+        vkw::PipelineManager& pipeline_manager,
+        uint32_t graphics_queue_index,
+        uint32_t compute_queue_index)
         : memory_allocator_(memory_allocator)
         , memory_manager_(memory_manager)
+        , render_target_manager_(render_target_manager)
+        , shader_manager_(shader_manager)
+        , pipeline_manager_(pipeline_manager)
         , device_(device)
-        , physical_device_(physical_device)
-        , default_material_(UberV2Material::Create())
+        , shapes_changed_(false)
+        , camera_changed_(false)
     {
+        shadow_controller_.reset(new VkwShadowController(device, memory_manager, shader_manager, render_target_manager, pipeline_manager, graphics_queue_index, compute_queue_index));
     }
 
     Material::Ptr VkwSceneController::GetDefaultMaterial() const
@@ -74,29 +64,8 @@ namespace Baikal
             throw std::runtime_error("VkwSceneController supports only perspective camera");
         }
 
-        const float focal_length = camera->GetFocalLength();
-        const float2 sensor_size = camera->GetSensorSize();
-
-        float2 z_range = camera->GetDepthRange();
-
-        // Nan-avoidance in perspective matrix
-        z_range.x = std::max(z_range.x, std::numeric_limits<float>::epsilon());
-
-        const float fovy = atan(sensor_size.y / (2.0f * focal_length));
-
-        const float3 up = camera->GetUpVector();
-        const float3 right = camera->GetRightVector();
-        const float3 forward = -camera->GetForwardVector();
-        const float3 pos = camera->GetPosition();
-
-        //const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), z_range.x, z_range.y);
-        const matrix proj = perspective_proj_fovy_rh_gl(fovy, camera->GetAspectRatio(), 1.0f, 4000.0f);
-        const float3 ip = float3(-dot(right, pos), -dot(up, pos), -dot(forward, pos));
-
-        matrix view = matrix(right.x, right.y, right.z, ip.x,
-            up.x, up.y, up.z, ip.y,
-            forward.x, forward.y, forward.z, ip.z,
-            0.0f, 0.0f, 0.0f, 1.0f);
+        const matrix proj = MakeProjectionMatrix(*camera);
+        const matrix view = MakeViewMatrix(*camera);
 
         const matrix view_proj = proj * view;
 
@@ -113,14 +82,18 @@ namespace Baikal
 
             out.camera = memory_manager_.CreateBuffer(sizeof(VkCamera),
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &camera_internal);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &camera_internal);
         }
 
         memory_manager_.WriteBuffer(out.camera.get(), 0u, sizeof(VkCamera), &camera_internal);
+
+        camera_changed_ = true;
     }
 
     void VkwSceneController::UpdateShapes(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const
     {
+        shapes_changed_ = true;
+
         uint32_t num_shapes = static_cast<uint32_t>(scene.GetNumShapes());
         uint32_t num_vertices = 0;
         uint32_t num_indices = 0;
@@ -128,7 +101,11 @@ namespace Baikal
         vertex_buffer_.clear();
         index_buffer_.clear();
         mesh_transforms_.clear();
+        mesh_bound_volumes_.clear();
+
         out.meshes.clear();
+
+        RadeonRays::bbox scene_bounds;
 
         std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
         for (; mesh_iter->IsValid(); mesh_iter->Next())
@@ -144,11 +121,20 @@ namespace Baikal
             VkwScene::VkwMesh vkw_mesh = { static_cast<uint32_t>(num_indices), static_cast<uint32_t>(mesh->GetNumIndices()), static_cast<uint32_t>(mesh->GetNumVertices()), mat_collector.GetItemIndex(material) };
             out.meshes.push_back(vkw_mesh);
 
+            RadeonRays::bbox mesh_bb;
+                
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
             {
-                Vertex vertex = { mesh->GetVertices()[v], mesh->GetNormals()[v], mesh->GetUVs()[v] };
+                RadeonRays::float3 pos = mesh->GetTransform() * mesh->GetVertices()[v];
+
+                mesh_bb.grow(pos);
+                scene_bounds.grow(pos);
+
+                Vertex vertex = { pos, mesh->GetNormals()[v], mesh->GetUVs()[v] };
                 vertex_buffer_.push_back(vertex);
             }
+
+            mesh_bound_volumes_.push_back(mesh_bb);
 
             for (std::size_t idx = 0; idx < mesh->GetNumIndices(); idx++)
             {
@@ -189,21 +175,31 @@ namespace Baikal
         if (out.shapes_count < num_shapes)
         {
             out.mesh_transforms.reset();
+            out.mesh_bound_volumes.reset();
 
             out.mesh_transforms = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * num_shapes,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+
+            out.mesh_bound_volumes = memory_manager_.CreateBuffer(sizeof(RadeonRays::bbox) * num_shapes,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
 
             out.shapes_count = num_shapes;
         }
 
-        memory_manager_.WriteBuffer(out.mesh_vertex_buffer.get(), 0u, sizeof(Vertex) * num_vertices, &vertex_buffer_[0]);
-        memory_manager_.WriteBuffer(out.mesh_index_buffer.get(), 0u, sizeof(uint32_t) * num_indices, &index_buffer_[0]);
-        memory_manager_.WriteBuffer(out.mesh_transforms.get(), 0u, sizeof(RadeonRays::matrix) * num_shapes, &mesh_transforms_[0]);
+        memory_manager_.WriteBuffer(out.mesh_vertex_buffer.get(), 0u, sizeof(Vertex) * num_vertices, vertex_buffer_.data());
+        memory_manager_.WriteBuffer(out.mesh_index_buffer.get(), 0u, sizeof(uint32_t) * num_indices, index_buffer_.data());
+        memory_manager_.WriteBuffer(out.mesh_transforms.get(), 0u, sizeof(RadeonRays::matrix) * num_shapes, mesh_transforms_.data());
+        memory_manager_.WriteBuffer(out.mesh_bound_volumes.get(), 0u, sizeof(RadeonRays::bbox) * num_shapes, mesh_bound_volumes_.data());
+
+        out.scene_bounds = scene_bounds;
     }
 
     void VkwSceneController::UpdateShapeProperties(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& volume_collector, VkwScene& out) const
     {
+        shapes_changed_ = true;
+
         uint32_t num_shapes = static_cast<uint32_t>(scene.GetNumShapes());
 
         mesh_transforms_.clear();
@@ -226,12 +222,12 @@ namespace Baikal
 
             out.mesh_transforms = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * num_shapes,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
 
             out.shapes_count = num_shapes;
         }
 
-        memory_manager_.WriteBuffer(out.mesh_transforms.get(), 0u, sizeof(RadeonRays::matrix) * num_shapes, &mesh_transforms_[0]);
+        memory_manager_.WriteBuffer(out.mesh_transforms.get(), 0u, sizeof(RadeonRays::matrix) * num_shapes, mesh_transforms_.data());
     }
 
     void VkwSceneController::UpdateCurrentScene(Scene1 const& scene, VkwScene& out) const
@@ -388,11 +384,24 @@ namespace Baikal
     void VkwSceneController::UpdateLights(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
         uint32_t num_lights = static_cast<uint32_t>(scene.GetNumLights());
+        
+        lights_changed_.resize(num_lights);
 
-        std::vector<VkLight> lights_internal;
-        lights_internal.reserve(static_cast<size_t>(num_lights));
+        uint32_t num_spot_lights = 0;
+        uint32_t num_point_lights = 0;
+        uint32_t num_directional_lights = 0;
+
+        std::vector<VkSpotLight> spot_lights;
+        std::vector<VkPointLight> point_lights;
+        std::vector<VkDirectionalLight> directional_lights;
+
+        spot_lights.reserve(static_cast<size_t>(num_lights));
+        point_lights.reserve(static_cast<size_t>(num_lights));
+        directional_lights.reserve(static_cast<size_t>(num_lights));
 
         std::unique_ptr<Iterator> light_iter(scene.CreateLightIterator());
+
+        uint32_t global_light_idx = 0;
 
         for (; light_iter->IsValid(); light_iter->Next())
         {
@@ -404,50 +413,67 @@ namespace Baikal
             {
                 case kPoint:
                 {
-                    float3 p = light->GetPosition();
+                    lights_changed_[global_light_idx] = light->IsDirty();
 
-                    VkLight point_light = { float4(p.x, p.y, p.z, static_cast<float>(kPoint)), float4(0.f, 0.f, 0.f, 0.f), light->GetEmittedRadiance() };
-                    lights_internal.push_back(point_light);
+                    float3 p = light->GetPosition();
+                    float3 r = light->GetEmittedRadiance();
+
+                    VkPointLight point_light = { p, float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) };
+                    point_lights.push_back(point_light);
+
+                    num_point_lights++;
 
                     break;
                 };
 
                 case kDirectional:
                 {
-                    VkLight directional_light = { float4(0.f, 0.f, 0.f, static_cast<float>(kDirectional)), light->GetDirection(), light->GetEmittedRadiance() };
-                    lights_internal.push_back(directional_light);
+                    lights_changed_[global_light_idx] = light->IsDirty();
+
+                    float3 r = light->GetEmittedRadiance();
+
+                    VkDirectionalLight directional_light = { light->GetDirection(), float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) };
+                    directional_lights.push_back(directional_light);
+
+                    num_directional_lights++;
 
                     break;
                 };
 
                 case kSpot:
                 {
+                    lights_changed_[global_light_idx] = light->IsDirty();
+
                     float3 p = light->GetPosition();
                     float3 d = light->GetDirection();
                     float3 r = light->GetEmittedRadiance();
 
                     auto cone_shape = static_cast<SpotLight const&>(*light).GetConeShape();
 
-                    VkLight spot_light = { float4(p.x, p.y, p.z, static_cast<float>(kSpot)), float4(d.x, d.y, d.z, cone_shape.x), float4(r.x, r.y, r.z, cone_shape.y) };
-                    lights_internal.push_back(spot_light);
+                    VkSpotLight spot_light = 
+                    {
+                        float4(p.x, p.y, p.z, cone_shape.x), 
+                        float4(d.x, d.y, d.z, cone_shape.y), 
+                        float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) 
+                    };
+
+                    spot_lights.push_back(spot_light);
+
+                    num_spot_lights++;
 
                     break;
                 };
 
                 case kIbl:
                 {
-                    // not supported yet
-                    VkLight ibl_light = { float4(0.f, 0.f, 0.f, static_cast<float>(kIbl)), float4(0.f, 0.f, 0.f, 0.f), float4(0.f, 0.f, 0.f, 0.f) };
-                    lights_internal.push_back(ibl_light);
+                    lights_changed_[global_light_idx] = light->IsDirty();
 
                     break;
                 };
 
                 case kArea:
                 {
-                    // not supported yet
-                    VkLight area_light = { float4(0.f, 0.f, 0.f, static_cast<float>(kArea)), float4(0.f, 0.f, 0.f, 0.f), float4(0.f, 0.f, 0.f, 0.f) };
-                    lights_internal.push_back(area_light);
+                    lights_changed_[global_light_idx] = light->IsDirty();
 
                     break;
                 };
@@ -459,20 +485,47 @@ namespace Baikal
             }
         }
 
-        if (out.lights == VK_NULL_HANDLE || out.light_count < num_lights)
+        if (num_spot_lights > 0 && (out.spot_lights == VK_NULL_HANDLE || out.num_spot_lights < num_spot_lights))
         {
-            out.lights.reset();
+            out.spot_lights.reset();
 
-            out.lights = memory_manager_.CreateBuffer(sizeof(VkLight) * num_lights,
+            out.spot_lights = memory_manager_.CreateBuffer(sizeof(VkSpotLight) * num_spot_lights,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, lights_internal.data());
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, spot_lights.data());
         }
 
+        if (num_point_lights > 0 && (out.point_lights == VK_NULL_HANDLE || out.num_point_lights < num_point_lights))
+        {
+            out.point_lights.reset();
+
+            out.point_lights = memory_manager_.CreateBuffer(sizeof(VkPointLight) * num_point_lights,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, point_lights.data());
+        }
+
+        if (num_directional_lights > 0 && (out.directional_lights == VK_NULL_HANDLE || out.num_directional_lights < num_directional_lights))
+        {
+            out.directional_lights.reset();
+
+            out.directional_lights = memory_manager_.CreateBuffer(sizeof(VkDirectionalLight) * num_directional_lights,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, directional_lights.data());
+        }
+
+        if (num_spot_lights > 0)
+            memory_manager_.WriteBuffer(out.spot_lights.get(), 0u, sizeof(VkSpotLight) * num_spot_lights, spot_lights.data());
+
+        if (num_point_lights > 0)
+            memory_manager_.WriteBuffer(out.point_lights.get(), 0u, sizeof(VkPointLight) * num_point_lights, point_lights.data());
+
+        if (num_directional_lights > 0)
+            memory_manager_.WriteBuffer(out.directional_lights.get(), 0u, sizeof(VkDirectionalLight) * num_directional_lights, directional_lights.data());
+
         out.light_count = num_lights;
-
-        memory_manager_.WriteBuffer(out.lights.get(), 0u, sizeof(VkLight) * num_lights, lights_internal.data());
+        out.num_point_lights = num_point_lights;
+        out.num_spot_lights = num_spot_lights;
+        out.num_directional_lights = num_directional_lights;
     }
-
 
     VkFormat GetTextureFormat(const Texture &texture)
     {
@@ -518,5 +571,14 @@ namespace Baikal
     {
     }
 
+    void Baikal::VkwSceneController::PostUpdate(Scene1 const& scene, VkwScene& out) const
+    {
+        shadow_controller_->UpdateShadows(shapes_changed_, camera_changed_, lights_changed_, scene, out);
 
+        shapes_changed_ = false;
+        camera_changed_ = false;
+
+        for (auto& v : lights_changed_) 
+            v = false;
+    }
 }

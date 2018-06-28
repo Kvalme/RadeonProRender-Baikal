@@ -68,10 +68,10 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_co
         try
         {
             //TODO: check num_bounces 
-            VkInteropInfo *interop_info;
+            VkInteropInfo *interop_info = nullptr;
 
             const rpr_context_properties *p = props;
-            while (*p)
+            while (p && *p)
             {
                 if ((*p) == RPR_VK_INTEROP_INFO)
                 {
@@ -83,16 +83,14 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_co
 
             if (!interop_info)
             {
-                throw Exception(RPR_ERROR_INTERNAL_ERROR, "");
+                VkConfigManager::CreateConfig(m_cfg, std::vector<const char*>());
             }
-
-            VkConfigManager::CreateConfig(m_cfg, (VkInstance)interop_info->instance, (VkDevice)interop_info->device, 
-                (VkPhysicalDevice)interop_info->physical_device, interop_info->graph_queue_family_idx, 
-                interop_info->compute_queue_family_idx);
-        }
-        catch(Exception&)
-        {
-            throw;
+            else
+            {
+                VkConfigManager::CreateConfig(m_cfg, (VkInstance)interop_info->instance, (VkDevice)interop_info->device,
+                    (VkPhysicalDevice)interop_info->physical_device, interop_info->graph_queue_family_idx,
+                    interop_info->compute_queue_family_idx);
+            }
         }
         catch (...)
         {

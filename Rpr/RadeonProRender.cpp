@@ -103,7 +103,8 @@ rpr_int rprCreateContext(rpr_int api_version, rpr_int * pluginIDs, size_t plugin
         }
         else
         {
-            *out_context = new ClContextObject(creation_flags);
+            //There should be ClContextObject but we use Vk for tests
+            *out_context = new VkContextObject(creation_flags, props);
         }
     }
     catch (Exception& e)

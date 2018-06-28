@@ -213,20 +213,27 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
     });
 }
 
-void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*> &requested_extensions)
+void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice device, VkPhysicalDevice physical_device,
+    uint32_t graphics_queue_family_idx, uint32_t compute_queue_family_idx)
 {
-    cfg.instance_ = CreateInstance(requested_extensions);
+    cfg.instance_ = vkw::VkScopedObject<VkInstance>(instance,
+                                                    [](VkInstance instance)
+                                                    {
+                                                    });
+    cfg.device_ = vkw::VkScopedObject<VkDevice>(device,
+                                                      [](VkDevice device)
+                                                      {
+                                                      });
+    cfg.graphics_queue_family_idx_ = graphics_queue_family_idx;
+    cfg.compute_queue_family_idx_ = compute_queue_family_idx;
 
-    cfg.device_   = CreateDevice(   cfg.instance_.get(),
-                                    cfg.compute_queue_family_idx_,
-                                    cfg.graphics_queue_family_idx_,
-                                    &cfg.physical_device_);
-    
+    cfg.physical_device_ = physical_device;
+
     cfg.memory_allocator_ = std::unique_ptr<vkw::MemoryAllocator>(new vkw::MemoryAllocator(cfg.device_.get(), cfg.physical_device_));
-    
+
     cfg.memory_manager_ = std::unique_ptr<vkw::MemoryManager>(new vkw::MemoryManager(cfg.device_.get(),
-        cfg.graphics_queue_family_idx_,
-        *cfg.memory_allocator_));
+                                                                                     cfg.graphics_queue_family_idx_,
+                                                                                     *cfg.memory_allocator_));
 
     cfg.render_target_manager_ = std::unique_ptr<vkw::RenderTargetManager>(new vkw::RenderTargetManager(cfg.device_.get(), *cfg.memory_manager_));
     cfg.descriptor_manager_.reset(new vkw::DescriptorManager(cfg.device_.get()));
@@ -235,16 +242,53 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*>
     cfg.utils_.reset(new vkw::Utils(cfg.device_.get()));
 
     cfg.factory_ = std::make_unique<Baikal::VkwRenderFactory>(cfg.device_.get(),
-        cfg.physical_device_,
-        cfg.graphics_queue_family_idx_,
-        cfg.compute_queue_family_idx_,
-        *cfg.memory_allocator_,
-        *cfg.memory_manager_,
-        *cfg.render_target_manager_,
-        *cfg.shader_manager_,
-        *cfg.descriptor_manager_,
-        *cfg.pipeline_manager_,
-        *cfg.utils_);
+                                                              cfg.physical_device_,
+                                                              cfg.graphics_queue_family_idx_,
+                                                              cfg.compute_queue_family_idx_,
+                                                              *cfg.memory_allocator_,
+                                                              *cfg.memory_manager_,
+                                                              *cfg.render_target_manager_,
+                                                              *cfg.shader_manager_,
+                                                              *cfg.descriptor_manager_,
+                                                              *cfg.pipeline_manager_,
+                                                              *cfg.utils_);
+
+    cfg.controller_ = cfg.factory_->CreateSceneController();
+    cfg.renderer_ = cfg.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);
+}
+
+void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*> &requested_extensions)
+{
+    cfg.instance_ = CreateInstance(requested_extensions);
+
+    cfg.device_  = CreateDevice( cfg.instance_.get(),
+                                    cfg.compute_queue_family_idx_,
+                                    cfg.graphics_queue_family_idx_,
+                                    &cfg.physical_device_);
+    
+    cfg.memory_allocator_ = std::unique_ptr<vkw::MemoryAllocator>(new vkw::MemoryAllocator(cfg.device_.get(), cfg.physical_device_));
+
+    cfg.memory_manager_ = std::unique_ptr<vkw::MemoryManager>(new vkw::MemoryManager(cfg.device_.get(),
+                                                                                     cfg.graphics_queue_family_idx_,
+                                                                                     *cfg.memory_allocator_));
+
+    cfg.render_target_manager_ = std::unique_ptr<vkw::RenderTargetManager>(new vkw::RenderTargetManager(cfg.device_.get(), *cfg.memory_manager_));
+    cfg.descriptor_manager_.reset(new vkw::DescriptorManager(cfg.device_.get()));
+    cfg.shader_manager_.reset(new vkw::ShaderManager(cfg.device_.get(), *cfg.descriptor_manager_));
+    cfg.pipeline_manager_.reset(new vkw::PipelineManager(cfg.device_.get()));
+    cfg.utils_.reset(new vkw::Utils(cfg.device_.get()));
+
+    cfg.factory_ = std::make_unique<Baikal::VkwRenderFactory>(cfg.device_.get(),
+                                                              cfg.physical_device_,
+                                                              cfg.graphics_queue_family_idx_,
+                                                              cfg.compute_queue_family_idx_,
+                                                              *cfg.memory_allocator_,
+                                                              *cfg.memory_manager_,
+                                                              *cfg.render_target_manager_,
+                                                              *cfg.shader_manager_,
+                                                              *cfg.descriptor_manager_,
+                                                              *cfg.pipeline_manager_,
+                                                              *cfg.utils_);
 
     cfg.controller_ = cfg.factory_->CreateSceneController();
     cfg.renderer_ = cfg.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);

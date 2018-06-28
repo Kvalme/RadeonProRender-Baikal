@@ -39,6 +39,8 @@ THE SOFTWARE.
 #include "RenderFactory/render_factory.h"
 #include "Renderers/renderer.h"
 
+#include "RadeonProRender_VK.h"
+
 namespace
 {
 
@@ -51,7 +53,7 @@ namespace
 
 }// anonymous
 
-VkContextObject::VkContextObject(rpr_creation_flags creation_flags)
+VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_context_properties *props)
     : ContextObject(creation_flags)
 {
     rpr_int result = RPR_SUCCESS;
@@ -66,8 +68,29 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags)
         try
         {
             //TODO: check num_bounces 
+            VkInteropInfo *interop_info = nullptr;
 
-            VkConfigManager::CreateConfig(m_cfg, std::vector<const char*>());
+            const rpr_context_properties *p = props;
+            while (p && *p)
+            {
+                if ((*p) == RPR_VK_INTEROP_INFO)
+                {
+                    interop_info = static_cast<VkInteropInfo*>(*(p + 1));
+                    ++p;
+                }
+                ++p;
+            }
+
+            if (!interop_info)
+            {
+                VkConfigManager::CreateConfig(m_cfg, std::vector<const char*>());
+            }
+            else
+            {
+                VkConfigManager::CreateConfig(m_cfg, (VkInstance)interop_info->instance, (VkDevice)interop_info->device,
+                    (VkPhysicalDevice)interop_info->physical_device, interop_info->graph_queue_family_idx,
+                    interop_info->compute_queue_family_idx);
+            }
         }
         catch (...)
         {

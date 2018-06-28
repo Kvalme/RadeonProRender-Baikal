@@ -67,6 +67,8 @@ public:
     };
 
     static void CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions);
+    static void CreateConfig(VkConfig& renderers, VkInstance instance, VkDevice device, VkPhysicalDevice physical_device,
+        uint32_t graphics_queue_family_idx, uint32_t compute_queue_family_idx);
 
 private:
     static vkw::VkScopedObject<VkInstance> CreateInstance(const std::vector<const char*> &requested_extensions);

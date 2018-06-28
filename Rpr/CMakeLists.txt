@@ -5,6 +5,7 @@ set(SOURCES
     RadeonProRender.h
     RadeonProRender_CL.h
     RadeonProRender_GL.h
+    RadeonProRender_VK.h
     Wrap.cpp)
 
 set(WRAP_OBJECT_SOURCES

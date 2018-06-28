@@ -1,0 +1,26 @@
+{
+    "rdocCaptureSettings": 1,
+    "settings": {
+        "autoStart": false,
+        "commandLine": "-w 1024 -h 768 -p . -f \"sphere+plane+area.test\"",
+        "environment": [
+        ],
+        "executable": "/home/dbiryukov/Projects/RadeonProRender-Baikal/build/bin/BaikalStandalone",
+        "inject": false,
+        "options": {
+            "allowFullscreen": true,
+            "allowVSync": true,
+            "apiValidation": true,
+            "captureAllCmdLists": false,
+            "captureCallstacks": false,
+            "captureCallstacksOnlyDraws": false,
+            "debugOutputMute": true,
+            "delayForDebugger": 0,
+            "hookIntoChildren": true,
+            "refAllResources": true,
+            "saveAllInitials": false,
+            "verifyMapWrites": true
+        },
+        "workingDir": "/home/dbiryukov/Projects/RadeonProRender-Baikal/BaikalStandalone"
+    }
+}

@@ -24,10 +24,13 @@ THE SOFTWARE.
 #include "WrapObject/FramebufferObject.h"
 #include "WrapObject/Exception.h"
 #include "Output/clwoutput.h"
+#include "Output/vkwoutput.h"
 #include "OpenImageIO/imageio.h"
 #include "RadeonProRender.h"
 #include "RadeonProRender_GL.h"
+#include "RadeonProRender_VK.h"
 #include "Renderers/monte_carlo_renderer.h"
+#include "VKW.h"
 
 FramebufferObject::FramebufferObject(Baikal::Output* out)
     : m_output(out)
@@ -80,6 +83,30 @@ std::size_t FramebufferObject::Height()
 void FramebufferObject::GetData(void* out_data)
 {
     m_output->GetData(static_cast<RadeonRays::float3*>(out_data));
+}
+
+void FramebufferObject::GetData(uint32_t data_type, void *out_data)
+{
+    if (data_type == RPR_VK_IMAGE_OBJECT)
+    {
+        VkImage *img = static_cast<VkImage*>(out_data);
+        Baikal::VkwOutput* output = dynamic_cast<Baikal::VkwOutput*>(m_output);
+        auto rt = output->GetRenderTarget();
+        *img = rt.attachments[0].image.get();
+    }
+    else if (data_type == RPR_VK_IMAGE_VIEW_OBJECT)
+    {
+        VkImageView *img = static_cast<VkImageView*>(out_data);
+        Baikal::VkwOutput* output = dynamic_cast<Baikal::VkwOutput*>(m_output);
+        auto rt = output->GetRenderTarget();
+        *img = rt.attachments[0].view.get();
+    }
+    else if (data_type == RPR_VK_SEMAPHORE_OBJECT)
+    {
+        VkSemaphore *semaphore = static_cast<VkSemaphore*>(out_data);
+        Baikal::VkwOutput* output = dynamic_cast<Baikal::VkwOutput*>(m_output);
+        *semaphore = output->GetSemaphore();
+    }
 }
 
 void FramebufferObject::Clear()

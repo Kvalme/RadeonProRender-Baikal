@@ -49,7 +49,7 @@ namespace Baikal
         };
     }
 
-    void VkwShadowController::BuildCommandBuffer(uint32_t shadow_pass_idx, uint32_t light_idx, VkwScene const& scene, vkw::CommandBuffer& cmd_buffer)
+    void VkwShadowController::BuildCommandBuffer(uint32_t shadow_map_idx, uint32_t view_proj_light_idx, VkwScene const& scene)
     {
         static std::vector<VkClearValue> clear_values =
         {
@@ -65,7 +65,7 @@ namespace Baikal
         VkDeviceSize offsets[1] = { 0 };
 
         VkBuffer vb = scene.mesh_vertex_buffer.get();
-        command_buffer_builder_->BeginRenderPass(clear_values, scene.shadows[shadow_pass_idx]);
+        command_buffer_builder_->BeginRenderPass(clear_values, scene.shadows[shadow_map_idx]);
 
         VkDescriptorSet desc_set = shadowmap_shader_.descriptor_set.get();
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowmap_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
@@ -80,17 +80,17 @@ namespace Baikal
 
         for (auto const& mesh : scene.meshes)
         {
-            uint32_t data[4] = { mesh_id++, light_idx, 0, 0};
+            uint32_t data[4] = { mesh_id++, view_proj_light_idx, 0, 0};
             vkCmdPushConstants(command_buffer, shadowmap_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(data), &data);
             vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
         }
 
         command_buffer_builder_->EndRenderPass();
 
-        cmd_buffer = command_buffer_builder_->EndCommandBuffer();
+        shadowmap_cmd_[shadow_map_idx] = command_buffer_builder_->EndCommandBuffer();
     }
 
-    void VkwShadowController::BuildDirectionalLightCommandBuffer(uint32_t shadow_pass_idx, uint32_t& light_idx, VkwScene const& scene, vkw::CommandBuffer& cmd_buffer)
+    void VkwShadowController::BuildDirectionalLightCommandBuffer(uint32_t shadow_map_idx, uint32_t& light_idx, VkwScene const& scene)
     {
         static std::vector<VkClearValue> clear_values =
         {
@@ -106,7 +106,7 @@ namespace Baikal
         VkDeviceSize offsets[1] = { 0 };
 
         VkBuffer vb = scene.mesh_vertex_buffer.get();
-        command_buffer_builder_->BeginRenderPass(clear_values, scene.shadows[shadow_pass_idx]);
+        command_buffer_builder_->BeginRenderPass(clear_values, scene.shadows[shadow_map_idx]);
 
         VkDescriptorSet desc_set = shadowmap_shader_.descriptor_set.get();
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowmap_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
@@ -148,7 +148,7 @@ namespace Baikal
         }
         command_buffer_builder_->EndRenderPass();
 
-        cmd_buffer = command_buffer_builder_->EndCommandBuffer();
+        shadowmap_cmd_[shadow_map_idx] = command_buffer_builder_->EndCommandBuffer();
     }
 
     void VkwShadowController::UpdateShadowMap(uint32_t shadow_pass_idx, VkwScene& out)
@@ -401,14 +401,16 @@ namespace Baikal
                 };
 
                 case kIbl:
-                {
+                {                   
                     // not supported yet
+                    lights_view_proj.push_back(RadeonRays::matrix());
                     break;
                 };
 
                 case kArea:
                 {
                     // not supported yet
+                    lights_view_proj.push_back(RadeonRays::matrix());
                     break;
                 };
 
@@ -511,18 +513,22 @@ namespace Baikal
         {
             shadowmap_cmd_.push_back(vkw::CommandBuffer());
 
-            BuildCommandBuffer(cmd_buf_count++, 0, out, shadowmap_cmd_.back());
+            BuildCommandBuffer(cmd_buf_count++, 0, out);
         }
 
         uint32_t light_idx = 0;
         uint32_t shadow_map_idx = 0;
-        uint32_t shadow_map_pass_idx = 0;
+        uint32_t view_proj_light_idx = 0;
 
         for (auto light_iter = scene.CreateLightIterator(); light_iter->IsValid(); light_iter->Next())
         {
             auto light = light_iter->ItemAs<Light>();
-
             auto light_type = GetLightType(*light);
+
+            if (light_type == kArea || light_type == kIbl)
+            {
+                view_proj_light_idx++;
+            }
 
             if (light_type == kSpot)
             {
@@ -530,18 +536,18 @@ namespace Baikal
                 {
                     if (geometry_changed)
                     {
-                        BuildCommandBuffer(shadow_map_idx, shadow_map_pass_idx, out, shadowmap_cmd_[shadow_map_idx]);
+                        BuildCommandBuffer(shadow_map_idx, view_proj_light_idx, out);
                     }
 
                     UpdateShadowMap(shadow_map_idx, out);
 
-                    shadow_map_pass_idx++;
+                    view_proj_light_idx++;
                 }
             }
 
             if (light_type == kDirectional && camera_changed)
             {
-                BuildDirectionalLightCommandBuffer(shadow_map_idx, shadow_map_pass_idx, out, shadowmap_cmd_[shadow_map_idx]);
+                BuildDirectionalLightCommandBuffer(shadow_map_idx, view_proj_light_idx, out);
                 UpdateShadowMap(shadow_map_idx, out);
             }
 

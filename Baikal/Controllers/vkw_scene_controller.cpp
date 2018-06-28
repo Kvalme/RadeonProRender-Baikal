@@ -466,14 +466,14 @@ namespace Baikal
 
                 case kIbl:
                 {
-                    lights_changed_[global_light_idx] = light->IsDirty();
+                    lights_changed_[global_light_idx++] = light->IsDirty();
 
                     break;
                 };
 
                 case kArea:
                 {
-                    lights_changed_[global_light_idx] = light->IsDirty();
+                    lights_changed_[global_light_idx++] = light->IsDirty();
 
                     break;
                 };

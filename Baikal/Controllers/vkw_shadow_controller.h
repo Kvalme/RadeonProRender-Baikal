@@ -52,8 +52,8 @@ namespace Baikal
 
         void UpdateShadows(bool geometry_changed, bool camera_changed, std::vector<bool> const& lights_changed, Scene1 const& scene, VkwScene& out);
     protected:
-        void BuildCommandBuffer(uint32_t shadow_pass_idx, uint32_t light_idx, VkwScene const& scene, vkw::CommandBuffer& cmd_buffer);
-        void BuildDirectionalLightCommandBuffer(uint32_t shadow_pass_idx, uint32_t& light_idx, VkwScene const& scene, vkw::CommandBuffer& cmd_buffer);
+        void BuildCommandBuffer(uint32_t shadow_map_idx, uint32_t view_proj_light_idx, VkwScene const& scene);
+        void BuildDirectionalLightCommandBuffer(uint32_t shadow_map_idx, uint32_t& light_idx, VkwScene const& scene);
         void UpdateShadowMap(uint32_t shadow_pass_idx, VkwScene& out);
         void CreateShadowRenderPipeline(VkRenderPass render_pass);
         void GenerateShadowViewProjForCascadeSlice(uint32_t cascade_idx, PerspectiveCamera const& camera, DirectionalLight const& light, RadeonRays::matrix& view_proj);

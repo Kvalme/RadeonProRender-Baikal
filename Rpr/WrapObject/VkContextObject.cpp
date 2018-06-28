@@ -68,11 +68,41 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_co
         try
         {
             //TODO: check num_bounces 
+            VkInstance instance;
+            VkDevice device;
+            VkPhysicalDevice physical_device;
+
             const rpr_context_properties *p = props;
-            VkInstance instance = static_cast<VkInstance>(p[0]);
-            VkDevice device = static_cast<VkDevice>(p[1]);
-            VkPhysicalDevice physical_device = static_cast<VkPhysicalDevice>(p[2]);
+            while (*p)
+            {
+                if ((*p) == RPR_VK_INSTANCE)
+                {
+                    instance = static_cast<VkInstance>(*(p + 1));
+                    ++p;
+                }
+                else if((*p) == RPR_VK_DEVICE)
+                {
+                    device = static_cast<VkDevice>(*(p + 1));
+                    ++p;
+                }
+                else if((*p) == RPR_VK_PHYSICAL_DEVICE)
+                {
+                    physical_device = static_cast<VkPhysicalDevice>(*(p + 1));
+                    ++p;
+                }
+                ++p;
+            }
+
+            if (!instance || !device || !physical_device)
+            {
+                throw Exception(RPR_ERROR_INTERNAL_ERROR, "");
+            }
+
             VkConfigManager::CreateConfig(m_cfg, instance, device, physical_device);
+        }
+        catch(Exception &e)
+        {
+            throw;
         }
         catch (...)
         {

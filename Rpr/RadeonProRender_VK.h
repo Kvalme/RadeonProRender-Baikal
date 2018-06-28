@@ -31,6 +31,10 @@ extern "C" {
 #define RPR_VK_IMAGE_VIEW_OBJECT 0x5002
 #define RPR_VK_SEMAPHORE_OBJECT 0x5003
 
+/* rpr_context_properties names */
+#define RPR_VK_INSTANCE (void*)0x1
+#define RPR_VK_DEVICE (void*)0x2
+#define RPR_VK_PHYSICAL_DEVICE (void*)0x3
 
 
 #ifdef __cplusplus

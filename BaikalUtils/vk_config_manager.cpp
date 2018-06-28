@@ -200,7 +200,8 @@ vkw::VkScopedObject<VkDevice> VkConfigManager::CreateDevice(VkInstance instance
     });
 }
 
-void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice device, VkPhysicalDevice physical_device)
+void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice device, VkPhysicalDevice physical_device,
+    uint32_t graphics_queue_family_idx, uint32_t compute_queue_family_idx)
 {
     cfg.instance_ = vkw::VkScopedObject<VkInstance>(instance,
                                                     [](VkInstance instance)
@@ -210,6 +211,8 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice 
                                                       [](VkDevice device)
                                                       {
                                                       });
+    cfg.graphics_queue_family_idx_ = graphics_queue_family_idx;
+    cfg.compute_queue_family_idx_ = compute_queue_family_idx;
 
     cfg.physical_device_ = physical_device;
 

@@ -32,10 +32,15 @@ extern "C" {
 #define RPR_VK_SEMAPHORE_OBJECT 0x5003
 
 /* rpr_context_properties names */
-#define RPR_VK_INSTANCE (void*)0x1
-#define RPR_VK_DEVICE (void*)0x2
-#define RPR_VK_PHYSICAL_DEVICE (void*)0x3
-
+#define RPR_VK_INTEROP_INFO (void*)0x1
+struct VkInteropInfo
+{
+    void *instance;
+    void *device;
+    void *physical_device;
+    uint32_t graph_queue_family_idx;
+    uint32_t compute_queue_family_idx;
+};
 
 #ifdef __cplusplus
 }

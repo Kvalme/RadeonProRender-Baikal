@@ -68,37 +68,27 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_co
         try
         {
             //TODO: check num_bounces 
-            VkInstance instance;
-            VkDevice device;
-            VkPhysicalDevice physical_device;
+            VkInteropInfo *interop_info;
 
             const rpr_context_properties *p = props;
             while (*p)
             {
-                if ((*p) == RPR_VK_INSTANCE)
+                if ((*p) == RPR_VK_INTEROP_INFO)
                 {
-                    instance = static_cast<VkInstance>(*(p + 1));
-                    ++p;
-                }
-                else if((*p) == RPR_VK_DEVICE)
-                {
-                    device = static_cast<VkDevice>(*(p + 1));
-                    ++p;
-                }
-                else if((*p) == RPR_VK_PHYSICAL_DEVICE)
-                {
-                    physical_device = static_cast<VkPhysicalDevice>(*(p + 1));
+                    interop_info = static_cast<VkInteropInfo*>(*(p + 1));
                     ++p;
                 }
                 ++p;
             }
 
-            if (!instance || !device || !physical_device)
+            if (!interop_info)
             {
                 throw Exception(RPR_ERROR_INTERNAL_ERROR, "");
             }
 
-            VkConfigManager::CreateConfig(m_cfg, instance, device, physical_device);
+            VkConfigManager::CreateConfig(m_cfg, (VkInstance)interop_info->instance, (VkDevice)interop_info->device, 
+                (VkPhysicalDevice)interop_info->physical_device, interop_info->graph_queue_family_idx, 
+                interop_info->compute_queue_family_idx);
         }
         catch(Exception&)
         {

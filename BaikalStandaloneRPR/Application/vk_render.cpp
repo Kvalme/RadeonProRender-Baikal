@@ -46,12 +46,15 @@ namespace BaikalRPR
     void AppVkRender::InitVk(AppSettings& settings)
     {
         VkConfigManager::CreateConfig(m_cfg, settings.vk_required_extensions);
-        void *params[7] = {
-            RPR_VK_INSTANCE, m_cfg.instance_.get(),
-            RPR_VK_DEVICE, m_cfg.device_.get(),
-            RPR_VK_PHYSICAL_DEVICE, m_cfg.physical_device_,
-            0
-        };
+
+        VkInteropInfo interop_info;
+        interop_info.instance = m_cfg.instance_.get();
+        interop_info.device = m_cfg.device_.get();
+        interop_info.physical_device = m_cfg.physical_device_;
+        interop_info.compute_queue_family_idx = m_cfg.compute_queue_family_idx_;
+        interop_info.graph_queue_family_idx = m_cfg.graphics_queue_family_idx_;
+        
+        void *params[3] = { RPR_VK_INTEROP_INFO, &interop_info, 0};
 
         CHECK(rprCreateContext(RPR_API_VERSION, nullptr, 0, RPR_CREATION_FLAGS_ENABLE_GPU0 | RPR_CREATION_FLAGS_ENABLE_VK_INTEROP, params, nullptr, &m_context));
         CHECK(rprContextCreateMaterialSystem(m_context, 0, &m_matsys));

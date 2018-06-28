@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include "SceneGraph/iterator.h"
 #include "SceneGraph/material.h"
 #include "SceneGraph/light.h"
+#include "SceneGraph/vkwscene.h"
 
 #include "RenderFactory/render_factory.h"
 #include "Renderers/renderer.h"
@@ -201,5 +202,6 @@ void VkContextObject::PrepareScene()
 {
     m_current_scene->AddEmissive();
 
-    m_cfg.controller_->CompileScene(m_current_scene->GetScene());
+    Baikal::VkwScene& scene = m_cfg.controller_->CompileScene(m_current_scene->GetScene());
+    m_cfg.controller_->PostUpdate(*m_current_scene->GetScene(), scene);
 }

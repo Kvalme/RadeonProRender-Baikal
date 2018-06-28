@@ -100,7 +100,7 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_co
 
             VkConfigManager::CreateConfig(m_cfg, instance, device, physical_device);
         }
-        catch(Exception &e)
+        catch(Exception&)
         {
             throw;
         }

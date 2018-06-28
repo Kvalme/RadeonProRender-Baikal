@@ -150,29 +150,5 @@ namespace BaikalRPR
         CHECK(rprLightSetTransform(light, true, &lightm.m00));
         CHECK(rprPointLightSetRadiantPower3f(light, 300.0f, 200.5f, 200.5f));
         CHECK(rprSceneAttachLight(m_scene, light));
-
-
-
-
-/*        switch (settings.camera_type)
-        {
-        case CameraType::kPerspective:
-            m_camera = Baikal::PerspectiveCamera::Create(
-                settings.camera_pos
-                , settings.camera_at
-                , settings.camera_up);
-
-            break;
-        case CameraType::kOrthographic:
-            m_camera = Baikal::OrthographicCamera::Create(
-                settings.camera_pos
-                , settings.camera_at
-                , settings.camera_up);
-            break;
-        default:
-            throw std::runtime_error("AppRender::Init(...): unsupported camera type");
-        }
-
-        m_scene->SetCamera(m_camera);*/
     }
 }

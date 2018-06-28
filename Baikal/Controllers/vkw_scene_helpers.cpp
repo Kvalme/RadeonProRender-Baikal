@@ -30,6 +30,21 @@ namespace Baikal
         }
     }
 
+    RadeonRays::matrix PerspectiveProjFovyRhVulkan(float l, float r, float b, float t, float n, float f)
+    {
+        return matrix(2 * n / (r - l), 0, 0, 0,
+            0, 2 * n / (t - b), 0, (r + l) / (r - l),
+            0, (t + b) / (t - b), f / (n - f), -(f * n) / (f - n),
+            0, 0, -1, 0);
+    }
+
+    RadeonRays::matrix PerspectiveProjFovyRhVulkan(float fovy, float aspect, float n, float f)
+    {
+        float hH = tan(fovy) * n;
+        float hW = hH * aspect;
+        return PerspectiveProjFovyRhVulkan(-hW, hW, -hH, hH, n, f);
+    }
+
     RadeonRays::matrix MakeViewMatrix(Camera const& camera)
     {
         const float3 up = camera.GetUpVector();
@@ -51,6 +66,6 @@ namespace Baikal
 
         const float fovy = atan(sensor_size.y / (2.0f * focal_length));
 
-        return perspective_proj_fovy_rh_vulkan(fovy, camera.GetAspectRatio(), z_range.x, z_range.y);
+        return PerspectiveProjFovyRhVulkan(fovy, camera.GetAspectRatio(), z_range.x, z_range.y);
     }
 }

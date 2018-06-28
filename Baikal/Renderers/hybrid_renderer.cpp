@@ -257,14 +257,23 @@ namespace Baikal
             VkBuffer directional_lights = scene.directional_lights != VK_NULL_HANDLE ? scene.directional_lights.get() 
                                                                                      : dummy_buffer_.get();
 
+            VkBuffer point_lights_transforms = scene.point_lights_transforms != VK_NULL_HANDLE ? scene.point_lights_transforms.get()
+                : dummy_buffer_.get();
+
+            VkBuffer spot_lights_transforms = scene.spot_lights_transforms != VK_NULL_HANDLE ? scene.spot_lights_transforms.get()
+                : dummy_buffer_.get();
+
+            VkBuffer directional_lights_transforms = scene.directional_lights_transforms != VK_NULL_HANDLE ? scene.directional_lights_transforms.get()
+                : dummy_buffer_.get();
+
             deferred_frag_shader_.SetArg(4, scene.camera.get());
             deferred_frag_shader_.SetArgArray(5, shadow_image_views, nearest_sampler_.get());
             deferred_frag_shader_.SetArg(6, point_lights);
             deferred_frag_shader_.SetArg(7, spot_lights);
             deferred_frag_shader_.SetArg(8, directional_lights);
-            deferred_frag_shader_.SetArg(9, scene.point_lights_transforms.get());
-            deferred_frag_shader_.SetArg(10, scene.spot_lights_transforms.get());
-            deferred_frag_shader_.SetArg(11, scene.directional_lights_transforms.get());
+            deferred_frag_shader_.SetArg(9, point_lights_transforms);
+            deferred_frag_shader_.SetArg(10, spot_lights_transforms);
+            deferred_frag_shader_.SetArg(11, directional_lights_transforms);
             deferred_frag_shader_.CommitArgs();
             
             mrt_shader_.SetArg(0, scene.camera.get());

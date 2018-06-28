@@ -127,7 +127,7 @@ endif ()
 
 if (BAIKAL_ENABLE_STANDALONE)
     set(BAIKALSTANDALONE_DLLS ${BAIKAL_DLLS})
-
+    set(BaikalStandaloneRPR_DLLS ${BAIKAL_DLLS})
     find_package(GLFW3 REQUIRED)
 
     add_subdirectory(BaikalStandalone)

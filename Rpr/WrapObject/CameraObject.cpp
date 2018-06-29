@@ -67,6 +67,10 @@ Baikal::Camera::Ptr CameraObject::GetCamera()
     {
         Baikal::PerspectiveCamera::Ptr camera = PerspectiveCamera::Create(m_eye, m_at, -m_up);
         camera->SetSensorSize(m_camera_sensor_size);
+        if (m_camera_zcap.x < 0.01)
+        {
+            m_camera_zcap.x = 0.01;
+        }
         camera->SetDepthRange(m_camera_zcap);
         camera->SetFocalLength(m_camera_focal_length);
         camera->SetFocusDistance(m_camera_focus_distance);

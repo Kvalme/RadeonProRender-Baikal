@@ -578,7 +578,11 @@ namespace Baikal
         shapes_changed_ = false;
         camera_changed_ = false;
 
-        for (auto& v : lights_changed_) 
-            v = false;
+        //Range-for don't work for std::vector<bool> on gcc-7.3
+        for (std::size_t a = 0; a < lights_changed_.size(); ++a)
+        {
+            lights_changed_[a] = false;
+        }
+
     }
 }

@@ -9,6 +9,7 @@
 #include "SceneGraph/Collector/collector.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace Baikal
 {
@@ -18,17 +19,17 @@ namespace Baikal
         vkw::PipelineManager& pipeline_manager,
         uint32_t graphics_queue_index,
         uint32_t compute_queue_index)
-        : memory_manager_(memory_manager)
+        : device_(device)
+        , memory_manager_(memory_manager)
         , render_target_manager_(render_target_manager)
         , shader_manager_(shader_manager)
         , pipeline_manager_(pipeline_manager)
-        , device_(device)
         , utils_(device_)
+        , view_proj_buffer_(VK_NULL_HANDLE)
         , graphics_queue_index_(graphics_queue_index)
         , compute_queue_index_(compute_queue_index)
         , shadowmap_width_(4096)
         , shadowmap_height_(4096)
-        , view_proj_buffer_(VK_NULL_HANDLE)
 
     {
         command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, graphics_queue_index_));
@@ -388,7 +389,7 @@ namespace Baikal
                     const float max_emitted_radiance = std::max(std::max(r.x, r.y), r.z);
                     const float shadow_clip_threshold = 0.01f;
                     const float near_plane = 0.1f;
-                    const float far_plane = std::sqrtf(abs(max_emitted_radiance / shadow_clip_threshold));
+                    const float far_plane = std::sqrt(std::abs(max_emitted_radiance / shadow_clip_threshold));
 
                     const matrix view = lookat_lh_dx(p, p - d * 2.0f, float3(0.f, 1.f, 0.f));
                     const matrix proj = perspective_proj_fovy_rh_gl(acos(cone_shape.y), 1.0f, near_plane, far_plane);

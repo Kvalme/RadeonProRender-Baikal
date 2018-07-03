@@ -291,6 +291,41 @@ namespace Baikal
             };
 
             BuildDeferredCommandBuffer(*vk_output, push_consts);
+
+            scene.rebuild_deferred_cmd_buffer = false;
+        }
+
+        if (scene.rebuild_mrt_cmd_buffers)
+        {
+            mrt_texture_image_views_.clear();
+            mrt_texture_image_views_.reserve(kMaxTextures);
+
+            for (auto const& tex : scene.textures)
+            {
+                mrt_texture_image_views_.push_back(tex.GetImageView());
+            }
+
+            // Fill array with dummy textures to make validation layer happy
+            while (mrt_texture_image_views_.size() < kMaxTextures)
+            {
+                mrt_texture_image_views_.push_back(black_pixel_.GetImageView());
+            }
+
+            if (mrt_descriptor_sets.size() < scene.mesh_transforms.size())
+            {
+                mrt_descriptor_sets.clear();
+                mrt_descriptor_sets.resize(scene.mesh_transforms.size());
+
+                for (size_t idx = 0; idx < scene.mesh_transforms.size(); idx++)
+                {
+                    mrt_descriptor_sets[idx] = shader_manager_.CreateDescriptorSet(mrt_shader_);
+                    mrt_descriptor_sets[idx].SetArg(0, scene.camera.get());
+                    mrt_descriptor_sets[idx].SetArg(1, scene.mesh_transforms[idx].get());
+                    mrt_descriptor_sets[idx].SetArgArray(2, mrt_texture_image_views_, linear_sampler_.get());
+                    mrt_descriptor_sets[idx].CommitArgs();
+                }
+            }
+
             BuildGbufferCommandBuffer(scene);
 
             scene.rebuild_mrt_cmd_buffers = false;

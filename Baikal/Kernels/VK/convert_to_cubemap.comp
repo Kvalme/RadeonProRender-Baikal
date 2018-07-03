@@ -1,0 +1,65 @@
+#version 450
+
+#define TILE_SIZE 8
+
+#include "common.glsl"
+#include "utils.glsl"
+
+layout (local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+
+layout (binding = 0) uniform sampler2D spheremap;
+layout (binding = 1, rgba16f) uniform writeonly imageCube cubemap;
+
+vec3 MapXYSToDirection(uint x, uint y, uint s, int width, int height)
+{
+    float u = ((x + 0.5f) / float(width)) * 2.0f - 1.0f;
+    float v = ((y + 0.5f) / float(height)) * 2.0f - 1.0f;
+    v *= -1.0f;
+
+    vec3 dir = vec3(0.0f);
+
+    switch(s) {
+    case 0:
+        dir = normalize(vec3(1.0f, v, -u));
+        break;
+    case 1:
+        dir = normalize(vec3(-1.0f, v, u));
+        break;
+    case 2:
+        dir = normalize(vec3(u, 1.0f, -v));
+        break;
+    case 3:
+        dir = normalize(vec3(u, -1.0f, v));
+        break;
+    case 4:
+        dir = normalize(vec3(u, v, 1.0f));
+        break;
+    case 5:
+        dir = normalize(vec3(-u, v, -1.0f));
+        break;
+    }
+
+    return dir;
+}
+
+void main() 
+{
+    ivec2 size = imageSize(cubemap);
+    int num_pixels = size.x * size.y;
+
+    const uint x = gl_GlobalInvocationID.x;
+    const uint y = gl_GlobalInvocationID.y;
+    const uint face = gl_GlobalInvocationID.z;
+
+    if (x >= size.x || y >= size.y)
+        return;
+
+    vec3 dir = MapXYSToDirection(x, y, face, size.x, size.y);
+
+    // convert dir to uv
+    vec3 sp = CartesianToSpherical(dir);
+	vec2 st = vec2(sp.y / (2 * PI), 1.0f - sp.z / PI);
+    vec4 v = textureLod(spheremap, st, 0.0f);
+
+    imageStore(cubemap, ivec3(x, y, face), v);
+}

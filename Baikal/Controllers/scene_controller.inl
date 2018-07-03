@@ -527,15 +527,15 @@ namespace Baikal
         //Lights and Shapes depends on Materials
         UpdateMaterials(scene, m_material_collector, m_texture_collector, out);
 
-        UpdateLights(scene, m_material_collector, m_texture_collector, out);
-        auto light_iterator = scene.CreateLightIterator();
-        DropDirty(*light_iterator);
-
         UpdateShapes(scene, m_material_collector, m_texture_collector, vol_collector, out);
         auto shape_iterator = scene.CreateShapeIterator();
         DropDirty(*shape_iterator);
 
         UpdateTextures(scene, m_material_collector, m_texture_collector, out);
+
+        UpdateLights(scene, m_material_collector, m_texture_collector, out);
+        auto light_iterator = scene.CreateLightIterator();
+        DropDirty(*light_iterator);
 
         UpdateLeafsData(scene, m_input_map_leafs_collector, m_texture_collector, out);
 

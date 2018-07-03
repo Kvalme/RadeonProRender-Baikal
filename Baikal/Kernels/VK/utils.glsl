@@ -46,29 +46,8 @@ vec3 ReconstructVSPositionFromDepth(mat4 inv_proj, vec2 uv, float depth)
     return view_pos.xyz / view_pos.w;
 }
 
-// From http://www.thetenthplanet.de/archives/1180
-mat3 CotangentFrame( vec3 N, vec3 p, vec2 uv )
-{
-    // get edge vectors of the pixel triangle
-    vec3 dp1 = dFdx( p );
-    vec3 dp2 = dFdy( p );
-    vec2 duv1 = dFdx( uv );
-    vec2 duv2 = dFdy( uv );
- 
-    // solve the linear system
-    vec3 dp2perp = cross( dp2, N );
-    vec3 dp1perp = cross( N, dp1 );
-    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
-    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
- 
-    // construct a scale-invariant frame 
-    float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) );
-    return mat3( T * invmax, B * invmax, N );
-}
-
 vec3 ConvertBumpToNormal(sampler2D bump, vec2 uv)
 {  
-    
     ivec2 size = textureSize(bump, 0);
     vec2 inv_size = vec2(1.0f, 1.0f) / size;
 
@@ -110,4 +89,14 @@ float Rnd(vec3 seed, int i){
 	vec4 seed4 = vec4(seed,i);
 	float dot_product = dot(seed4, vec4(12.9898,78.233,45.164,94.673));
 	return fract(sin(dot_product) * 43758.5453);
+}
+
+vec3 CartesianToSpherical(vec3 cart)
+{
+    float temp = atan(cart.x, cart.z);
+    float r = sqrt(cart.x*cart.x + cart.y*cart.y + cart.z*cart.z);
+    float phi = temp >= 0 ? temp : temp + 2*PI;
+    float theta = acos(cart.y / r);
+	
+	return vec3(r, phi, theta);
 }

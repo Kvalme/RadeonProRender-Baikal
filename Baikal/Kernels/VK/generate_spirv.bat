@@ -6,3 +6,7 @@ glslc -c -MD deferred.vert -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD deferred.frag -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD depth_only.vert -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD depth_only.frag -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD convert_to_cubemap.comp -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD cubemap_sh9_project.comp -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD cubemap_sh9_downsample.comp -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD cubemap_sh9_final.comp -Dfloat4=vec4 -Dmatrix=mat4

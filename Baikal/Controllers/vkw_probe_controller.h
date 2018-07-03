@@ -37,61 +37,58 @@ namespace Baikal
     class DirectionalLight;
     class PerspectiveCamera;
 
-    ///< Shadow controller implementation
-    class VkwShadowController
+    ///< Probe controller implementation
+    class VkwProbeController
     {
     public:
-        VkwShadowController(VkDevice device, vkw::MemoryManager& memory_manager,
+        VkwProbeController(VkDevice device, vkw::MemoryManager& memory_manager,
             vkw::ShaderManager& shader_manager,
             vkw::RenderTargetManager& render_target_manager,
             vkw::PipelineManager& pipeline_manager,
+            vkw::ExecutionManager& execution_manager,
             uint32_t graphics_queue_index,
             uint32_t compute_queue_index);
 
-        ~VkwShadowController() = default;
+        ~VkwProbeController() = default;
 
-        void UpdateShadows(bool geometry_changed, bool camera_changed, std::vector<bool> const& lights_changed, Scene1 const& scene, VkwScene& out);
+        void UpdateEnvMap(VkwScene& out);
     protected:
-        void BuildCommandBuffer(uint32_t shadow_map_idx, uint32_t view_proj_light_idx, VkwScene const& scene);
-        void BuildDirectionalLightCommandBuffer(uint32_t shadow_map_idx, uint32_t& light_idx, VkwScene const& scene);
-        void UpdateShadowMap(uint32_t shadow_pass_idx, VkwScene& out);
-        void CreateShadowRenderPipeline(VkRenderPass render_pass);
-        void GenerateShadowViewProjForCascadeSlice(uint32_t cascade_idx, PerspectiveCamera const& camera, DirectionalLight const& light, RadeonRays::matrix& view_proj);
-    protected:
-        const float                                     split_dists_[4] = { 0.01f, 0.03f, 0.1f, 0.3f };
+        const uint32_t                                  env_map_size = 512;
 
         VkDevice                                        device_;
         vkw::MemoryManager&                             memory_manager_;
         vkw::RenderTargetManager&                       render_target_manager_;
         vkw::ShaderManager&                             shader_manager_;
         vkw::PipelineManager&                           pipeline_manager_;
-        
-        std::vector<vkw::RenderTargetCreateInfo>        shadow_attachments;
-
-        vkw::Shader                                     shadowmap_shader_;
-        std::vector<vkw::DescriptorSet>                 shadowmap_descriptor_sets_;
-
-        std::unique_ptr<vkw::CommandBufferBuilder>      command_buffer_builder_;
-        std::vector<vkw::CommandBuffer>                 shadowmap_cmd_;
-        vkw::GraphicsPipeline                           shadowmap_pipeline_;
-
-        vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
-        vkw::VkScopedObject<VkSampler>                  linear_sampler_;
-
-        std::vector<vkw::VkScopedObject<VkSemaphore>>   shadowmap_syncs_;
+        vkw::ExecutionManager&                          execution_manager_;
 
         vkw::Utils                                      utils_;
 
-        vkw::VkScopedObject<VkBuffer>                   view_proj_buffer_;
+        std::unique_ptr<vkw::CommandBufferBuilder>      command_buffer_builder_;
+        std::vector<vkw::VkScopedObject<VkBuffer>>      sh9_buffers_;
+        std::vector<vkw::VkScopedObject<VkSemaphore>>   sh9_semaphores_;
+
+        vkw::Texture                                    env_cube_map_;
+
+        vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
+
+        vkw::Shader                                     convert_to_cubemap_shader_;
+        vkw::ComputePipeline                            convert_to_cubemap_pipeline_;
+
+        vkw::Shader                                     project_cubemap_to_sh9_shader_;
+        vkw::ComputePipeline                            project_cubemap_to_sh9_pipeline_;
+
+        vkw::Shader                                     downsample_sh9_shader_;
+        vkw::ComputePipeline                            downsample_sh9_pipeline_;
+
+        vkw::Shader                                     final_sh9_shader_;
+        vkw::ComputePipeline                            final_sh9_pipeline_;
 
         VkViewport                                      viewport_;
         VkRect2D                                        scissor_;
 
         uint32_t                                        graphics_queue_index_;
         uint32_t                                        compute_queue_index_;
-
-        uint32_t                                        shadowmap_width_;
-        uint32_t                                        shadowmap_height_;
 
         VkQueue                                         graphics_queue_;
         VkQueue                                         compute_queue_;

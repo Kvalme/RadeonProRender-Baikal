@@ -239,6 +239,7 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice 
     cfg.descriptor_manager_.reset(new vkw::DescriptorManager(cfg.device_.get()));
     cfg.shader_manager_.reset(new vkw::ShaderManager(cfg.device_.get(), *cfg.descriptor_manager_));
     cfg.pipeline_manager_.reset(new vkw::PipelineManager(cfg.device_.get()));
+    cfg.execution_manager_.reset(new vkw::ExecutionManager(cfg.device_.get(), cfg.compute_queue_family_idx_));
     cfg.utils_.reset(new vkw::Utils(cfg.device_.get()));
 
     cfg.factory_ = std::make_unique<Baikal::VkwRenderFactory>(cfg.device_.get(),
@@ -251,6 +252,7 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice 
                                                               *cfg.shader_manager_,
                                                               *cfg.descriptor_manager_,
                                                               *cfg.pipeline_manager_,
+                                                              *cfg.execution_manager_,
                                                               *cfg.utils_);
 
     cfg.controller_ = cfg.factory_->CreateSceneController();
@@ -276,6 +278,7 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*>
     cfg.descriptor_manager_.reset(new vkw::DescriptorManager(cfg.device_.get()));
     cfg.shader_manager_.reset(new vkw::ShaderManager(cfg.device_.get(), *cfg.descriptor_manager_));
     cfg.pipeline_manager_.reset(new vkw::PipelineManager(cfg.device_.get()));
+    cfg.execution_manager_.reset(new vkw::ExecutionManager(cfg.device_.get(), cfg.compute_queue_family_idx_));
     cfg.utils_.reset(new vkw::Utils(cfg.device_.get()));
 
     cfg.factory_ = std::make_unique<Baikal::VkwRenderFactory>(cfg.device_.get(),
@@ -288,6 +291,7 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*>
                                                               *cfg.shader_manager_,
                                                               *cfg.descriptor_manager_,
                                                               *cfg.pipeline_manager_,
+                                                              *cfg.execution_manager_,
                                                               *cfg.utils_);
 
     cfg.controller_ = cfg.factory_->CreateSceneController();

@@ -5,6 +5,8 @@ set(CONTROLLERS_SOURCES
     Controllers/vkw_scene_controller.h
     Controllers/vkw_shadow_controller.cpp
     Controllers/vkw_shadow_controller.h
+    Controllers/vkw_probe_controller.cpp
+    Controllers/vkw_probe_controller.h
     Controllers/vkw_scene_helpers.cpp
     Controllers/vkw_scene_helpers.h
     Controllers/scene_controller.h

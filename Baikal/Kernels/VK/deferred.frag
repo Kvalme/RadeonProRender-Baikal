@@ -8,6 +8,7 @@ layout (location = 0) in vec2 uv;
 layout (location = 0) out vec4 color;
 
 #include "common_structures.glsl"
+#include "common.glsl"
 #include "utils.glsl"
 #include "brdf.glsl"
 
@@ -55,6 +56,13 @@ layout (binding = 11) uniform DirectionalLightTransformInfo
 	matrix 	view_proj[kMaxLights][4]; // view-proj for each cascade
 } directional_lights_view_proj;
 
+layout (binding = 12) uniform sampler2D env_image;
+
+layout (binding = 13) uniform EnvMapIrradiance
+{
+	VkSH9Color data;
+} env_map_irradiance;
+
 layout(push_constant) uniform PushConsts {
 	VkDeferredPushConstants data;
 } push_constants;
@@ -72,6 +80,58 @@ float SampleShadow(uint light_idx, vec3 p, vec3 shadow_uv, float bias, float sca
 	}
 
 	return shadow;
+}
+
+const float CosineA0 = PI;
+const float CosineA1 = (2.0f * PI) / 3.0f;
+const float CosineA2 = PI / 4.0f;
+
+struct SH9
+{
+    float sh[9];
+};
+
+SH9 SH_Get2ndOrderCoeffs(vec3 d)
+{
+    SH9 sh9;
+
+    d = normalize(d);
+
+    float fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;
+    float pz2 = d.z * d.z;
+
+    sh9.sh[0] = 0.2820947917738781f * CosineA0;
+    sh9.sh[2] = 0.4886025119029199f * d.z * CosineA1;
+    sh9.sh[6] = 0.9461746957575601f * pz2 + -0.3153915652525201f;
+    fC0 = d.x;
+    fS0 = d.y;
+    fTmpA = -0.48860251190292f;
+    sh9.sh[3] = fTmpA * fC0 * CosineA1;
+    sh9.sh[1] = fTmpA * fS0 * CosineA1;
+    fTmpB = -1.092548430592079f * d.z;
+    sh9.sh[7] = fTmpB * fC0 * CosineA2;
+    sh9.sh[5] = fTmpB * fS0 * CosineA2;
+    fC1 = d.x*fC0 - d.y*fS0;
+    fS1 = d.x*fS0 + d.y*fC0;
+    fTmpC = 0.5462742152960395f;
+    sh9.sh[8] = fTmpC * fC1 * CosineA2;
+    sh9.sh[4] = fTmpC * fS1 * CosineA2;
+
+    return sh9;
+}
+
+vec3 EvaluateSHIrradiance(vec3 dir, VkSH9Color radiance)
+{
+    SH9 shBasis = SH_Get2ndOrderCoeffs(dir);
+
+    vec3 irradiance = vec3(0.0f);
+
+    for(int i = 0; i < 9; ++i)
+    {
+        irradiance += radiance.coefficients[i].xyz * shBasis.sh[i];
+    }
+
+    return irradiance;
 }
 
 void main()
@@ -99,16 +159,42 @@ void main()
 	uint num_spot_lights = clamp(push_constants.data.num_lights[2], 0, kMaxLights);
 	uint num_directional_lights = clamp(push_constants.data.num_lights[3], 0, kMaxLights);
 
+	vec3 ambient  = vec3(0.0f);
+	vec3 lighting = vec3(0.f);
+	vec3 env_map  = vec3(0.f);
+
+	if (is_geometry == 0.f)
+	{	
+		const float aspect 	= camera.data.params.x;
+		const float fov 	= camera.data.params.y;
+
+		vec2 env_uv = (uv * 2.0f - vec2(1.0f)) * tan(fov);
+        env_uv.x = env_uv.x * aspect;
+        vec4 r = vec4(env_uv, -1, 0) * camera.data.inv_view;
+
+		r.y = -r.y;
+		r = normalize(r);
+
+		vec3 sp = CartesianToSpherical(r.xyz);
+		
+		float phi = sp.y;
+		float theta = sp.z;
+
+		vec2 st = vec2(phi / (2 * PI), 1.0f - theta / PI);
+
+		env_map = texture(env_image, st).xyz;
+	}
+
 	BRDFInputs brdf_inputs;
 	brdf_inputs.albedo = buffer_data1.xyz;
 	brdf_inputs.roughness = buffer_data1.w;
 	brdf_inputs.metallic = 0.f;
 	brdf_inputs.transparency = 0.f;
 
-	vec3 lighting = vec3(0.f);
-	
 	if (is_geometry == 1.f)
 	{
+		ambient = brdf_inputs.albedo * EvaluateSHIrradiance(vec3(N.x, -N.y, N.z), env_map_irradiance.data) / PI;
+
 		for (uint i = 0; i < num_spot_lights; i++)
 		{
 			vec3 light_pos = spot_lights.data[i].position.xyz;
@@ -202,11 +288,10 @@ void main()
 
 			vec3 BRDF = BRDF_Evaluate(brdf_inputs, V, N, L);
 
-			lighting += NdotL.xxx * BRDF * light_intensity / (dist * dist);
+			lighting += NdotL * BRDF * light_intensity / (dist * dist);
 		}
 	}
 
-	vec3 ambient	= vec3(0.0f);//buffer_data1.xyz * 0.01f;
-	vec3 final 		= lighting + ambient;
+	vec3 final 		= ambient + env_map + lighting;
 	color			= pow(vec4(final, 1.f), vec4(1.f / 2.2f));
 }

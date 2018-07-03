@@ -30,7 +30,7 @@ out gl_PerVertex
 
 void main()
 {
-	uint transform_idx 	= clamp(vs_consts.data.x - 1, 0, kMaxTransforms);
+	uint transform_idx 	= clamp(vs_consts.data.x, 0, kMaxTransforms);
 	matrix	transform 	= transforms.data[transform_idx];
 
 	uint light_idx 		= clamp(vs_consts.data.y, 0, 16);

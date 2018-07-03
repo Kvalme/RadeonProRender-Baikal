@@ -54,6 +54,7 @@ namespace Baikal
             , vkw::ShaderManager&         shader_manager
             , vkw::DescriptorManager&     descriptor_manager
             , vkw::PipelineManager&       pipeline_manager
+            , vkw::ExecutionManager&      execution_manager
             , vkw::Utils&                 utils
         );
 
@@ -75,6 +76,7 @@ namespace Baikal
         vkw::ShaderManager&         shader_manager_;
         vkw::DescriptorManager&     descriptor_manager_;
         vkw::PipelineManager&       pipeline_manager_;
+        vkw::ExecutionManager&      execution_manager_;
         vkw::Utils&                 utils_;
 
         uint32_t                                    graphics_queue_family_index_;

@@ -249,8 +249,6 @@ namespace Baikal
     {
         shapes_changed_ = true;
 
-        uint32_t num_shapes = static_cast<uint32_t>(scene.GetNumShapes());
-
         mesh_transforms_.clear();
 
         uint32_t mesh_idx = 0;

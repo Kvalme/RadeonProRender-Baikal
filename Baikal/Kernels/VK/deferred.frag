@@ -193,7 +193,7 @@ void main()
 
 	if (is_geometry == 1.f)
 	{
-		ambient = brdf_inputs.albedo * EvaluateSHIrradiance(vec3(N.x, -N.y, N.z), env_map_irradiance.data) / PI;
+		ambient = (brdf_inputs.albedo / PI) * EvaluateSHIrradiance(vec3(N.x, -N.y, N.z), env_map_irradiance.data) / PI;
 
 		for (uint i = 0; i < num_spot_lights; i++)
 		{

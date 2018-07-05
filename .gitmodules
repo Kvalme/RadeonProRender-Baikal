@@ -5,3 +5,6 @@
 [submodule "VKW"]
 	path = VKW
 	url = https://github.com/Radeon-Pro/RadeonProVulkanWrapper.git
+[submodule "RTEffects"]
+	path = RTEffects
+	url = https://github.com/Radeon-Pro/RadeonProRTEffects.git

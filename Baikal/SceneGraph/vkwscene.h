@@ -77,10 +77,10 @@ namespace Baikal
 
         struct VkwMesh
         {
-            uint32_t                index_base;
-            uint32_t                index_count;
-            uint32_t				vertex_count;
-            uint32_t                material_id;
+            uint32_t index_base;
+            uint32_t index_count;
+            uint32_t vertex_count;
+            uint32_t material_id;
         };
 
         vkw::VkScopedObject<VkBuffer>   point_lights;
@@ -131,7 +131,7 @@ namespace Baikal
         std::unique_ptr<Bundle>         input_map_bundle;
 
         RadeonRays::float4              cascade_splits_dist;
-        RadeonRays::bbox                scene_bounds;
+        RadeonRays::bbox                scene_aabb;
 
         mutable bool                    rebuild_cmd_buffers;
     };

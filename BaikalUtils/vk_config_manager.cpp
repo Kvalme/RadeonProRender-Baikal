@@ -48,7 +48,7 @@ vkw::VkScopedObject<VkInstance> VkConfigManager::CreateInstance(const std::vecto
 #ifndef __APPLE__
 
     extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-    layers.push_back(Baikal::VK_LAYER_LUNARG_parameter_validation_name);
+    //layers.push_back(Baikal::VK_LAYER_LUNARG_parameter_validation_name);
     layers.push_back(Baikal::VK_LAYER_LUNARG_standard_validation_name);
 
 #endif

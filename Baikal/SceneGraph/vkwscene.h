@@ -49,7 +49,9 @@ namespace Baikal
             , num_spot_lights(0)
             , num_directional_lights(0)
             , sh_count(0)
-            , rebuild_cmd_buffers(true)
+            , env_map_idx(-1)
+            , rebuild_deferred_cmd_buffer(true)
+            , rebuild_mrt_cmd_buffers(true)
         {}
 
         typedef matrix mat4;
@@ -93,10 +95,10 @@ namespace Baikal
 
         vkw::VkScopedObject<VkBuffer>   camera;
 
-        vkw::VkScopedObject<VkBuffer>   mesh_bound_volumes;
-        vkw::VkScopedObject<VkBuffer>   mesh_transforms;
-        vkw::VkScopedObject<VkBuffer>   mesh_vertex_buffer;
-        vkw::VkScopedObject<VkBuffer>   mesh_index_buffer;
+        vkw::VkScopedObject<VkBuffer>                   mesh_bound_volumes;
+        std::vector<vkw::VkScopedObject<VkBuffer>>      mesh_transforms;
+        vkw::VkScopedObject<VkBuffer>                   mesh_vertex_buffer;
+        vkw::VkScopedObject<VkBuffer>                   mesh_index_buffer;
 
         //vkw::Texture                  ibl_skylight_reflections;
         vkw::VkScopedObject<VkBuffer>   ibl_skylight_diffuse;
@@ -106,6 +108,7 @@ namespace Baikal
         vkw::VkScopedObject<VkBuffer>   raytrace_lights_buffer;
         vkw::VkScopedObject<VkBuffer>   raytrace_RNG_buffer;
 
+        vkw::VkScopedObject<VkBuffer>   env_map_irradiance_sh9;
         vkw::VkScopedObject<VkBuffer>   sh_grid;
 
         uint32_t                        vertex_count;
@@ -116,6 +119,7 @@ namespace Baikal
         uint32_t                        num_spot_lights;
         uint32_t                        num_directional_lights;
         uint32_t                        sh_count;
+        uint32_t                        env_map_idx;
 
         std::vector<vkw::Texture>       textures;
         std::vector<VkwMesh>            meshes;
@@ -133,6 +137,7 @@ namespace Baikal
         RadeonRays::float4              cascade_splits_dist;
         RadeonRays::bbox                scene_aabb;
 
-        mutable bool                    rebuild_cmd_buffers;
+        mutable bool                    rebuild_deferred_cmd_buffer;
+        mutable bool                    rebuild_mrt_cmd_buffers;
     };
 }

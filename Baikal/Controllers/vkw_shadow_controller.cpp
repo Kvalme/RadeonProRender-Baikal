@@ -68,22 +68,31 @@ namespace Baikal
         VkBuffer vb = scene.mesh_vertex_buffer.get();
         command_buffer_builder_->BeginRenderPass(clear_values, scene.shadows[shadow_map_idx]);
 
-        VkDescriptorSet desc_set = shadowmap_shader_.descriptor_set.get();
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowmap_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
-
         vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
         vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
 
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
         vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
 
-        uint32_t mesh_id = 1;
-
-        for (auto const& mesh : scene.meshes)
+        for (size_t transform_pass = 0; transform_pass < scene.mesh_transforms.size(); transform_pass++)
         {
-            uint32_t data[4] = { mesh_id++, view_proj_light_idx, 0, 0};
-            vkCmdPushConstants(command_buffer, shadowmap_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(data), &data);
-            vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
+            VkDescriptorSet desc_set = shadowmap_descriptor_sets_[transform_pass].descriptor_set.get();
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowmap_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+
+            size_t max_range = std::min((transform_pass + 1) * kMaxTransforms, scene.meshes.size());
+            size_t transform_id = 0;
+
+            for (size_t mesh_id = transform_pass * kMaxTransforms; mesh_id < max_range; mesh_id++)
+            {
+                VkwScene::VkwMesh const& mesh = scene.meshes[mesh_id];
+
+                uint32_t data[4] = { static_cast<uint32_t>(transform_id), view_proj_light_idx, 0, 0 };
+                vkCmdPushConstants(command_buffer, shadowmap_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(data), &data);
+                vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
+
+                transform_id++;
+                transform_id = transform_id % kMaxTransforms;
+            }
         }
 
         command_buffer_builder_->EndRenderPass();
@@ -109,9 +118,6 @@ namespace Baikal
         VkBuffer vb = scene.mesh_vertex_buffer.get();
         command_buffer_builder_->BeginRenderPass(clear_values, scene.shadows[shadow_map_idx]);
 
-        VkDescriptorSet desc_set = shadowmap_shader_.descriptor_set.get();
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowmap_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
-
         vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
 
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
@@ -136,14 +142,27 @@ namespace Baikal
 
             vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
-            uint32_t mesh_id = 1;
-
-            for (auto const& mesh : scene.meshes)
+            for (size_t transform_pass = 0; transform_pass < scene.mesh_transforms.size(); transform_pass++)
             {
-                uint32_t data[4] = { mesh_id++, light_idx, 0, 0 };
-                vkCmdPushConstants(command_buffer, shadowmap_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(data), &data);
-                vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
+                VkDescriptorSet desc_set = shadowmap_descriptor_sets_[transform_pass].descriptor_set.get();
+                vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowmap_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+
+                size_t max_range = std::min((transform_pass + 1) * kMaxTransforms, scene.meshes.size());
+                size_t transform_id = 0;
+
+                for (size_t mesh_id = transform_pass * kMaxTransforms; mesh_id < max_range; mesh_id++)
+                {
+                    VkwScene::VkwMesh const& mesh = scene.meshes[mesh_id];
+
+                    uint32_t data[4] = { static_cast<uint32_t>(transform_id), light_idx, 0, 0 };
+                    vkCmdPushConstants(command_buffer, shadowmap_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(data), &data);
+                    vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
+
+                    transform_id++;
+                    transform_id = transform_id % kMaxTransforms;
+                }
             }
+
 
             light_idx++;
         }
@@ -504,9 +523,18 @@ namespace Baikal
         out.cascade_splits_dist *= camera->GetDepthRange().y;
         out.cascade_splits_dist.w *= camera->GetDepthRange().y;
 
-        shadowmap_shader_.SetArg(0, view_proj_buffer_.get());
-        shadowmap_shader_.SetArg(1, out.mesh_transforms.get());
-        shadowmap_shader_.CommitArgs();
+        if (shadowmap_descriptor_sets_.size() < out.mesh_transforms.size())
+        {
+            shadowmap_descriptor_sets_.resize(out.mesh_transforms.size());
+
+            for (size_t i = 0; i < shadowmap_descriptor_sets_.size(); i++)
+            {
+                shadowmap_descriptor_sets_[i] = shader_manager_.CreateDescriptorSet(shadowmap_shader_);
+                shadowmap_descriptor_sets_[i].SetArg(0, view_proj_buffer_.get());
+                shadowmap_descriptor_sets_[i].SetArg(1, out.mesh_transforms[i].get());
+                shadowmap_descriptor_sets_[i].CommitArgs();
+            }
+        }
 
         uint32_t cmd_buf_count = static_cast<uint32_t>(shadowmap_cmd_.size());
 

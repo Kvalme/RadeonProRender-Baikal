@@ -58,13 +58,11 @@ namespace Baikal
     {
         const float focal_length = camera.GetFocalLength();
         const float2 sensor_size = camera.GetSensorSize();
+        const float fovy = atan(sensor_size.y / (2.0f * focal_length));
 
         float2 z_range = camera.GetDepthRange();
-
         // Nan-avoidance in perspective matrix
         z_range.x = std::max(z_range.x, std::numeric_limits<float>::epsilon());
-
-        const float fovy = atan(sensor_size.y / (2.0f * focal_length));
 
         return PerspectiveProjFovyRhVulkan(fovy, camera.GetAspectRatio(), z_range.x, z_range.y);
     }

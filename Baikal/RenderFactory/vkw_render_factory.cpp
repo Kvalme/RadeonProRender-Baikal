@@ -21,12 +21,14 @@ namespace Baikal
         , vkw::ShaderManager&         shader_manager
         , vkw::DescriptorManager&     descriptor_manager
         , vkw::PipelineManager&       pipeline_manager
+        , vkw::ExecutionManager&      execution_manager
         , vkw::Utils&                 utils)            : memory_allocator_(memory_allocator)
                                                         , memory_manager_(memory_manager)
                                                         , render_target_manager_(render_target_manager)
                                                         , shader_manager_(shader_manager)
                                                         , descriptor_manager_(descriptor_manager)
                                                         , pipeline_manager_(pipeline_manager)
+                                                        , execution_manager_(execution_manager)
                                                         , utils_(utils)
                                                         , graphics_queue_family_index_(graphics_queue_family_index)
                                                         , compute_queue_family_index_(compute_queue_family_index)
@@ -45,7 +47,7 @@ namespace Baikal
                                                                                 memory_manager_, 
                                                                                 shader_manager_, 
                                                                                 render_target_manager_, 
-                                                                                pipeline_manager_, 
+                                                                                pipeline_manager_,
                                                                                 graphics_queue_family_index_, 
                                                                                 compute_queue_family_index_));
             case RendererType::kUnidirectionalPathTracer:
@@ -72,11 +74,13 @@ namespace Baikal
     std::unique_ptr<SceneController<VkwScene>> VkwRenderFactory::CreateSceneController() const
     {
         return std::make_unique<VkwSceneController>(device_,
+                                                    physical_device_,
                                                     memory_allocator_,
                                                     memory_manager_,
                                                     shader_manager_,
                                                     render_target_manager_,
                                                     pipeline_manager_,
+                                                    execution_manager_,
                                                     graphics_queue_family_index_,
                                                     compute_queue_family_index_);
     }

@@ -615,7 +615,7 @@ namespace BaikalRPR
 
                 vkCmdSetScissor(command_buffers_[frame_idx_], 0, 1, &scissor);
 
-                VkDescriptorSet desc_set = output_frag_shader_.descriptor_set.get();
+                VkDescriptorSet desc_set = output_frag_shader_.descriptor_set.descriptor_set.get();
                 vkCmdBindDescriptorSets(command_buffers_[frame_idx_], VK_PIPELINE_BIND_POINT_GRAPHICS, output_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
 
                 vkCmdBindVertexBuffers(command_buffers_[frame_idx_], 0, 1, &vb, offsets);

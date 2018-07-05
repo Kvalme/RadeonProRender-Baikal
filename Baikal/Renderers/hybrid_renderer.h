@@ -75,7 +75,7 @@ namespace Baikal
         void BuildDeferredCommandBuffer(VkwOutput const& output, VkDeferredPushConstants const& push_consts);
         void BuildGbufferCommandBuffer(VkwScene const& scene);
 
-        void DrawGbufferPass();
+        void DrawGbufferPass(VkwScene const& scene);
         void DrawDeferredPass(VkwOutput const& output, VkwScene const& scene);
 
     protected:
@@ -83,7 +83,9 @@ namespace Baikal
         vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_ib_;
 
         vkw::Shader                                     mrt_shader_;
+        std::vector<vkw::DescriptorSet>                 mrt_descriptor_sets;
         vkw::GraphicsPipeline                           mrt_pipeline_;
+        std::vector<VkImageView>                        mrt_texture_image_views_;
 
         vkw::Shader                                     deferred_vert_shader_;
         vkw::Shader                                     deferred_frag_shader_;

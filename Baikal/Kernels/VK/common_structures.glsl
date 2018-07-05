@@ -35,10 +35,18 @@ struct VkCamera
     matrix    view;
     matrix    inv_view;
     matrix    inv_proj;
+    matrix    inv_view_proj;
+
+    float4    params; // x - aspect ratio, y - fov
 };
 
 struct VkDeferredPushConstants
 {
     int         num_lights[4];
     float4      cascade_splits;
+};
+
+struct VkSH9Color
+{
+    float4 coefficients[9];
 };

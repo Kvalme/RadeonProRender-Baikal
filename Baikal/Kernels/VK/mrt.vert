@@ -22,11 +22,11 @@ layout (binding = 0) uniform CameraInfo
 
 layout (binding = 1) uniform TransformInfo
 {
-	matrix data[1024];
+	matrix data[kMaxTransforms];
 } transforms;
 
 layout(push_constant) uniform VsPushConsts {
-    uvec4 	data; // mesh id
+    uvec4 	data; // transform id
 } vs_consts;
 
 out gl_PerVertex
@@ -36,7 +36,7 @@ out gl_PerVertex
 
 void main()
 {
-	uint transform_idx 	= max(0, vs_consts.data.x - 1);
+	uint transform_idx 	= clamp(vs_consts.data.x, 0, kMaxTransforms);
 	matrix	transform 	= transforms.data[transform_idx];
 
 	proj_pos 	= inPosition * transform * camera.data.view_proj;

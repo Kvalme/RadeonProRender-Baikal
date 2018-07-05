@@ -68,7 +68,7 @@ namespace Baikal
         vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
         vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
 
-        VkDescriptorSet desc_set = deferred_frag_shader_.descriptor_set.get();
+        VkDescriptorSet desc_set = deferred_frag_shader_.descriptor_set.descriptor_set.get();
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
 
         VkBuffer vb = fullscreen_quad_vb_.get();
@@ -94,81 +94,93 @@ namespace Baikal
             { 1.0f, 0.f }
         };
 
-        command_buffer_builder_->BeginCommandBuffer();
+         command_buffer_builder_->BeginCommandBuffer();
 
-        VkCommandBuffer command_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
+         VkCommandBuffer command_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
 
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.pipeline.get());
+         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.pipeline.get());
 
-        VkDeviceSize offsets[1] = { 0 };
+         VkDeviceSize offsets[1] = { 0 };
 
-        VkBuffer vb = scene.mesh_vertex_buffer.get();
-        command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
+         VkBuffer vb = scene.mesh_vertex_buffer.get();
+         command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
 
-        VkDescriptorSet desc_set = mrt_shader_.descriptor_set.get();
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+         for (size_t transform_pass = 0; transform_pass < scene.mesh_transforms.size(); transform_pass++)
+         {
+             VkDescriptorSet desc_set = mrt_descriptor_sets[transform_pass].descriptor_set.get();
+             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
 
-        vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
-        vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
+             vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
+             vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
 
-        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
-        vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
+             vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
+             vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
 
-        uint32_t mesh_id = 1;
-        for (auto const& mesh : scene.meshes)
-        {
-            struct VkMaterialConstants
-            {
-                uint32_t data[4];
-                
-                float4 diffuse_data;              
-                float4 reflection_data;
-                float4 roughness_data;
-                float4 ior_data;
-                float4 shading_normal;
-            };
+             size_t max_range = std::min((transform_pass + 1) * kMaxTransforms, scene.meshes.size());
+             size_t transform_id = 0;
 
-            VkwScene::Material::Value const diffuse     = scene.materials[mesh.material_id].diffuse_color;
-            VkwScene::Material::Value const reflection  = scene.materials[mesh.material_id].reflection_color;
-            VkwScene::Material::Value const ior         = scene.materials[mesh.material_id].reflection_ior;
-            VkwScene::Material::Value const roughness   = scene.materials[mesh.material_id].reflection_roughness;
-            VkwScene::Material::Value const normal      = scene.materials[mesh.material_id].shading_normal;
+             for (size_t mesh_id = transform_pass * kMaxTransforms; mesh_id < max_range; mesh_id++)
+             {
+                 VkwScene::VkwMesh const& mesh = scene.meshes[mesh_id];
 
-            float diffuse_tex_id = diffuse.isTexture ? static_cast<float>(diffuse.texture_id) : -1;
-            float reflection_tex_id = reflection.isTexture ? static_cast<float>(reflection.texture_id) : -1;
-            float ior_tex_id = ior.isTexture ? static_cast<float>(ior.texture_id) : -1;
-            float roughness_tex_id = roughness.isTexture ? static_cast<float>(roughness.texture_id) : -1;
-            float shading_normal_tex_id = normal.isTexture ? static_cast<float>(normal.texture_id) : -1;
+                 struct VkMaterialConstants
+                 {
+                     uint32_t data[4];
 
-            VkMaterialConstants push_constants;
-            push_constants.data[0] = mesh_id++;
-            push_constants.diffuse_data     = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
-            push_constants.reflection_data  = float4(reflection.color.x, reflection.color.y, reflection.color.z, reflection_tex_id);
-            push_constants.ior_data         = float4(ior.color.x, ior.color.y, ior.color.z, ior_tex_id);
-            push_constants.roughness_data   = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
-            push_constants.shading_normal   = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
+                     float4 diffuse_data;
+                     float4 reflection_data;
+                     float4 roughness_data;
+                     float4 ior_data;
+                     float4 shading_normal;
+                 };
 
-            uint32_t vs_push_data[4] = { push_constants.data[0], 0, 0, 0 };
-            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_push_data), &vs_push_data);
-            vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vs_push_data), sizeof(VkMaterialConstants), &push_constants);
+                 VkwScene::Material::Value const diffuse = scene.materials[mesh.material_id].diffuse_color;
+                 VkwScene::Material::Value const reflection = scene.materials[mesh.material_id].reflection_color;
+                 VkwScene::Material::Value const ior = scene.materials[mesh.material_id].reflection_ior;
+                 VkwScene::Material::Value const roughness = scene.materials[mesh.material_id].reflection_roughness;
+                 VkwScene::Material::Value const normal = scene.materials[mesh.material_id].shading_normal;
 
-            vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
-        }
+                 float diffuse_tex_id = diffuse.isTexture ? static_cast<float>(diffuse.texture_id) : -1;
+                 float reflection_tex_id = reflection.isTexture ? static_cast<float>(reflection.texture_id) : -1;
+                 float ior_tex_id = ior.isTexture ? static_cast<float>(ior.texture_id) : -1;
+                 float roughness_tex_id = roughness.isTexture ? static_cast<float>(roughness.texture_id) : -1;
+                 float shading_normal_tex_id = normal.isTexture ? static_cast<float>(normal.texture_id) : -1;
 
-        command_buffer_builder_->EndRenderPass();
+                 VkMaterialConstants push_constants;
+                 push_constants.data[0] = static_cast<uint32_t>(mesh_id % 255 + 1);
+                 push_constants.diffuse_data = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
+                 push_constants.reflection_data = float4(reflection.color.x, reflection.color.y, reflection.color.z, reflection_tex_id);
+                 push_constants.ior_data = float4(ior.color.x, ior.color.y, ior.color.z, ior_tex_id);
+                 push_constants.roughness_data = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
+                 push_constants.shading_normal = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
 
-        g_buffer_cmd_ = command_buffer_builder_->EndCommandBuffer();
+                 uint32_t vs_push_data[4] = { static_cast<uint32_t>(transform_id), 0, 0, 0 };
+                 vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_push_data), &vs_push_data);
+                 vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vs_push_data), sizeof(VkMaterialConstants), &push_constants);
+
+                 vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
+
+                 transform_id++;
+                 transform_id = transform_id % kMaxTransforms;
+             }
+         }
+
+         command_buffer_builder_->EndRenderPass();
+
+         g_buffer_cmd_ = command_buffer_builder_->EndCommandBuffer();
     }
 
     void HybridRenderer::DrawDeferredPass(VkwOutput const& output, VkwScene const& scene)
     {
         VkCommandBuffer deferred_cmd_buf = deferred_cmd_.get();
 
-        VkSemaphore g_buffer_finised = gbuffer_signal_.get();
         VkSemaphore render_finished = output.GetSemaphore();
 
-        std::vector<VkSemaphore> wait_semaphores = { g_buffer_finised };
-        std::vector<VkPipelineStageFlags> stage_wait_bits = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        std::vector<VkSemaphore> wait_semaphores;
+        std::vector<VkPipelineStageFlags> stage_wait_bits;
+
+        wait_semaphores.push_back(gbuffer_signal_.get());
+        stage_wait_bits.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
         for (auto const& shadow_semaphore : scene.shadows_finished_signal)
         {
@@ -191,7 +203,7 @@ namespace Baikal
             throw std::runtime_error("HybridRenderer: queue submission failed");
     }
 
-    void HybridRenderer::DrawGbufferPass()
+    void HybridRenderer::DrawGbufferPass(VkwScene const& scene)
     {
         VkCommandBuffer g_buffer_cmd = g_buffer_cmd_.get();
         VkSemaphore g_buffer_finised = gbuffer_signal_.get();
@@ -219,27 +231,13 @@ namespace Baikal
         if (vk_output == nullptr)
             throw std::runtime_error("HybridRenderer: Internal error");
 
-        if (scene.rebuild_cmd_buffers)
+        if (scene.rebuild_deferred_cmd_buffer)
         {
-            std::vector<VkImageView> texture_image_views;
-            texture_image_views.reserve(kMaxTextures);
-
             std::vector<VkImageView> shadow_image_views;
 
             for (auto const& tex : scene.shadows)
             {
                 shadow_image_views.push_back(tex.attachments[0].view.get());
-            }
-
-            for (auto const& tex : scene.textures)
-            {
-                texture_image_views.push_back(tex.GetImageView());
-            }
-
-            // Fill array with dummy textures to make validation layer happy
-            while (texture_image_views.size() < kMaxTextures)
-            {
-                texture_image_views.push_back(black_pixel_.GetImageView());
             }
 
             // Fill array with dummy textures to make validation layer happy
@@ -248,14 +246,14 @@ namespace Baikal
                 shadow_image_views.push_back(inf_pixel_.GetImageView());
             }
 
-            VkBuffer point_lights = scene.point_lights != VK_NULL_HANDLE ? scene.point_lights.get() 
-                                                                         : dummy_buffer_.get();
+            VkBuffer point_lights = scene.point_lights != VK_NULL_HANDLE ? scene.point_lights.get()
+                : dummy_buffer_.get();
 
-            VkBuffer spot_lights = scene.spot_lights != VK_NULL_HANDLE ? scene.spot_lights.get() 
-                                                                       : dummy_buffer_.get();
+            VkBuffer spot_lights = scene.spot_lights != VK_NULL_HANDLE ? scene.spot_lights.get()
+                : dummy_buffer_.get();
 
-            VkBuffer directional_lights = scene.directional_lights != VK_NULL_HANDLE ? scene.directional_lights.get() 
-                                                                                     : dummy_buffer_.get();
+            VkBuffer directional_lights = scene.directional_lights != VK_NULL_HANDLE ? scene.directional_lights.get()
+                : dummy_buffer_.get();
 
             VkBuffer point_lights_transforms = scene.point_lights_transforms != VK_NULL_HANDLE ? scene.point_lights_transforms.get()
                 : dummy_buffer_.get();
@@ -266,6 +264,11 @@ namespace Baikal
             VkBuffer directional_lights_transforms = scene.directional_lights_transforms != VK_NULL_HANDLE ? scene.directional_lights_transforms.get()
                 : dummy_buffer_.get();
 
+            VkImageView env_map = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView() : scene.textures[scene.env_map_idx].GetImageView();
+
+            VkBuffer env_map_irradiance = scene.env_map_irradiance_sh9 != VK_NULL_HANDLE ? scene.env_map_irradiance_sh9.get()
+                : dummy_buffer_.get();
+
             deferred_frag_shader_.SetArg(4, scene.camera.get());
             deferred_frag_shader_.SetArgArray(5, shadow_image_views, nearest_sampler_.get());
             deferred_frag_shader_.SetArg(6, point_lights);
@@ -274,15 +277,13 @@ namespace Baikal
             deferred_frag_shader_.SetArg(9, point_lights_transforms);
             deferred_frag_shader_.SetArg(10, spot_lights_transforms);
             deferred_frag_shader_.SetArg(11, directional_lights_transforms);
-            deferred_frag_shader_.CommitArgs();
-            
-            mrt_shader_.SetArg(0, scene.camera.get());
-            mrt_shader_.SetArg(1, scene.mesh_transforms.get());
-            mrt_shader_.SetArgArray(2, texture_image_views, linear_sampler_.get());
-            mrt_shader_.CommitArgs();
+            deferred_frag_shader_.SetArg(12, env_map, linear_sampler_.get());
+            deferred_frag_shader_.SetArg(13, env_map_irradiance);
 
-            VkDeferredPushConstants push_consts = { 
-                static_cast<int>(scene.light_count), 
+            deferred_frag_shader_.CommitArgs();
+
+            VkDeferredPushConstants push_consts = {
+                static_cast<int>(scene.light_count),
                 static_cast<int>(scene.num_point_lights),
                 static_cast<int>(scene.num_spot_lights),
                 static_cast<int>(scene.num_directional_lights),
@@ -290,12 +291,47 @@ namespace Baikal
             };
 
             BuildDeferredCommandBuffer(*vk_output, push_consts);
-            BuildGbufferCommandBuffer(scene);
 
-            scene.rebuild_cmd_buffers = false;
+            scene.rebuild_deferred_cmd_buffer = false;
         }
 
-        DrawGbufferPass();
+        if (scene.rebuild_mrt_cmd_buffers)
+        {
+            mrt_texture_image_views_.clear();
+            mrt_texture_image_views_.reserve(kMaxTextures);
+
+            for (auto const& tex : scene.textures)
+            {
+                mrt_texture_image_views_.push_back(tex.GetImageView());
+            }
+
+            // Fill array with dummy textures to make validation layer happy
+            while (mrt_texture_image_views_.size() < kMaxTextures)
+            {
+                mrt_texture_image_views_.push_back(black_pixel_.GetImageView());
+            }
+
+            if (mrt_descriptor_sets.size() < scene.mesh_transforms.size())
+            {
+                mrt_descriptor_sets.clear();
+                mrt_descriptor_sets.resize(scene.mesh_transforms.size());
+
+                for (size_t idx = 0; idx < scene.mesh_transforms.size(); idx++)
+                {
+                    mrt_descriptor_sets[idx] = shader_manager_.CreateDescriptorSet(mrt_shader_);
+                    mrt_descriptor_sets[idx].SetArg(0, scene.camera.get());
+                    mrt_descriptor_sets[idx].SetArg(1, scene.mesh_transforms[idx].get());
+                    mrt_descriptor_sets[idx].SetArgArray(2, mrt_texture_image_views_, linear_sampler_.get());
+                    mrt_descriptor_sets[idx].CommitArgs();
+                }
+            }
+
+            BuildGbufferCommandBuffer(scene);
+
+            scene.rebuild_mrt_cmd_buffers = false;
+        }
+
+        DrawGbufferPass(scene);
         DrawDeferredPass(*vk_output, scene);
     }
 

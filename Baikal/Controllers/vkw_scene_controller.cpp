@@ -27,12 +27,14 @@ using namespace RadeonRays;
 
 namespace Baikal
 {
-    VkwSceneController::VkwSceneController(VkDevice device, 
+    VkwSceneController::VkwSceneController(VkDevice device,
+                                           VkPhysicalDevice physical_device,
                                            vkw::MemoryAllocator& memory_allocator,
                                            vkw::MemoryManager& memory_manager,
                                            vkw::ShaderManager& shader_manager,
                                            vkw::RenderTargetManager& render_target_manager,
                                            vkw::PipelineManager& pipeline_manager,
+                                           vkw::ExecutionManager& execution_manager,
                                            uint32_t graphics_queue_index,
                                            uint32_t compute_queue_index)
     : memory_allocator_(memory_allocator)
@@ -40,7 +42,9 @@ namespace Baikal
     , render_target_manager_(render_target_manager)
     , shader_manager_(shader_manager)
     , pipeline_manager_(pipeline_manager)
+    , execution_manager_(execution_manager)
     , device_(device)
+    , physical_device_(physical_device)
     , shapes_changed_(false)
     , camera_changed_(false)
     {
@@ -48,6 +52,12 @@ namespace Baikal
                                                          shader_manager, render_target_manager, 
                                                          pipeline_manager, graphics_queue_index, 
                                                          compute_queue_index));
+
+        probe_controller_.reset(new VkwProbeController(device,memory_manager,
+                                                       shader_manager, render_target_manager,
+                                                       pipeline_manager, execution_manager,
+                                                       graphics_queue_index,
+                                                       compute_queue_index));
     }
 
     Material::Ptr VkwSceneController::GetDefaultMaterial() const
@@ -74,12 +84,18 @@ namespace Baikal
         const matrix view = MakeViewMatrix(*camera);
         const matrix view_proj = proj * view;
 
+        const float focal_length = camera->GetFocalLength();
+        const float2 sensor_size = camera->GetSensorSize();
+        const float fovy = atan(sensor_size.y / (2.0f * focal_length));
+
         VkCamera camera_internal;
         camera_internal.position = camera->GetPosition();
         camera_internal.view_proj = view_proj;
         camera_internal.view = view;
         camera_internal.inv_view = inverse(view);
         camera_internal.inv_proj = inverse(proj);
+        camera_internal.inv_view_proj = inverse(view_proj);
+        camera_internal.params = RadeonRays::float4(camera->GetAspectRatio(), fovy);
 
         if (out.camera == VK_NULL_HANDLE)
         {
@@ -106,8 +122,8 @@ namespace Baikal
         shapes_changed_ = true;
 
         uint32_t num_shapes = static_cast<uint32_t>(scene.GetNumShapes());
-        uint32_t num_vertices = 0;
-        uint32_t num_indices = 0;
+        uint32_t num_vertices_total = 0;
+        uint32_t num_indices_total = 0;
 
         vertex_buffer_.clear();
         index_buffer_.clear();
@@ -119,6 +135,12 @@ namespace Baikal
         RadeonRays::bbox scene_aabb;
 
         auto mesh_iter(scene.CreateShapeIterator());
+        uint32_t num_transform_buffers = static_cast<uint32_t>(scene.GetNumShapes() / kMaxTransforms) + 1;
+        out.mesh_transforms.clear();
+        out.mesh_transforms.resize(num_transform_buffers);
+
+        uint32_t mesh_idx = 0;
+
         for (; mesh_iter->IsValid(); mesh_iter->Next())
         {
             auto shape = mesh_iter->ItemAs<Baikal::Shape>();
@@ -163,50 +185,83 @@ namespace Baikal
 
             mesh_transforms_.push_back(mesh->GetTransform());
 
-            num_vertices += num_vertices;
-            num_indices += num_indices;
+            if (mesh_transforms_.size() == kMaxTransforms)
+            {
+                uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
+
+                if (out.mesh_transforms[buffer_idx] == VK_NULL_HANDLE)
+                {
+                    out.mesh_transforms[buffer_idx].reset();
+
+                    out.mesh_transforms[buffer_idx] = 
+                        memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                     VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+                }
+
+                memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u,
+                                            sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                                            mesh_transforms_.data());
+
+                mesh_transforms_.clear();
+            }
+
+            num_vertices_total += num_vertices;
+            num_indices_total += num_indices;
 
             assert(mesh->GetNumVertices() == mesh->GetNumNormals());
             assert(mesh->GetNumVertices() == mesh->GetNumUVs());
+
+            mesh_idx++;
         }
 
-        if (out.vertex_count < num_vertices)
+        if (!mesh_transforms_.empty())
+        {
+            uint32_t buffer_idx = mesh_idx / kMaxTransforms;
+
+            if (out.mesh_transforms[buffer_idx] == VK_NULL_HANDLE)
+            {
+                out.mesh_transforms[buffer_idx].reset();
+
+                out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+            }
+
+            memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_.size(), mesh_transforms_.data());
+            mesh_transforms_.clear();
+        }
+
+        if (out.vertex_count < num_vertices_total)
         {
             out.mesh_vertex_buffer.reset();
 
             out.mesh_vertex_buffer = 
-                memory_manager_.CreateBuffer(sizeof(Vertex) * num_vertices,
+                memory_manager_.CreateBuffer(sizeof(Vertex) * num_vertices_total,
                                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                              VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, nullptr);
 
-            out.vertex_count = num_vertices;
+            out.vertex_count = num_vertices_total;
         }
 
-        if (out.index_count < num_indices)
+        if (out.index_count < num_indices_total)
         {
             out.mesh_index_buffer.reset();
 
             out.mesh_index_buffer =
-                memory_manager_.CreateBuffer(sizeof(uint32_t) * num_indices,
+                memory_manager_.CreateBuffer(sizeof(uint32_t) * num_indices_total,
                                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                              VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
                                              nullptr);
 
-            out.index_count = num_indices;
+            out.index_count = num_indices_total;
         }
 
         if (out.shapes_count < num_shapes)
         {
-            out.mesh_transforms.reset();
             out.mesh_bound_volumes.reset();
-
-            out.mesh_transforms =
-                memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * num_shapes,
-                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                             nullptr);
 
             out.mesh_bound_volumes = 
                 memory_manager_.CreateBuffer(sizeof(RadeonRays::bbox) * num_shapes,
@@ -218,22 +273,19 @@ namespace Baikal
         }
 
         memory_manager_.WriteBuffer(out.mesh_vertex_buffer.get(), 0u,
-                                    sizeof(Vertex) * num_vertices,
+                                    sizeof(Vertex) * num_vertices_total,
                                     vertex_buffer_.data());
 
         memory_manager_.WriteBuffer(out.mesh_index_buffer.get(), 0u,
-                                    sizeof(uint32_t) * num_indices,
+                                    sizeof(uint32_t) * num_indices_total,
                                     index_buffer_.data());
-
-        memory_manager_.WriteBuffer(out.mesh_transforms.get(), 0u,
-                                    sizeof(RadeonRays::matrix) * num_shapes,
-                                    mesh_transforms_.data());
 
         memory_manager_.WriteBuffer(out.mesh_bound_volumes.get(), 0u,
                                     sizeof(RadeonRays::bbox) * num_shapes,
                                     mesh_bound_volumes_.data());
 
         out.scene_aabb = scene_aabb;
+        out.rebuild_mrt_cmd_buffers = true;
     }
 
     void VkwSceneController::UpdateShapeProperties(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& volume_collector, VkwScene& out) const
@@ -244,7 +296,10 @@ namespace Baikal
 
         mesh_transforms_.clear();
 
+        uint32_t mesh_idx = 0;
+
         auto mesh_iter(scene.CreateShapeIterator());
+
         for (; mesh_iter->IsValid(); mesh_iter->Next())
         {
             auto shape = mesh_iter->ItemAs<Baikal::Shape>();
@@ -256,25 +311,52 @@ namespace Baikal
             }
 
             mesh_transforms_.push_back(mesh->GetTransform());
+
+            if (mesh_transforms_.size() == kMaxTransforms)
+            {
+                uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
+
+                if (out.mesh_transforms[buffer_idx] == VK_NULL_HANDLE)
+                {
+                    out.mesh_transforms[buffer_idx].reset();
+
+                    out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+                }
+
+                memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_.size(), mesh_transforms_.data());
+                mesh_transforms_.clear();
+            }
+
+            mesh_transforms_.push_back(mesh->GetTransform());
+            mesh_idx++;
         }
 
-        if (out.shapes_count < num_shapes)
+        if (!mesh_transforms_.empty())
         {
-            out.mesh_transforms.reset();
+            uint32_t buffer_idx = mesh_idx / kMaxTransforms;
 
-            out.mesh_transforms =
-                memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * num_shapes,
-                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                             nullptr);
+            if (out.mesh_transforms[buffer_idx] == VK_NULL_HANDLE)
+            {
+                out.mesh_transforms[buffer_idx].reset();
 
-            out.shapes_count = num_shapes;
+                out.mesh_transforms[buffer_idx] = 
+                    memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
+                                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                                 nullptr);
+            }
+
+            memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, 
+                                        sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                                        mesh_transforms_.data());
+
+            mesh_transforms_.clear();
         }
 
-        memory_manager_.WriteBuffer(out.mesh_transforms.get(), 0u,
-                                    sizeof(RadeonRays::matrix) * num_shapes,
-                                    mesh_transforms_.data());
+        out.rebuild_mrt_cmd_buffers = true;
     }
 
     void VkwSceneController::UpdateCurrentScene(Scene1 const& scene, VkwScene& out) const
@@ -542,6 +624,15 @@ namespace Baikal
                 case kIbl:
                 {
                     lights_changed_[global_light_idx++] = light->IsDirty();
+
+                    if (light->IsDirty())
+                    {
+                        Baikal::ImageBasedLight *ibl = static_cast<Baikal::ImageBasedLight *>(light.get());
+                        out.env_map_idx = tex_collector.GetItemIndex(ibl->GetTexture());
+                        probe_controller_->UpdateEnvMap(out);
+
+                        out.rebuild_deferred_cmd_buffer = true;
+                    }
 
                     break;
                 };

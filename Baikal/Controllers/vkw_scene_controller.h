@@ -30,6 +30,7 @@
 
 #include "scene_controller.h"
 #include "vkw_shadow_controller.h"
+#include "vkw_probe_controller.h"
 
 #include "SceneGraph/vkwscene.h"
 
@@ -60,11 +61,13 @@ namespace Baikal
     public:
         // Constructor
         VkwSceneController( VkDevice device, 
+                            VkPhysicalDevice physical_device,
                             vkw::MemoryAllocator& memory_allocator, 
                             vkw::MemoryManager& memory_manager,
                             vkw::ShaderManager& shader_manager,
                             vkw::RenderTargetManager& render_target_manager,
                             vkw::PipelineManager& pipeline_manager,
+                            vkw::ExecutionManager& execution_manager,
                             uint32_t graphics_queue_index,
                             uint32_t compute_queue_index);
         // Destructor
@@ -106,7 +109,7 @@ namespace Baikal
         // Write single volume at data pointer
         void WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const;
         // Write single input map leaf at data pointer
-        // Collectore is required to convert texture pointers into indices.
+        // Collector is required to convert texture pointers into indices.
         void WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const;
 
         void PostUpdate(Scene1 const& scene, VkwScene& out) const;
@@ -125,6 +128,7 @@ namespace Baikal
         vkw::RenderTargetManager&                       render_target_manager_;
         vkw::ShaderManager&                             shader_manager_;
         vkw::PipelineManager&                           pipeline_manager_;
+        vkw::ExecutionManager&                          execution_manager_;
         // Vulkan logical device
         VkDevice                                        device_;
         // Vulkan physical device
@@ -133,6 +137,9 @@ namespace Baikal
         Material::Ptr                                   default_material_;
         // Controller responsible for shadow updates 
         std::unique_ptr<VkwShadowController>            shadow_controller_;
+        // Controller responsible env map update and light probes
+        std::unique_ptr<VkwProbeController>             probe_controller_;
+
         // Storage to prevent re-allocations on each scene update
         mutable std::vector<Vertex>                     vertex_buffer_;
         mutable std::vector<uint32_t>                   index_buffer_;

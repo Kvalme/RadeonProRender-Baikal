@@ -32,7 +32,8 @@ namespace Baikal
     {
         command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, compute_queue_index_));
 
-        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        linear_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         vkGetDeviceQueue(device_, graphics_queue_index, 0, &graphics_queue_);
         vkGetDeviceQueue(device_, compute_queue_index, 0, &compute_queue_);
@@ -44,6 +45,9 @@ namespace Baikal
         convert_to_cubemap_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_COMPUTE_BIT, "../Baikal/Kernels/VK/convert_to_cubemap.comp.spv");
         convert_to_cubemap_pipeline_ = pipeline_manager_.CreateComputePipeline(convert_to_cubemap_shader_, group_count_x, group_count_y, 1);
 
+        generate_cubemap_mips_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_COMPUTE_BIT, "../Baikal/Kernels/VK/generate_cube_mips.comp.spv");
+        generate_cubemap_mips_pipeline_ = pipeline_manager_.CreateComputePipeline(generate_cubemap_mips_shader_, group_count_x, group_count_y, 1);
+
         project_cubemap_to_sh9_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_COMPUTE_BIT, "../Baikal/Kernels/VK/cubemap_sh9_project.comp.spv");
         project_cubemap_to_sh9_pipeline_ = pipeline_manager_.CreateComputePipeline(project_cubemap_to_sh9_shader_, group_count_x, group_count_y, 1);
 
@@ -53,8 +57,10 @@ namespace Baikal
         final_sh9_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_COMPUTE_BIT, "../Baikal/Kernels/VK/cubemap_sh9_final.comp.spv");
         final_sh9_pipeline_ = pipeline_manager_.CreateComputePipeline(final_sh9_shader_, 1, 1, 1);
 
-        VkExtent3D extent = { env_map_size, env_map_size, 1 };
+        prefilter_reflections_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_COMPUTE_BIT, "../Baikal/Kernels/VK/prefilter_reflections.comp.spv");
+        prefilter_reflections_pipeline_ = pipeline_manager_.CreateComputePipeline(prefilter_reflections_shader_, group_count_x, group_count_y, 1);
 
+        VkExtent3D extent = { env_map_size, env_map_size, 1 };
         env_cube_map_.SetCubeTexture(&memory_manager_, extent, VK_FORMAT_R16G16B16A16_SFLOAT, true);
 
         convert_to_cubemap_shader_.SetArg(1, env_cube_map_.GetImageView(), nearest_sampler_.get());
@@ -78,7 +84,7 @@ namespace Baikal
         }
     }
 
-    void VkwProbeController::UpdateEnvMap(VkwScene& out)
+    void VkwProbeController::PrefilterEnvMap(VkwScene& out)
     {
         convert_to_cubemap_shader_.SetArg(0, out.textures[out.env_map_idx].GetImageView(), nearest_sampler_.get());
         convert_to_cubemap_shader_.CommitArgs();
@@ -96,6 +102,24 @@ namespace Baikal
         execution_manager_.Submit(command_buffer.get());
         execution_manager_.WaitIdle();
         
+        for (uint32_t i = 0; i < num_mips - 1; i++)
+        {
+            uint32_t next_mip_size = env_map_size >> (i + 1);
+            uint32_t group_count_x = (next_mip_size + group_size - 1) / group_size;
+            uint32_t group_count_y = (next_mip_size + group_size - 1) / group_size;
+
+            generate_cubemap_mips_shader_.SetArg(0, env_cube_map_.GetImageView(i), linear_sampler_.get());
+            generate_cubemap_mips_shader_.SetArg(1, env_cube_map_.GetImageView(i + 1), linear_sampler_.get());
+            generate_cubemap_mips_shader_.CommitArgs();
+
+            command_buffer_builder_->BeginCommandBuffer();
+            command_buffer_builder_->Dispatch(generate_cubemap_mips_pipeline_, generate_cubemap_mips_shader_, group_count_x, group_count_y, 6);
+            vkw::CommandBuffer command_buffer = command_buffer_builder_->EndCommandBuffer();
+
+            execution_manager_.Submit(command_buffer.get());
+            execution_manager_.WaitIdle();
+        }
+
         project_cubemap_to_sh9_shader_.SetArg(0, env_cube_map_.GetImageView(), nearest_sampler_.get());
         project_cubemap_to_sh9_shader_.SetArg(1, sh9_buffers_[0].get());
         project_cubemap_to_sh9_shader_.CommitArgs();
@@ -151,5 +175,76 @@ namespace Baikal
         
         execution_manager_.Submit(command_buffer.get());
         execution_manager_.WaitIdle();
+
+        if (out.ibl_skylight_reflections.GetImageView() == VK_NULL_HANDLE)
+        {
+            VkExtent3D extent = { env_map_size, env_map_size, 1 };
+            out.ibl_skylight_reflections.SetCubeTexture(&memory_manager_, extent, VK_FORMAT_R16G16B16A16_SFLOAT, true);
+        }
+
+        std::vector<VkImageView> env_map_mips;
+        env_map_mips.resize(num_mips);
+
+        for (uint32_t i = 0; i < num_mips; i++)
+        {
+            env_map_mips[i] = env_cube_map_.GetImageView(i);
+        }
+
+        struct PushConstsStruct
+        {
+            uint32_t mip;
+            uint32_t max_mips;
+            float roughness;
+        };
+
+        prefilter_reflections_shader_.SetArgArray(0, env_map_mips, linear_sampler_.get());
+        prefilter_reflections_shader_.SetArg(1, env_cube_map_.GetImageView(), linear_sampler_.get());
+
+        for (uint32_t mip = 0; mip < num_mips; mip++)
+        {
+            const uint32_t width = env_map_size >> mip;
+            const uint32_t height = env_map_size >> mip;
+
+            const uint32_t group_size = 8;
+            const uint32_t group_count_x = (width + group_size - 1) / group_size;
+            const uint32_t group_count_y = (height + group_size - 1) / group_size;
+          
+            prefilter_reflections_shader_.SetArg(2, out.ibl_skylight_reflections.GetImageView(mip), linear_sampler_.get());
+            prefilter_reflections_shader_.CommitArgs();
+            
+            float roughness = (float)mip / (float)(num_mips - 1);
+            PushConstsStruct push_constants = { mip, num_mips, roughness };
+
+            command_buffer_builder_->BeginCommandBuffer();
+            command_buffer_builder_->Dispatch(prefilter_reflections_pipeline_, prefilter_reflections_shader_, group_count_x, group_count_y, 6, sizeof(push_constants), &push_constants);
+            command_buffer = command_buffer_builder_->EndCommandBuffer();
+
+            execution_manager_.Submit(command_buffer.get());
+            execution_manager_.WaitIdle();
+        }
+
+        // Generate brdf lut
+        if (out.ibl_brdf_lut.GetImageView() == VK_NULL_HANDLE)
+        {
+            generate_brdf_lut_shader_ = shader_manager_.CreateShader(VK_SHADER_STAGE_COMPUTE_BIT, "../Baikal/Kernels/VK/generate_brdf_lut.comp.spv");
+            generate_brdf_lut_pipeline_ = pipeline_manager_.CreateComputePipeline(generate_brdf_lut_shader_, group_count_x, group_count_y, 1);
+
+            uint32_t brdf_lut_size = 512;
+            VkExtent3D brdf_lut_extent = { brdf_lut_size, brdf_lut_size, 1 };
+            out.ibl_brdf_lut.SetTexture(&memory_manager_, brdf_lut_extent, VK_FORMAT_R16G16B16A16_SFLOAT);
+
+            generate_brdf_lut_shader_.SetArg(0, out.ibl_brdf_lut.GetImageView(), nearest_sampler_.get());
+            generate_brdf_lut_shader_.CommitArgs();
+
+            uint32_t group_count_x = (brdf_lut_size + group_size - 1) / group_size;
+            uint32_t group_count_y = (brdf_lut_size + group_size - 1) / group_size;
+
+            command_buffer_builder_->BeginCommandBuffer();
+            command_buffer_builder_->Dispatch(generate_brdf_lut_pipeline_, generate_brdf_lut_shader_, group_count_x, group_count_y, 1);
+            vkw::CommandBuffer command_buffer = command_buffer_builder_->EndCommandBuffer();
+
+            execution_manager_.Submit(command_buffer.get());
+            execution_manager_.WaitIdle();
+        }
     }
 }

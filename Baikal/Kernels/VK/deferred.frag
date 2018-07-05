@@ -63,6 +63,9 @@ layout (binding = 13) uniform EnvMapIrradiance
 	VkSH9Color data;
 } env_map_irradiance;
 
+layout (binding = 14) uniform samplerCube prefiltered_reflections;
+layout (binding = 15) uniform sampler2D brdf_lut;
+
 layout(push_constant) uniform PushConsts {
 	VkDeferredPushConstants data;
 } push_constants;
@@ -134,6 +137,26 @@ vec3 EvaluateSHIrradiance(vec3 dir, VkSH9Color radiance)
     return irradiance;
 }
 
+vec3 PrefilteredReflection(vec3 R, float roughness)
+{
+	const float MAX_REFLECTION_LOD = 11.0;
+
+	float lod = roughness * MAX_REFLECTION_LOD;
+
+	float lodf = floor(lod);
+	float lodc = ceil(lod);
+
+	vec3 a = textureLod(prefiltered_reflections, R, lod).rgb;
+	vec3 b = textureLod(prefiltered_reflections, R, lod).rgb;
+
+	return mix(a, b, lod - lodf);
+}
+
+vec3 F_SchlickR(float cosTheta, vec3 F0, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
 void main()
 {
 	uvec4 	data 		 = texture(g_buffer_0, uv);
@@ -159,8 +182,8 @@ void main()
 	uint num_spot_lights = clamp(push_constants.data.num_lights[2], 0, kMaxLights);
 	uint num_directional_lights = clamp(push_constants.data.num_lights[3], 0, kMaxLights);
 
-	vec3 ambient  = vec3(0.0f);
-	vec3 lighting = vec3(0.f);
+	vec3 ambient_lighting = vec3(0.f);
+	vec3 direct_lighting = vec3(0.f);
 	vec3 env_map  = vec3(0.f);
 
 	if (is_geometry == 0.f)
@@ -187,14 +210,12 @@ void main()
 
 	BRDFInputs brdf_inputs;
 	brdf_inputs.albedo = buffer_data1.xyz;
-	brdf_inputs.roughness = buffer_data1.w;
-	brdf_inputs.metallic = 0.f;
+	brdf_inputs.roughness = 0.1f;
+	brdf_inputs.metallic = 0.0f;
 	brdf_inputs.transparency = 0.f;
 
 	if (is_geometry == 1.f)
 	{
-		ambient = (brdf_inputs.albedo / PI) * EvaluateSHIrradiance(vec3(N.x, -N.y, N.z), env_map_irradiance.data) / PI;
-
 		for (uint i = 0; i < num_spot_lights; i++)
 		{
 			vec3 light_pos = spot_lights.data[i].position.xyz;
@@ -230,7 +251,7 @@ void main()
 			int shadow_size = textureSize(shadow_map[shadow_map_idx], 0).x;
 
 			float shadow = SampleShadow(shadow_map_idx, world_pos, shadow_uv.xyz, bias, 1.f / shadow_size);
-			lighting += shadow.x * NdotL * spot * BRDF / (dist * dist);
+			direct_lighting += shadow.x * NdotL * spot * BRDF / (dist * dist);
 		}
 
 		for (uint i = 0; i < num_directional_lights; i++)
@@ -264,13 +285,13 @@ void main()
 			float bias = clamp(0.005f * tan(acos(NdotL)), 0.0f, 0.01f);
 			float shadow = SampleShadow(shadow_map_idx, world_pos, shadow_coords.xyz, bias / (cascade_idx + 1), 1.f / (half_shadow_size.x * (cascade_idx + 1)));
 
-			lighting += NdotL.xxx * shadow * BRDF * light_rad;
+			direct_lighting += NdotL.xxx * shadow * BRDF * light_rad;
 /*
 			bool visualise_cascades = true;
 			const vec3 cascade_color[4] = vec3[](vec3(1,0,0), vec3(0,1,0), vec3(0,0,1), vec3(1,1,0));
 			vec3 color = visualise_cascades ? cascade_color[cascade_idx] : vec3(1,1,1);
 
-			lighting += color * NdotL.xxx * shadow * BRDF * light_rad;
+			direct_lighting += color * NdotL.xxx * shadow * BRDF * light_rad;
 */
 		}
 
@@ -288,10 +309,32 @@ void main()
 
 			vec3 BRDF = BRDF_Evaluate(brdf_inputs, V, N, L);
 
-			lighting += NdotL * BRDF * light_intensity / (dist * dist);
+			direct_lighting += NdotL * BRDF * light_intensity / (dist * dist);
 		}
+
+		vec3 F0 = vec3(0.04); 
+		F0 = mix(F0, brdf_inputs.albedo, brdf_inputs.metallic);
+
+		float NdotV = clamp(dot(N, V), 0.f, 1.f);
+
+		vec3 F = F_SchlickR(NdotV, F0, brdf_inputs.roughness);
+
+		vec2 brdf = texture(brdf_lut, vec2(NdotV, brdf_inputs.roughness)).rg;
+		
+		vec3 I = -V;
+		vec3 R = normalize(reflect(I, N));
+		vec3 reflection = PrefilteredReflection(R, brdf_inputs.roughness).rgb;
+
+		vec3 env_irradiance = EvaluateSHIrradiance(N, env_map_irradiance.data) / PI;
+		vec3 indirect_diffuse = (brdf_inputs.albedo / PI) * env_irradiance;
+		vec3 indirect_specular = reflection * (brdf.x * F + brdf.y);
+
+		vec3 kD = 1.f - F;
+		kD = kD * (1.f - brdf_inputs.metallic);
+
+		ambient_lighting = kD * indirect_diffuse + indirect_specular;
 	}
 
-	vec3 final 		= ambient + env_map + lighting;
+	vec3 final		= ambient_lighting + env_map + direct_lighting;
 	color			= pow(vec4(final, 1.f), vec4(1.f / 2.2f));
 }

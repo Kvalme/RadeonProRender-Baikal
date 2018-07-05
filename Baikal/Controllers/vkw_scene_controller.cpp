@@ -543,11 +543,11 @@ namespace Baikal
                 {
                     lights_changed_[global_light_idx++] = light->IsDirty();
 
-                    if (light->IsDirty())
+                    //if (light->IsDirty())
                     {
                         Baikal::ImageBasedLight *ibl = static_cast<Baikal::ImageBasedLight *>(light.get());
                         out.env_map_idx = tex_collector.GetItemIndex(ibl->GetTexture());
-                        probe_controller_->UpdateEnvMap(out);
+                        probe_controller_->PrefilterEnvMap(out);
 
                         out.rebuild_deferred_cmd_buffer = true;
                     }
@@ -632,7 +632,7 @@ namespace Baikal
 
         VkFormat fmt = GetTextureFormat(texture);
 
-        vk_texture.SetTexture(&memory_manager_, size, fmt, texture.GetSizeInBytes(), texture.GetData());
+        vk_texture.SetTexture(&memory_manager_, size, fmt, false, texture.GetSizeInBytes(), texture.GetData());
     }
 
     void VkwSceneController::WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const

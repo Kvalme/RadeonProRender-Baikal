@@ -1,0 +1,28 @@
+#version 450
+
+#define TILE_SIZE 8
+
+layout (local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+layout (binding = 0, rgba16f) uniform imageCube tex_high_mip;
+layout (binding = 1, rgba16f) uniform imageCube tex_low_mip;
+
+void main() 
+{
+    ivec3 size = ivec3(imageSize(tex_high_mip), 6);
+
+    const uint x = gl_GlobalInvocationID.x * 2;
+    const uint y = gl_GlobalInvocationID.y * 2;
+    const uint face = gl_GlobalInvocationID.z;
+
+    vec4 s[4] = 
+    { 
+        imageLoad(tex_high_mip, clamp(ivec3(x, y, face), ivec3(0), size)),
+        imageLoad(tex_high_mip, clamp(ivec3(x + 1, y, face), ivec3(0), size)),
+        imageLoad(tex_high_mip, clamp(ivec3(x, y + 1, face), ivec3(0), size)),
+        imageLoad(tex_high_mip, clamp(ivec3(x + 1, y + 1, face), ivec3(0), size))
+    };
+
+    vec4 v = (s[0] + s[1] + s[2] + s[3]) / 4.f;
+
+    imageStore(tex_low_mip, ivec3(gl_GlobalInvocationID.xyz), v);
+}

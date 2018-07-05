@@ -10,3 +10,6 @@ glslc -c -MD convert_to_cubemap.comp -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD cubemap_sh9_project.comp -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD cubemap_sh9_downsample.comp -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD cubemap_sh9_final.comp -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD prefilter_reflections.comp -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD generate_cube_mips.comp -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD generate_brdf_lut.comp -Dfloat4=vec4 -Dmatrix=mat4

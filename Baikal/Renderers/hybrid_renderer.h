@@ -104,6 +104,8 @@ namespace Baikal
 
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
         vkw::VkScopedObject<VkSampler>                  linear_sampler_;
+        vkw::VkScopedObject<VkSampler>                  linear_sampler_clamp_;
+        vkw::VkScopedObject<VkSampler>                  prefiltered_reflections_clamp_sampler_;
         vkw::VkScopedObject<VkSemaphore>                gbuffer_signal_;
 
         vkw::Utils                                      utils_;

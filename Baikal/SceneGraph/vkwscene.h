@@ -100,7 +100,8 @@ namespace Baikal
         vkw::VkScopedObject<VkBuffer>                   mesh_vertex_buffer;
         vkw::VkScopedObject<VkBuffer>                   mesh_index_buffer;
 
-        //vkw::Texture                  ibl_skylight_reflections;
+        vkw::Texture                    ibl_skylight_reflections;
+        vkw::Texture                    ibl_brdf_lut;
         vkw::VkScopedObject<VkBuffer>   ibl_skylight_diffuse;
 
         vkw::VkScopedObject<VkBuffer>   raytrace_shape_buffer;

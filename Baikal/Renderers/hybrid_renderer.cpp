@@ -25,6 +25,8 @@ namespace Baikal
 
         nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         linear_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        linear_sampler_clamp_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        prefiltered_reflections_clamp_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, 11.f);
 
         gbuffer_signal_ = utils_.CreateSemaphore();
 
@@ -36,8 +38,8 @@ namespace Baikal
         float black_pixel_data[4] = { 0.f, 0.f, 0.f, 0.f };
         float inf_pixel_data[4] = { 1e20f, 1e20f, 1e20f, 1e20f };
 
-        black_pixel_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, sizeof(black_pixel_data), &black_pixel_data);
-        inf_pixel_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, sizeof(inf_pixel_data), &inf_pixel_data);
+        black_pixel_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, false, sizeof(black_pixel_data), &black_pixel_data);
+        inf_pixel_.SetTexture(&memory_manager_, tex_size, VK_FORMAT_R16_SFLOAT, false, sizeof(inf_pixel_data), &inf_pixel_data);
 
         dummy_buffer_ = memory_manager.CreateBuffer(sizeof(RadeonRays::matrix), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     }
@@ -264,7 +266,14 @@ namespace Baikal
             VkBuffer directional_lights_transforms = scene.directional_lights_transforms != VK_NULL_HANDLE ? scene.directional_lights_transforms.get()
                 : dummy_buffer_.get();
 
-            VkImageView env_map = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView() : scene.textures[scene.env_map_idx].GetImageView();
+            VkImageView env_map = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView() 
+                                                                  : scene.textures[scene.env_map_idx].GetImageView();
+
+            VkImageView env_map_prefiltered_reflections = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView() 
+                                                                                          : scene.ibl_skylight_reflections.GetImageView();
+
+            VkImageView brdf_lut = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView()
+                                                                   : scene.ibl_brdf_lut.GetImageView();
 
             VkBuffer env_map_irradiance = scene.env_map_irradiance_sh9 != VK_NULL_HANDLE ? scene.env_map_irradiance_sh9.get()
                 : dummy_buffer_.get();
@@ -279,6 +288,8 @@ namespace Baikal
             deferred_frag_shader_.SetArg(11, directional_lights_transforms);
             deferred_frag_shader_.SetArg(12, env_map, linear_sampler_.get());
             deferred_frag_shader_.SetArg(13, env_map_irradiance);
+            deferred_frag_shader_.SetArg(14, env_map_prefiltered_reflections, prefiltered_reflections_clamp_sampler_.get());
+            deferred_frag_shader_.SetArg(15, brdf_lut, linear_sampler_clamp_.get());
 
             deferred_frag_shader_.CommitArgs();
 
@@ -433,8 +444,8 @@ namespace Baikal
     {
         static std::vector<vkw::RenderTargetCreateInfo> attachments = {
             { width, height, VK_FORMAT_R16G16B16A16_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},   // xy - packed normals, next 24 bits - depth, 8 bits - mesh id
-            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },      // albedo
-            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },      // xy - motion, zw - roughness, metaliness
+            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },     // albedo
+            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },     // xy - motion, zw - roughness, metaliness
             { width, height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
         };
 

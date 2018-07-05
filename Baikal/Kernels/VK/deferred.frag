@@ -11,6 +11,9 @@ layout (location = 0) out vec4 color;
 #include "common.glsl"
 #include "utils.glsl"
 #include "brdf.glsl"
+#include "tonemap.glsl"
+#include "shadows.glsl"
+#include "spherical_harmonics.glsl"
 
 layout (binding = 0) uniform usampler2D g_buffer_0;// packed normals, mesh id + 24 bit depth
 layout (binding = 1) uniform sampler2D g_buffer_1; // albedo
@@ -70,73 +73,6 @@ layout(push_constant) uniform PushConsts {
 	VkDeferredPushConstants data;
 } push_constants;
 
-float SampleShadow(uint light_idx, vec3 p, vec3 shadow_uv, float bias, float scale)
-{
-	float shadow = 1.0f;
-
-	for (int sampleIdx = 0; sampleIdx < 4; sampleIdx++)
-	{
-		int index = int(16.0 * Rnd(floor(p.xyz * 255.0f), sampleIdx)) % 16;
-
-		float occluded = texture(shadow_map[light_idx], vec2(shadow_uv.st + PoissonDisk[index] * scale)).r < shadow_uv.z - bias ? 1.0f : 0.0f;
-		shadow -= 0.25 * occluded;
-	}
-
-	return shadow;
-}
-
-const float CosineA0 = PI;
-const float CosineA1 = (2.0f * PI) / 3.0f;
-const float CosineA2 = PI / 4.0f;
-
-struct SH9
-{
-    float sh[9];
-};
-
-SH9 SH_Get2ndOrderCoeffs(vec3 d)
-{
-    SH9 sh9;
-
-    d = normalize(d);
-
-    float fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;
-    float pz2 = d.z * d.z;
-
-    sh9.sh[0] = 0.2820947917738781f * CosineA0;
-    sh9.sh[2] = 0.4886025119029199f * d.z * CosineA1;
-    sh9.sh[6] = 0.9461746957575601f * pz2 + -0.3153915652525201f;
-    fC0 = d.x;
-    fS0 = d.y;
-    fTmpA = -0.48860251190292f;
-    sh9.sh[3] = fTmpA * fC0 * CosineA1;
-    sh9.sh[1] = fTmpA * fS0 * CosineA1;
-    fTmpB = -1.092548430592079f * d.z;
-    sh9.sh[7] = fTmpB * fC0 * CosineA2;
-    sh9.sh[5] = fTmpB * fS0 * CosineA2;
-    fC1 = d.x*fC0 - d.y*fS0;
-    fS1 = d.x*fS0 + d.y*fC0;
-    fTmpC = 0.5462742152960395f;
-    sh9.sh[8] = fTmpC * fC1 * CosineA2;
-    sh9.sh[4] = fTmpC * fS1 * CosineA2;
-
-    return sh9;
-}
-
-vec3 EvaluateSHIrradiance(vec3 dir, VkSH9Color radiance)
-{
-    SH9 shBasis = SH_Get2ndOrderCoeffs(dir);
-
-    vec3 irradiance = vec3(0.0f);
-
-    for(int i = 0; i < 9; ++i)
-    {
-        irradiance += radiance.coefficients[i].xyz * shBasis.sh[i];
-    }
-
-    return irradiance;
-}
-
 vec3 PrefilteredReflection(vec3 R, float roughness)
 {
 	const float MAX_REFLECTION_LOD = 11.0;
@@ -150,11 +86,6 @@ vec3 PrefilteredReflection(vec3 R, float roughness)
 	vec3 b = textureLod(prefiltered_reflections, R, lod).rgb;
 
 	return mix(a, b, lod - lodf);
-}
-
-vec3 F_SchlickR(float cosTheta, vec3 F0, float roughness)
-{
-	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 void main()
@@ -211,7 +142,7 @@ void main()
 	BRDFInputs brdf_inputs;
 	brdf_inputs.albedo = buffer_data1.xyz;
 	brdf_inputs.roughness = 0.1f;
-	brdf_inputs.metallic = 0.0f;
+	brdf_inputs.metallic = 0.5f;
 	brdf_inputs.transparency = 0.f;
 
 	if (is_geometry == 1.f)
@@ -250,7 +181,7 @@ void main()
 			float bias = clamp(0.0005f * tan(acos(NdotL)), 0.0005f, 0.01f);
 			int shadow_size = textureSize(shadow_map[shadow_map_idx], 0).x;
 
-			float shadow = SampleShadow(shadow_map_idx, world_pos, shadow_uv.xyz, bias, 1.f / shadow_size);
+			float shadow = SampleShadow(shadow_map[shadow_map_idx], world_pos, shadow_uv.xyz, bias, 1.f / shadow_size);
 			direct_lighting += shadow.x * NdotL * spot * BRDF / (dist * dist);
 		}
 
@@ -283,7 +214,7 @@ void main()
 			ivec2 half_shadow_size = textureSize(shadow_map[shadow_map_idx], 0) >> 1;
 			
 			float bias = clamp(0.005f * tan(acos(NdotL)), 0.0f, 0.01f);
-			float shadow = SampleShadow(shadow_map_idx, world_pos, shadow_coords.xyz, bias / (cascade_idx + 1), 1.f / (half_shadow_size.x * (cascade_idx + 1)));
+			float shadow = SampleShadow(shadow_map[shadow_map_idx], world_pos, shadow_coords.xyz, bias / (cascade_idx + 1), 1.f / (half_shadow_size.x * (cascade_idx + 1)));
 
 			direct_lighting += NdotL.xxx * shadow * BRDF * light_rad;
 /*
@@ -334,7 +265,7 @@ void main()
 
 		ambient_lighting = kD * indirect_diffuse + indirect_specular;
 	}
-
-	vec3 final		= ambient_lighting + env_map + direct_lighting;
+	
+	vec3 final		= Tonemap(ambient_lighting + env_map + direct_lighting);
 	color			= pow(vec4(final, 1.f), vec4(1.f / 2.2f));
 }

@@ -50,8 +50,8 @@ namespace Baikal
             , num_directional_lights(0)
             , sh_count(0)
             , env_map_idx(-1)
-            , rebuild_deferred_cmd_buffer(true)
-            , rebuild_mrt_cmd_buffers(true)
+            , rebuild_deferred_pass(true)
+            , rebuild_mrt_pass(true)
         {}
 
         typedef matrix mat4;
@@ -138,7 +138,7 @@ namespace Baikal
         RadeonRays::float4              cascade_splits_dist;
         RadeonRays::bbox                scene_aabb;
 
-        mutable bool                    rebuild_deferred_cmd_buffer;
-        mutable bool                    rebuild_mrt_cmd_buffers;
+        mutable bool                    rebuild_deferred_pass;
+        mutable bool                    rebuild_mrt_pass;
     };
 }

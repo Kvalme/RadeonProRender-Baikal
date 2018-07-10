@@ -15,7 +15,7 @@ void main()
     const uint face = gl_GlobalInvocationID.z;
 
     vec4 s[4] = 
-    { 
+    {
         imageLoad(tex_high_mip, clamp(ivec3(x, y, face), ivec3(0), size)),
         imageLoad(tex_high_mip, clamp(ivec3(x + 1, y, face), ivec3(0), size)),
         imageLoad(tex_high_mip, clamp(ivec3(x, y + 1, face), ivec3(0), size)),

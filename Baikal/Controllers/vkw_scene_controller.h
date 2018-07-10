@@ -151,5 +151,7 @@ namespace Baikal
         mutable bool                                    shapes_changed_;
         mutable bool                                    camera_changed_;
         mutable std::vector<bool>                       lights_changed_;
+
+        mutable RadeonRays::matrix                      prev_view_proj_;
     };
 }

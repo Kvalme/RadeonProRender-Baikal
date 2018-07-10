@@ -14,7 +14,6 @@ vec3 MapXYSToDirection(uint x, uint y, uint s, int width, int height)
 {
     float u = ((x + 0.5f) / float(width)) * 2.0f - 1.0f;
     float v = ((y + 0.5f) / float(height)) * 2.0f - 1.0f;
-    //v *= -1;
 
     vec3 dir = vec3(0.0f);
 

@@ -13,3 +13,5 @@ glslc -c -MD cubemap_sh9_final.comp -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD prefilter_reflections.comp -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD generate_cube_mips.comp -Dfloat4=vec4 -Dmatrix=mat4
 glslc -c -MD generate_brdf_lut.comp -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD txaa.frag -Dfloat4=vec4 -Dmatrix=mat4
+glslc -c -MD copy_rt.frag -Dfloat4=vec4 -Dmatrix=mat4

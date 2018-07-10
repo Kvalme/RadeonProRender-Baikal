@@ -11,63 +11,64 @@ layout (location = 0) out vec4 color;
 #include "common.glsl"
 #include "utils.glsl"
 #include "brdf.glsl"
-#include "tonemap.glsl"
 #include "shadows.glsl"
 #include "spherical_harmonics.glsl"
+#include "tonemap.glsl"
 
-layout (binding = 0) uniform usampler2D g_buffer_0;// packed normals, mesh id + 24 bit depth
+layout (binding = 0) uniform sampler2D g_buffer_0; // normals
 layout (binding = 1) uniform sampler2D g_buffer_1; // albedo
-layout (binding = 2) uniform sampler2D g_buffer_2; // reflections & ior
-layout (binding = 3) uniform sampler2D g_buffer_3; // 32-bit depth
+layout (binding = 2) uniform sampler2D g_buffer_2; // motion
+layout (binding = 3) uniform sampler2D g_buffer_3; // roughness, metaliness, mesh id
+layout (binding = 4) uniform sampler2D g_buffer_4; // 32-bit depth
 
-layout (binding = 4) uniform CameraInfo
+layout (binding = 5) uniform CameraInfo
 {
 	VkCamera data;
 } camera;
 
-layout (binding = 5) uniform sampler2D shadow_map[kMaxLights];
+layout (binding = 6) uniform sampler2D shadow_map[kMaxLights];
 
 // Lights info
-layout (binding = 6) uniform PointLightsInfo
+layout (binding = 7) uniform PointLightsInfo
 {
 	VkPointLight data[kMaxLights];
 } point_lights;
 
-layout (binding = 7) uniform SpotLightsInfo
+layout (binding = 8) uniform SpotLightsInfo
 {
 	VkSpotLight data[kMaxLights];
 } spot_lights;
 
-layout (binding = 8) uniform DirectionalLightsInfo
+layout (binding = 9) uniform DirectionalLightsInfo
 {
 	VkDirectionalLight data[kMaxLights];
 } directional_lights;
 
 // Light transforms info (view-proj matrices)
-layout (binding = 9) uniform PointLightTransformInfo
+layout (binding = 10) uniform PointLightTransformInfo
 {
 	matrix view_proj[kMaxLights][6]; // view-proj for each side, unused for now
 } point_lights_transforms;
 
-layout (binding = 10) uniform SpotLightTransformInfo
+layout (binding = 11) uniform SpotLightTransformInfo
 {
 	matrix view_proj[kMaxLights];
 } spot_lights_view_proj;
 
-layout (binding = 11) uniform DirectionalLightTransformInfo
+layout (binding = 12) uniform DirectionalLightTransformInfo
 {
 	matrix 	view_proj[kMaxLights][4]; // view-proj for each cascade
 } directional_lights_view_proj;
 
-layout (binding = 12) uniform sampler2D env_image;
+layout (binding = 13) uniform sampler2D env_image;
 
-layout (binding = 13) uniform EnvMapIrradiance
+layout (binding = 14) uniform EnvMapIrradiance
 {
 	VkSH9Color data;
 } env_map_irradiance;
 
-layout (binding = 14) uniform samplerCube prefiltered_reflections;
-layout (binding = 15) uniform sampler2D brdf_lut;
+layout (binding = 15) uniform samplerCube prefiltered_reflections;
+layout (binding = 16) uniform sampler2D brdf_lut;
 
 layout(push_constant) uniform PushConsts {
 	VkDeferredPushConstants data;
@@ -90,16 +91,12 @@ vec3 PrefilteredReflection(vec3 R, float roughness)
 
 void main()
 {
-	uvec4 	data 		 = texture(g_buffer_0, uv);
-	vec4 	buffer_data1 = texture(g_buffer_1, uv);
+	vec3 	N 		 	 = texture(g_buffer_0, uv).xyz * 2.f - 1.f;
+	vec4 	albedo	     = texture(g_buffer_1, uv);
+	vec4	buffer_data3 = texture(g_buffer_3, uv);
 
-	vec3 N 				= (vec4(DecodeNormal(data.xy), 0.f) * camera.data.inv_view).xyz;
-	vec2 depth_mesh_id 	= DecodeDepthAndMeshID(data.zw);
-
-	// 32 bit depth instead 24 bits solves precision issues with shadows. TODO: Use inverse Z
-	float depth			= texture(g_buffer_3, uv).x;
-	//float depth			= depth_mesh_id.x;
-	float mesh_id		= depth_mesh_id.y;
+	float depth			= texture(g_buffer_4, uv).x;
+	float mesh_id		= buffer_data3.z;
 
 	float is_geometry	= mesh_id > 0.f ? 1.f : 0.f;
 
@@ -140,13 +137,14 @@ void main()
 	}
 
 	BRDFInputs brdf_inputs;
-	brdf_inputs.albedo = buffer_data1.xyz;
+	brdf_inputs.albedo = albedo.xyz;
 	brdf_inputs.roughness = 0.1f;
 	brdf_inputs.metallic = 0.5f;
 	brdf_inputs.transparency = 0.f;
 
 	if (is_geometry == 1.f)
 	{
+		
 		for (uint i = 0; i < num_spot_lights; i++)
 		{
 			vec3 light_pos = spot_lights.data[i].position.xyz;
@@ -184,6 +182,7 @@ void main()
 			float shadow = SampleShadow(shadow_map[shadow_map_idx], world_pos, shadow_uv.xyz, bias, 1.f / shadow_size);
 			direct_lighting += shadow.x * NdotL * spot * BRDF / (dist * dist);
 		}
+
 
 		for (uint i = 0; i < num_directional_lights; i++)
 		{
@@ -226,6 +225,7 @@ void main()
 */
 		}
 
+
 		for (uint i = 0; i < num_point_lights; i++)
 		{
 			vec3 light_pos = point_lights.data[i].position.xyz;
@@ -243,6 +243,7 @@ void main()
 			direct_lighting += NdotL * BRDF * light_intensity / (dist * dist);
 		}
 
+
 		vec3 F0 = vec3(0.04); 
 		F0 = mix(F0, brdf_inputs.albedo, brdf_inputs.metallic);
 
@@ -256,7 +257,8 @@ void main()
 		vec3 R = normalize(reflect(I, N));
 		vec3 reflection = PrefilteredReflection(R, brdf_inputs.roughness).rgb;
 
-		vec3 env_irradiance = EvaluateSHIrradiance(N, env_map_irradiance.data) / PI;
+		VkSH9Color env_map_data = env_map_irradiance.data;
+		vec3 env_irradiance = EvaluateSHIrradiance(N, env_map_data) / PI;
 		vec3 indirect_diffuse = (brdf_inputs.albedo / PI) * env_irradiance;
 		vec3 indirect_specular = reflection * (brdf.x * F + brdf.y);
 

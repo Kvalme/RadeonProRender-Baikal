@@ -67,10 +67,9 @@ namespace Baikal
         {
             throw std::runtime_error("VkwSceneController supports only perspective camera");
         }
-
+        
         const matrix proj = MakeProjectionMatrix(*camera);
         const matrix view = MakeViewMatrix(*camera);
-
         const matrix view_proj = proj * view;
 
         const float focal_length = camera->GetFocalLength();
@@ -80,11 +79,14 @@ namespace Baikal
         VkCamera camera_internal;
         camera_internal.position = camera->GetPosition();
         camera_internal.view_proj = view_proj;
+        camera_internal.prev_view_proj = prev_view_proj_;
         camera_internal.view = view;
         camera_internal.inv_view = inverse(view);
         camera_internal.inv_proj = inverse(proj);
         camera_internal.inv_view_proj = inverse(view_proj);
         camera_internal.params = RadeonRays::float4(camera->GetAspectRatio(), fovy);
+
+        prev_view_proj_ = view_proj;
 
         if (out.camera == VK_NULL_HANDLE)
         {
@@ -242,7 +244,7 @@ namespace Baikal
         memory_manager_.WriteBuffer(out.mesh_bound_volumes.get(), 0u, sizeof(RadeonRays::bbox) * num_shapes, mesh_bound_volumes_.data());
 
         out.scene_aabb = scene_bounds;
-        out.rebuild_mrt_cmd_buffers = true;
+        out.rebuild_mrt_pass = true;
     }
 
     void VkwSceneController::UpdateShapeProperties(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& volume_collector, VkwScene& out) const
@@ -302,7 +304,7 @@ namespace Baikal
             mesh_transforms_.clear();
         }
 
-        out.rebuild_mrt_cmd_buffers = true;
+        out.rebuild_mrt_pass = true;
     }
 
     void VkwSceneController::UpdateCurrentScene(Scene1 const& scene, VkwScene& out) const
@@ -549,7 +551,7 @@ namespace Baikal
                     out.env_map_idx = tex_collector.GetItemIndex(ibl->GetTexture());
                     probe_controller_->PrefilterEnvMap(out);
 
-                    out.rebuild_deferred_cmd_buffer = true;
+                    out.rebuild_deferred_pass = true;
                 }
 
                 break;
@@ -667,6 +669,5 @@ namespace Baikal
         {
             lights_changed_[a] = false;
         }
-
     }
 }

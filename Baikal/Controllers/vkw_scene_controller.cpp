@@ -440,6 +440,7 @@ namespace Baikal
         {
             mat->reflection_metalness = input_to_material_value(material.GetInputValue("uberv2.reflection.metalness"));
             mat->reflection_roughness = input_to_material_value(material.GetInputValue("uberv2.reflection.roughness"));
+            mat->reflection_ior = input_to_material_value(material.GetInputValue("uberv2.reflection.ior"));
         }
 
         if ((mat->layers & UberV2Material::Layers::kTransparencyLayer) == UberV2Material::Layers::kTransparencyLayer)

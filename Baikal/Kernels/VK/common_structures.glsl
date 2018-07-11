@@ -46,10 +46,11 @@ struct VkMaterialConstants
     int data[4];
 
     float4 diffuse;
-    float4 reflection;
+    float4 normal;
     float4 roughness;
     float4 metalness;
-    float4 normal;
+    float4 ior;
+    float4 transparency;
 };
 
 struct VkDeferredPushConstants

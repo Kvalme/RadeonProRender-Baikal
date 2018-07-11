@@ -57,7 +57,8 @@ namespace Baikal
 
         struct Material
         {
-            uint32_t layers; //Values from UberV2Material::Layers
+            uint32_t layers; // Values from UberV2Material::Layers
+
             struct Value
             {
                 bool isTexture = false;
@@ -69,6 +70,7 @@ namespace Baikal
 
             Value reflection_roughness;
             Value reflection_metalness;
+            Value reflection_ior;
 
             Value transparency;
 

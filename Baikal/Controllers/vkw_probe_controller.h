@@ -51,9 +51,9 @@ namespace Baikal
 
         ~VkwProbeController() = default;
 
-        void UpdateEnvMap(VkwScene& out);
+        void PrefilterEnvMap(VkwScene& out);
     protected:
-        const uint32_t                                  env_map_size = 512;
+        const uint32_t                                  env_map_size = 1024;
 
         VkDevice                                        device_;
         vkw::MemoryManager&                             memory_manager_;
@@ -71,15 +71,26 @@ namespace Baikal
         vkw::Texture                                    env_cube_map_;
 
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
+        vkw::VkScopedObject<VkSampler>                  linear_sampler_;
 
         vkw::Shader                                     convert_to_cubemap_shader_;
         vkw::ComputePipeline                            convert_to_cubemap_pipeline_;
 
+        vkw::Shader                                     generate_cubemap_mips_shader_;
+        vkw::ComputePipeline                            generate_cubemap_mips_pipeline_;
+
+        vkw::Shader                                     generate_brdf_lut_shader_;
+        vkw::ComputePipeline                            generate_brdf_lut_pipeline_;
+
         vkw::Shader                                     project_cubemap_to_sh9_shader_;
         vkw::ComputePipeline                            project_cubemap_to_sh9_pipeline_;
 
+        vkw::Shader                                     prefilter_reflections_shader_;
+        vkw::ComputePipeline                            prefilter_reflections_pipeline_;
+
         vkw::Shader                                     downsample_sh9_shader_;
         vkw::ComputePipeline                            downsample_sh9_pipeline_;
+
 
         vkw::Shader                                     final_sh9_shader_;
         vkw::ComputePipeline                            final_sh9_pipeline_;

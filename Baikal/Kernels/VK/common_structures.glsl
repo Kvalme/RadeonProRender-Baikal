@@ -32,12 +32,25 @@ struct VkCamera
     float4    position;
 
     matrix    view_proj;
+    matrix    prev_view_proj;
     matrix    view;
     matrix    inv_view;
     matrix    inv_proj;
     matrix    inv_view_proj;
 
     float4    params; // x - aspect ratio, y - fov
+};
+
+struct VkMaterialConstants
+{
+    int data[4];
+
+    float4 diffuse;
+    float4 normal;
+    float4 roughness;
+    float4 metalness;
+    float4 ior;
+    float4 transparency;
 };
 
 struct VkDeferredPushConstants
@@ -49,4 +62,11 @@ struct VkDeferredPushConstants
 struct VkSH9Color
 {
     float4 coefficients[9];
+};
+
+struct VkJitterBuffer
+{
+    matrix jitter;
+    matrix prev_jitter;
+    float4 offsets;
 };

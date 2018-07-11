@@ -26,7 +26,6 @@ namespace Baikal
         constexpr static uint32_t invalid_idx = static_cast<uint32_t>(-1);
 
         VkwScene()
-            //: lights(VK_NULL_HANDLE)
             : point_lights(VK_NULL_HANDLE)
             , spot_lights(VK_NULL_HANDLE)
             , directional_lights(VK_NULL_HANDLE)
@@ -52,15 +51,16 @@ namespace Baikal
             , num_directional_lights(0)
             , sh_count(0)
             , env_map_idx(invalid_idx)
-            , rebuild_deferred_cmd_buffer(true)
-            , rebuild_mrt_cmd_buffers(true)
+            , rebuild_deferred_pass(true)
+            , rebuild_mrt_pass(true)
         {}
 
         typedef matrix mat4;
 
         struct Material
         {
-            uint32_t layers; //Values from UberV2Material::Layers
+            uint32_t layers; // Values from UberV2Material::Layers
+
             struct Value
             {
                 bool isTexture = false;
@@ -70,8 +70,8 @@ namespace Baikal
 
             Value diffuse_color;
 
-            Value reflection_color;
             Value reflection_roughness;
+            Value reflection_metalness;
             Value reflection_ior;
 
             Value transparency;
@@ -81,10 +81,10 @@ namespace Baikal
 
         struct VkwMesh
         {
-            uint32_t                index_base;
-            uint32_t                index_count;
-            uint32_t				vertex_count;
-            uint32_t                material_id;
+            uint32_t index_base;
+            uint32_t index_count;
+            uint32_t vertex_count;
+            uint32_t material_id;
         };
 
         vkw::VkScopedObject<VkBuffer>   point_lights;
@@ -102,7 +102,8 @@ namespace Baikal
         vkw::VkScopedObject<VkBuffer>                   mesh_vertex_buffer;
         vkw::VkScopedObject<VkBuffer>                   mesh_index_buffer;
 
-        //vkw::Texture                  ibl_skylight_reflections;
+        vkw::Texture                    ibl_skylight_reflections;
+        vkw::Texture                    ibl_brdf_lut;
         vkw::VkScopedObject<VkBuffer>   ibl_skylight_diffuse;
 
         vkw::VkScopedObject<VkBuffer>   raytrace_shape_buffer;
@@ -137,9 +138,9 @@ namespace Baikal
         std::unique_ptr<Bundle>         input_map_bundle;
 
         RadeonRays::float4              cascade_splits_dist;
-        RadeonRays::bbox                scene_bounds;
+        RadeonRays::bbox                scene_aabb;
 
-        mutable bool                    rebuild_deferred_cmd_buffer;
-        mutable bool                    rebuild_mrt_cmd_buffers;
+        mutable bool                    rebuild_deferred_pass;
+        mutable bool                    rebuild_mrt_pass;
     };
 }

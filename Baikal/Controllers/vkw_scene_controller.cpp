@@ -69,10 +69,9 @@ namespace Baikal
         {
             throw std::runtime_error("VkwSceneController supports only perspective camera");
         }
-
+        
         const matrix proj = MakeProjectionMatrix(*camera);
         const matrix view = MakeViewMatrix(*camera);
-
         const matrix view_proj = proj * view;
 
         const float focal_length = camera->GetFocalLength();
@@ -82,11 +81,14 @@ namespace Baikal
         VkCamera camera_internal;
         camera_internal.position = camera->GetPosition();
         camera_internal.view_proj = view_proj;
+        camera_internal.prev_view_proj = prev_view_proj_;
         camera_internal.view = view;
         camera_internal.inv_view = inverse(view);
         camera_internal.inv_proj = inverse(proj);
         camera_internal.inv_view_proj = inverse(view_proj);
         camera_internal.params = RadeonRays::float4(camera->GetAspectRatio(), fovy);
+
+        prev_view_proj_ = view_proj;
 
         if (out.camera == VK_NULL_HANDLE)
         {
@@ -142,7 +144,7 @@ namespace Baikal
             out.meshes.push_back(vkw_mesh);
 
             RadeonRays::bbox mesh_bb;
-                
+
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
             {
                 RadeonRays::float3 pos = mesh->GetTransform() * mesh->GetVertices()[v];
@@ -243,8 +245,8 @@ namespace Baikal
         memory_manager_.WriteBuffer(out.mesh_index_buffer.get(), 0u, sizeof(uint32_t) * num_indices, index_buffer_.data());
         memory_manager_.WriteBuffer(out.mesh_bound_volumes.get(), 0u, sizeof(RadeonRays::bbox) * num_shapes, mesh_bound_volumes_.data());
 
-        out.scene_bounds = scene_bounds;
-        out.rebuild_mrt_cmd_buffers = true;
+        out.scene_aabb = scene_bounds;
+        out.rebuild_mrt_pass = true;
     }
 
     void VkwSceneController::UpdateShapeProperties(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& volume_collector, VkwScene& out) const
@@ -304,7 +306,7 @@ namespace Baikal
             mesh_transforms_.clear();
         }
 
-        out.rebuild_mrt_cmd_buffers = true;
+        out.rebuild_mrt_pass = true;
     }
 
     void VkwSceneController::UpdateCurrentScene(Scene1 const& scene, VkwScene& out) const
@@ -391,42 +393,42 @@ namespace Baikal
         {
             assert(input_value.type == Material::InputType::kInputMap);
             // We only support leaf nodes atm, so proceed them and assert if we have any other node
-            switch(input_value.input_map_value->m_type)
+            switch (input_value.input_map_value->m_type)
             {
-                case InputMap::InputMapType::kConstantFloat:
-                {
-                    InputMap_ConstantFloat *i = static_cast<InputMap_ConstantFloat*>(input_value.input_map_value.get());
-                    VkwScene::Material::Value value;
-                    value.isTexture = false;
-                    value.color.x = i->GetValue();
-                    return value;
-                }
-                case InputMap::InputMapType::kConstantFloat3:
-                {
-                    InputMap_ConstantFloat3 *i = static_cast<InputMap_ConstantFloat3*>(input_value.input_map_value.get());
-                    VkwScene::Material::Value value;
-                    value.isTexture = false;
-                    value.color = i->GetValue();
-                    return value;
-                }
-                case InputMap::InputMapType::kSampler:
-                {
-                    InputMap_Sampler *i = static_cast<InputMap_Sampler*>(input_value.input_map_value.get());
-                    VkwScene::Material::Value value;
-                    value.isTexture = true;
-                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
-                    return value;
-                }
-                case InputMap::InputMapType::kSamplerBumpmap:
-                {
-                    InputMap_SamplerBumpMap *i = static_cast<InputMap_SamplerBumpMap*>(input_value.input_map_value.get());
-                    VkwScene::Material::Value value;
-                    value.isTexture = true;
-                    value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
-                    return value;
-                };
-                default:
-                    assert(!"Unsupported input map type");
+            case InputMap::InputMapType::kConstantFloat:
+            {
+                InputMap_ConstantFloat *i = static_cast<InputMap_ConstantFloat*>(input_value.input_map_value.get());
+                VkwScene::Material::Value value;
+                value.isTexture = false;
+                value.color.x = i->GetValue();
+                return value;
+            }
+            case InputMap::InputMapType::kConstantFloat3:
+            {
+                InputMap_ConstantFloat3 *i = static_cast<InputMap_ConstantFloat3*>(input_value.input_map_value.get());
+                VkwScene::Material::Value value;
+                value.isTexture = false;
+                value.color = i->GetValue();
+                return value;
+            }
+            case InputMap::InputMapType::kSampler:
+            {
+                InputMap_Sampler *i = static_cast<InputMap_Sampler*>(input_value.input_map_value.get());
+                VkwScene::Material::Value value;
+                value.isTexture = true;
+                value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
+                return value;
+            }
+            case InputMap::InputMapType::kSamplerBumpmap:
+            {
+                InputMap_SamplerBumpMap *i = static_cast<InputMap_SamplerBumpMap*>(input_value.input_map_value.get());
+                VkwScene::Material::Value value;
+                value.isTexture = true;
+                value.texture_id = tex_collector.GetItemIndex(i->GetTexture());
+                return value;
+            };
+            default:
+                assert(!"Unsupported input map type");
             }
             return  VkwScene::Material::Value();
         };
@@ -438,9 +440,9 @@ namespace Baikal
 
         if ((mat->layers & UberV2Material::Layers::kReflectionLayer) == UberV2Material::Layers::kReflectionLayer)
         {
-            mat->reflection_color = input_to_material_value(material.GetInputValue("uberv2.reflection.color"));
-            mat->reflection_ior = input_to_material_value(material.GetInputValue("uberv2.reflection.roughness"));
-            mat->reflection_roughness = input_to_material_value(material.GetInputValue("uberv2.reflection.ior"));
+            mat->reflection_metalness = input_to_material_value(material.GetInputValue("uberv2.reflection.metalness"));
+            mat->reflection_roughness = input_to_material_value(material.GetInputValue("uberv2.reflection.roughness"));
+            mat->reflection_ior = input_to_material_value(material.GetInputValue("uberv2.reflection.ior"));
         }
 
         if ((mat->layers & UberV2Material::Layers::kTransparencyLayer) == UberV2Material::Layers::kTransparencyLayer)
@@ -461,7 +463,7 @@ namespace Baikal
     void VkwSceneController::UpdateLights(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, VkwScene& out) const
     {
         uint32_t num_lights = static_cast<uint32_t>(scene.GetNumLights());
-        
+
         lights_changed_.resize(num_lights);
 
         uint32_t num_spot_lights = 0;
@@ -488,86 +490,86 @@ namespace Baikal
 
             switch (light_type)
             {
-                case kPoint:
+            case kPoint:
+            {
+                lights_changed_[global_light_idx] = light->IsDirty();
+
+                float3 p = light->GetPosition();
+                float3 r = light->GetEmittedRadiance();
+
+                VkPointLight point_light = { p, float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) };
+                point_lights.push_back(point_light);
+
+                num_point_lights++;
+
+                break;
+            };
+
+            case kDirectional:
+            {
+                lights_changed_[global_light_idx] = light->IsDirty();
+
+                float3 r = light->GetEmittedRadiance();
+
+                VkDirectionalLight directional_light = { light->GetDirection(), float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) };
+                directional_lights.push_back(directional_light);
+
+                num_directional_lights++;
+
+                break;
+            };
+
+            case kSpot:
+            {
+                lights_changed_[global_light_idx] = light->IsDirty();
+
+                float3 p = light->GetPosition();
+                float3 d = light->GetDirection();
+                float3 r = light->GetEmittedRadiance();
+
+                auto cone_shape = static_cast<SpotLight const&>(*light).GetConeShape();
+
+                VkSpotLight spot_light =
                 {
-                    lights_changed_[global_light_idx] = light->IsDirty();
-
-                    float3 p = light->GetPosition();
-                    float3 r = light->GetEmittedRadiance();
-
-                    VkPointLight point_light = { p, float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) };
-                    point_lights.push_back(point_light);
-
-                    num_point_lights++;
-
-                    break;
+                    float4(p.x, p.y, p.z, cone_shape.x),
+                    float4(d.x, d.y, d.z, cone_shape.y),
+                    float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++))
                 };
 
-                case kDirectional:
+                spot_lights.push_back(spot_light);
+
+                num_spot_lights++;
+
+                break;
+            };
+
+            case kIbl:
+            {
+                lights_changed_[global_light_idx++] = light->IsDirty();
+
+                if (light->IsDirty())
                 {
-                    lights_changed_[global_light_idx] = light->IsDirty();
+                    Baikal::ImageBasedLight *ibl = static_cast<Baikal::ImageBasedLight *>(light.get());
+                    out.env_map_idx = tex_collector.GetItemIndex(ibl->GetTexture());
+                    probe_controller_->PrefilterEnvMap(out);
 
-                    float3 r = light->GetEmittedRadiance();
+                    out.rebuild_deferred_pass = true;
+                }
 
-                    VkDirectionalLight directional_light = { light->GetDirection(), float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) };
-                    directional_lights.push_back(directional_light);
+                break;
+            };
 
-                    num_directional_lights++;
+            case kArea:
+            {
+                lights_changed_[global_light_idx++] = light->IsDirty();
 
-                    break;
-                };
+                break;
+            };
 
-                case kSpot:
-                {
-                    lights_changed_[global_light_idx] = light->IsDirty();
-
-                    float3 p = light->GetPosition();
-                    float3 d = light->GetDirection();
-                    float3 r = light->GetEmittedRadiance();
-
-                    auto cone_shape = static_cast<SpotLight const&>(*light).GetConeShape();
-
-                    VkSpotLight spot_light = 
-                    {
-                        float4(p.x, p.y, p.z, cone_shape.x), 
-                        float4(d.x, d.y, d.z, cone_shape.y), 
-                        float4(r.x, r.y, r.z, static_cast<float>(global_light_idx++)) 
-                    };
-
-                    spot_lights.push_back(spot_light);
-
-                    num_spot_lights++;
-
-                    break;
-                };
-
-                case kIbl:
-                {
-                    lights_changed_[global_light_idx++] = light->IsDirty();
-
-                    if (light->IsDirty())
-                    {
-                        Baikal::ImageBasedLight *ibl = static_cast<Baikal::ImageBasedLight *>(light.get());
-                        out.env_map_idx = tex_collector.GetItemIndex(ibl->GetTexture());
-                        probe_controller_->UpdateEnvMap(out);
-
-                        out.rebuild_deferred_cmd_buffer = true;
-                    }
-
-                    break;
-                };
-
-                case kArea:
-                {
-                    lights_changed_[global_light_idx++] = light->IsDirty();
-
-                    break;
-                };
-
-                default:
-                {
-                    break;
-                };
+            default:
+            {
+                break;
+            };
             }
         }
 
@@ -617,10 +619,10 @@ namespace Baikal
     {
         switch (texture.GetFormat())
         {
-            case Texture::Format::kRgba8: return VK_FORMAT_R8G8B8A8_UNORM;
-            case Texture::Format::kRgba16: return VK_FORMAT_R16G16B16A16_UNORM;
-            case Texture::Format::kRgba32: return VK_FORMAT_R32G32B32A32_SFLOAT;
-            default: return VK_FORMAT_R8G8B8A8_UNORM;
+        case Texture::Format::kRgba8: return VK_FORMAT_R8G8B8A8_UNORM;
+        case Texture::Format::kRgba16: return VK_FORMAT_R16G16B16A16_UNORM;
+        case Texture::Format::kRgba32: return VK_FORMAT_R32G32B32A32_SFLOAT;
+        default: return VK_FORMAT_R8G8B8A8_UNORM;
         }
     }
 
@@ -634,7 +636,7 @@ namespace Baikal
 
         VkFormat fmt = GetTextureFormat(texture);
 
-        vk_texture.SetTexture(&memory_manager_, size, fmt, texture.GetSizeInBytes(), texture.GetData());
+        vk_texture.SetTexture(&memory_manager_, size, fmt, false, texture.GetSizeInBytes(), texture.GetData());
     }
 
     void VkwSceneController::WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const
@@ -669,6 +671,5 @@ namespace Baikal
         {
             lights_changed_[a] = false;
         }
-
     }
 }

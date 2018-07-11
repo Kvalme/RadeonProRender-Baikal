@@ -25,7 +25,6 @@ THE SOFTWARE.
 #include "renderer.h"
 
 #include "SceneGraph/vkwscene.h"
-//#include "Controllers/vkw_scene_controller.h"
 
 #include "VKW.h"
 
@@ -72,12 +71,20 @@ namespace Baikal
     protected:
         void InitializeResources();
         void ResizeRenderTargets(uint32_t width, uint32_t height);
-        void BuildDeferredCommandBuffer(VkwOutput const& output, VkDeferredPushConstants const& push_consts);
+        
+        void UpdateDeferredPass(VkwScene const& scene, VkwOutput const& vk_output);
+        void UpdateGbufferPass(VkwScene const& scene);
+        void UpdateJitterBuffer();
+
+        void BuildDeferredCommandBuffer(VkDeferredPushConstants const& push_consts);
         void BuildGbufferCommandBuffer(VkwScene const& scene);
+        void BuildTXAACommandBuffer(VkwOutput const& output);
+        void BuildCopyCmdBuffer();
 
         void DrawGbufferPass(VkwScene const& scene);
-        void DrawDeferredPass(VkwOutput const& output, VkwScene const& scene);
-
+        void DrawDeferredPass(VkwScene const& scene);
+        void DrawTXAAPass();
+        void CopyToHistoryBuffer(VkwOutput const& output);
     protected:
         vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_vb_;
         vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_ib_;
@@ -87,9 +94,14 @@ namespace Baikal
         vkw::GraphicsPipeline                           mrt_pipeline_;
         std::vector<VkImageView>                        mrt_texture_image_views_;
 
-        vkw::Shader                                     deferred_vert_shader_;
-        vkw::Shader                                     deferred_frag_shader_;
+        vkw::Shader                                     deferred_shader_;
         vkw::GraphicsPipeline                           deferred_pipeline_;
+
+        vkw::Shader                                     txaa_shader_;
+        vkw::GraphicsPipeline                           txaa_pipeline_;
+
+        vkw::Shader                                     copy_shader_;
+        vkw::GraphicsPipeline                           copy_pipeline_;
     protected:
         vkw::MemoryManager&                             memory_manager_;
         vkw::RenderTargetManager&                       render_target_manager_;
@@ -97,6 +109,8 @@ namespace Baikal
         vkw::PipelineManager&                           pipeline_manager_;
 
         vkw::RenderTarget                               g_buffer_;
+        vkw::RenderTarget                               deferred_buffer_;
+        vkw::RenderTarget                               history_buffer_;
 
         std::unique_ptr<vkw::CommandBufferBuilder>      command_buffer_builder_;
 
@@ -104,7 +118,12 @@ namespace Baikal
 
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
         vkw::VkScopedObject<VkSampler>                  linear_sampler_;
-        vkw::VkScopedObject<VkSemaphore>                gbuffer_signal_;
+        vkw::VkScopedObject<VkSampler>                  linear_sampler_clamp_;
+        vkw::VkScopedObject<VkSampler>                  prefiltered_reflections_clamp_sampler_;
+
+        vkw::VkScopedObject<VkSemaphore>                g_buffer_finisned_;
+        vkw::VkScopedObject<VkSemaphore>                deferred_finished_;
+        vkw::VkScopedObject<VkSemaphore>                txaa_finished_;
 
         vkw::Utils                                      utils_;
         
@@ -113,8 +132,11 @@ namespace Baikal
 
         vkw::CommandBuffer                              g_buffer_cmd_;
         vkw::CommandBuffer                              deferred_cmd_;
+        vkw::CommandBuffer                              txaa_cmd_;
+        vkw::CommandBuffer                              copy_cmd_;
 
         vkw::VkScopedObject<VkBuffer>                   dummy_buffer_;
+        vkw::VkScopedObject<VkBuffer>                   jitter_buffer_;
 
         VkViewport                                      viewport_;
         VkRect2D                                        scissor_;
@@ -124,8 +146,17 @@ namespace Baikal
 
         uint32_t                                        framebuffer_width_;
         uint32_t                                        framebuffer_height_;
-
+        
+        float                                           inv_framebuffer_width_;
+        float                                           inv_framebuffer_height_;
+        
         VkQueue                                         graphics_queue_;
         VkQueue                                         compute_queue_;
+
+        // Sub-sample positions for 8x TAA
+        std::vector<RadeonRays::float2>                 txaa_sample_locations_;
+        RadeonRays::matrix                              prev_jitter_;
+        const uint32_t                                  txaa_num_samples_ = 8;
+        uint32_t                                        txaa_frame_idx_;
     };
 }

@@ -47,6 +47,7 @@ namespace Baikal
 
     void AppVkRender::Update(AppSettings& settings)
     {
+        m_camera->SetDirty(true);
     }
 
     void AppVkRender::UpdateScene()

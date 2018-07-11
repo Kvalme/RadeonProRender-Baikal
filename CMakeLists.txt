@@ -20,7 +20,11 @@ if (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
 endif (BAIKAL_ENABLE_GLTF AND NOT BAIKAL_ENABLE_RPR)
 
 if (BAIKAL_ENABLE_HYBRID_RENDERER)
+	#Configure RTEffects
+	set(RTE_ENABLE_EXAMPLES OFF CACHE BOOL "Disable examples")
+	set(RTE_ENABLE_UNIT_TESTS OFF CACHE BOOL "Disable unit tests")
     add_subdirectory(VKW)
+	add_subdirectory(RTEffects)
     add_definitions(-DHYBRID_RENDERER=1)
 endif()
 
@@ -44,6 +48,17 @@ if (BAIKAL_ENABLE_STANDALONE OR BAIKAL_ENABLE_RPR)
     find_package(OpenGL REQUIRED)
 endif (BAIKAL_ENABLE_STANDALONE OR BAIKAL_ENABLE_RPR)
 
+
+
+# Sanity checks
+if (BAIKAL_ENABLE_STANDALONE AND NOT BAIKAL_ENABLE_IO)
+    message(FATAL_ERROR "BAIKAL_ENABLE_STANDALONE option requires BAIKAL_ENABLE_IO to be turned ON but it is OFF")
+endif (BAIKAL_ENABLE_STANDALONE AND NOT BAIKAL_ENABLE_IO)
+
+if (BAIKAL_ENABLE_STANDALONE OR BAIKAL_ENABLE_RPR)
+    find_package(GLEW REQUIRED)
+endif (BAIKAL_ENABLE_STANDALONE OR BAIKAL_ENABLE_RPR)
+
 #Configure RadeonRays build
 set(RR_EMBED_KERNELS ON CACHE BOOL "Embed CL kernels into binary module")
 set(RR_ALLOW_CPU_DEVICES OFF CACHE BOOL "Allows CPU Devices")
@@ -56,16 +71,6 @@ set(RR_SHARED_CALC OFF CACHE BOOL "Link Calc(compute abstraction layer) dynamica
 set(RR_ENABLE_RAYMASK $BAIKAL_ENABLE_RAYMASK CACHE BOOL "Enable ray masking in intersection kernels")
 set(RR_TUTORIALS OFF CACHE BOOL "Add tutorials projects")
 set(RR_SAFE_MATH OFF CACHE BOOL "use safe math")
-
-# Sanity checks
-if (BAIKAL_ENABLE_STANDALONE AND NOT BAIKAL_ENABLE_IO)
-    message(FATAL_ERROR "BAIKAL_ENABLE_STANDALONE option requires BAIKAL_ENABLE_IO to be turned ON but it is OFF")
-endif (BAIKAL_ENABLE_STANDALONE AND NOT BAIKAL_ENABLE_IO)
-
-if (BAIKAL_ENABLE_STANDALONE OR BAIKAL_ENABLE_RPR)
-    find_package(GLEW REQUIRED)
-endif (BAIKAL_ENABLE_STANDALONE OR BAIKAL_ENABLE_RPR)
-
 add_subdirectory(RadeonRays)
 
 add_subdirectory(Baikal)

@@ -51,8 +51,8 @@ namespace Baikal
      */
 
     // Dirty flags are used to perform partial buffer updates to save traffic
-    using DirtyFlags = std::uint32_t;
-    enum class DirtyFlag : int {
+    using DirtyFlags = uint32_t;
+    enum class DirtyFlag {
         kNone = 0x0,
         kLights = 0x01,
         kShapes = 0x02,
@@ -62,6 +62,27 @@ namespace Baikal
         kMaterial = 0x20,
         kAll = kLights | kShapes | kShapeTransforms | kCamera | kBackground | kMaterial
     };
+
+    inline DirtyFlag operator | (DirtyFlag lhs, DirtyFlag rhs)
+    {
+        return static_cast<DirtyFlag> (
+                static_cast<uint32_t>(lhs) |
+                static_cast<uint32_t>(rhs)
+        );
+    }
+
+    inline DirtyFlag operator & (DirtyFlag lhs, DirtyFlag rhs)
+    {
+        return static_cast<DirtyFlag> (
+                static_cast<uint32_t>(lhs) &
+                static_cast<uint32_t>(rhs)
+        );
+    }
+
+    inline DirtyFlag operator ~ (DirtyFlag flag)
+    {
+        return static_cast<DirtyFlag>(~static_cast<uint32_t>(flag));
+    }
 
     class Scene1
     {

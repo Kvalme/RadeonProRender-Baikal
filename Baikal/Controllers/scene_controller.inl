@@ -44,7 +44,7 @@ namespace Baikal
     template <typename CompiledScene>
     inline
     bool SceneController<CompiledScene>::HasFlag(DirtyFlags flags, DirtyFlag flag) {
-        return (static_cast<int>(flags) & static_cast<int>(flag)) != 0;
+        return (static_cast<DirtyFlag>(flags) & flag) != DirtyFlag::kNone;
     }
 
     template <typename CompiledScene>
@@ -478,7 +478,7 @@ namespace Baikal
             }
 
             // If background image need an update, do it.
-            if (static_cast<DirtyFlag>(scene->GetDirtyFlags() & static_cast<int>(DirtyFlag::kBackground))
+            if ((static_cast<DirtyFlag>(scene->GetDirtyFlags()) & DirtyFlag::kBackground)
                 == DirtyFlag::kBackground)
             {
                 UpdateSceneAttributes(*scene, m_texture_collector, out);

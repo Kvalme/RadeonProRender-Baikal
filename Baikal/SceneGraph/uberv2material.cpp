@@ -22,7 +22,6 @@ THE SOFTWARE.
 
 #include "uberv2material.h"
 #include "inputmaps.h"
-#include <algorithm>
 
 using namespace Baikal;
 using namespace RadeonRays;

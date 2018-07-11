@@ -93,6 +93,8 @@ namespace Baikal
         int device_index;
         // Vulkan required extensions list
         std::vector<const char*> vk_required_extensions;
+        // Flags to control updates of the scene (For Vulkan only so far)
+        DirtyFlags update_flags;
     };
 
     class AppCliParser

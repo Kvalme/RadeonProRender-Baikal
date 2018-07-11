@@ -24,7 +24,6 @@ namespace Baikal
         typedef std::vector<vkw::RenderTarget> RenderTargetArray;
 
         VkwScene()
-            //: lights(VK_NULL_HANDLE)
             : point_lights(VK_NULL_HANDLE)
             , spot_lights(VK_NULL_HANDLE)
             , directional_lights(VK_NULL_HANDLE)
@@ -68,9 +67,8 @@ namespace Baikal
 
             Value diffuse_color;
 
-            Value reflection_color;
             Value reflection_roughness;
-            Value reflection_ior;
+            Value reflection_metalness;
 
             Value transparency;
 

@@ -48,7 +48,7 @@ struct VkMaterialConstants
     float4 diffuse;
     float4 reflection;
     float4 roughness;
-    float4 ior;
+    float4 metalness;
     float4 normal;
 };
 

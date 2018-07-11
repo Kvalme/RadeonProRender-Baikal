@@ -145,24 +145,21 @@ namespace Baikal
                  VkwScene::VkwMesh const& mesh = scene.meshes[mesh_id];
 
                  VkwScene::Material::Value const diffuse = scene.materials[mesh.material_id].diffuse_color;
-                 VkwScene::Material::Value const reflection = scene.materials[mesh.material_id].reflection_color;
-                 VkwScene::Material::Value const ior = scene.materials[mesh.material_id].reflection_ior;
+                 VkwScene::Material::Value const metalness = scene.materials[mesh.material_id].reflection_metalness;
                  VkwScene::Material::Value const roughness = scene.materials[mesh.material_id].reflection_roughness;
                  VkwScene::Material::Value const normal = scene.materials[mesh.material_id].shading_normal;
 
                  float diffuse_tex_id = diffuse.isTexture ? static_cast<float>(diffuse.texture_id) : -1;
-                 float reflection_tex_id = reflection.isTexture ? static_cast<float>(reflection.texture_id) : -1;
-                 float ior_tex_id = ior.isTexture ? static_cast<float>(ior.texture_id) : -1;
+                 float metalness_tex_id = metalness.isTexture ? static_cast<float>(metalness.texture_id) : -1;
                  float roughness_tex_id = roughness.isTexture ? static_cast<float>(roughness.texture_id) : -1;
                  float shading_normal_tex_id = normal.isTexture ? static_cast<float>(normal.texture_id) : -1;
 
                  VkMaterialConstants push_constants;
-                 push_constants.data[0] = static_cast<int>(mesh_id % 255 + 1);
-                 push_constants.diffuse= float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
-                 push_constants.reflection = float4(reflection.color.x, reflection.color.y, reflection.color.z, reflection_tex_id);
-                 push_constants.ior = float4(ior.color.x, ior.color.y, ior.color.z, ior_tex_id);
+                 push_constants.data[0]   = static_cast<int>(mesh_id % 255 + 1);
+                 push_constants.diffuse   = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
+                 push_constants.metalness = float4(metalness.color.x, metalness.color.y, metalness.color.z, metalness_tex_id);
                  push_constants.roughness = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
-                 push_constants.normal = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
+                 push_constants.normal    = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
 
                  uint32_t vs_push_data[4] = { static_cast<uint32_t>(transform_id), 0, 0, 0 };
                  vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_push_data), &vs_push_data);
@@ -617,10 +614,10 @@ namespace Baikal
     void HybridRenderer::ResizeRenderTargets(uint32_t width, uint32_t height)
     {
         static std::vector<vkw::RenderTargetCreateInfo> attachments = {
-            { width, height, VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},   // normals
-            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },            // albedo
-            { width, height, VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },             // motion
-            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },            // roughness, metaliness, mesh id
+            { width, height, VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},     // normals
+            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // albedo
+            { width, height, VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },               // motion
+            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // roughness, metalness, mesh id
             { width, height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
         };
 

@@ -438,9 +438,8 @@ namespace Baikal
 
         if ((mat->layers & UberV2Material::Layers::kReflectionLayer) == UberV2Material::Layers::kReflectionLayer)
         {
-            mat->reflection_color = input_to_material_value(material.GetInputValue("uberv2.reflection.color"));
-            mat->reflection_ior = input_to_material_value(material.GetInputValue("uberv2.reflection.roughness"));
-            mat->reflection_roughness = input_to_material_value(material.GetInputValue("uberv2.reflection.ior"));
+            mat->reflection_metalness = input_to_material_value(material.GetInputValue("uberv2.reflection.metalness"));
+            mat->reflection_roughness = input_to_material_value(material.GetInputValue("uberv2.reflection.roughness"));
         }
 
         if ((mat->layers & UberV2Material::Layers::kTransparencyLayer) == UberV2Material::Layers::kTransparencyLayer)

@@ -18,7 +18,7 @@ layout (location = 0) out vec4 color;
 layout (binding = 0) uniform sampler2D g_buffer_0; // normals
 layout (binding = 1) uniform sampler2D g_buffer_1; // albedo
 layout (binding = 2) uniform sampler2D g_buffer_2; // motion
-layout (binding = 3) uniform sampler2D g_buffer_3; // roughness, metaliness, mesh id
+layout (binding = 3) uniform sampler2D g_buffer_3; // roughness, metalness, mesh id
 layout (binding = 4) uniform sampler2D g_buffer_4; // 32-bit depth
 
 layout (binding = 5) uniform CameraInfo

@@ -193,7 +193,7 @@ void SceneObject::RemoveEmissive()
 bool SceneObject::IsDirty()
 {
     auto dirty = m_scene->GetDirtyFlags();
-    return dirty != Baikal::Scene1::kNone;
+    return static_cast<Baikal::DirtyFlag>(dirty) != Baikal::DirtyFlag::kNone;
 }
 
 void SceneObject::SetBackgroundImage(MaterialObject* image)

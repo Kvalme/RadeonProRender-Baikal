@@ -253,7 +253,9 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice 
                                                               *cfg.descriptor_manager_,
                                                               *cfg.pipeline_manager_,
                                                               *cfg.execution_manager_,
-                                                              *cfg.utils_);
+                                                              *cfg.utils_,
+                                                              static_cast<Baikal::DirtyFlags>
+                                                              (Baikal::DirtyFlag::kAll & ~Baikal::DirtyFlag::kMaterial));
 
     cfg.controller_ = cfg.factory_->CreateSceneController();
     cfg.renderer_ = cfg.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);

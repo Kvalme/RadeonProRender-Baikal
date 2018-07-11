@@ -45,7 +45,7 @@ namespace BaikalRPR
 
     void AppVkRender::InitVk(AppSettings& settings)
     {
-        VkConfigManager::CreateConfig(m_cfg, settings.vk_required_extensions);
+        VkConfigManager::CreateConfig(m_cfg, settings.vk_required_extensions, static_cast<Baikal::DirtyFlags>(Baikal::DirtyFlag::kAll & ~Baikal::DirtyFlag::kMaterial));
 
         VkInteropInfo interop_info;
         interop_info.instance = m_cfg.instance_.get();

@@ -23,6 +23,8 @@ namespace Baikal
         typedef std::vector<vkw::VkScopedObject<VkSemaphore>> SemaphoreArray;
         typedef std::vector<vkw::RenderTarget> RenderTargetArray;
 
+        constexpr static uint32_t invalid_idx = static_cast<uint32_t>(-1);
+
         VkwScene()
             //: lights(VK_NULL_HANDLE)
             : point_lights(VK_NULL_HANDLE)
@@ -49,7 +51,7 @@ namespace Baikal
             , num_spot_lights(0)
             , num_directional_lights(0)
             , sh_count(0)
-            , env_map_idx(-1)
+            , env_map_idx(invalid_idx)
             , rebuild_deferred_cmd_buffer(true)
             , rebuild_mrt_cmd_buffers(true)
         {}

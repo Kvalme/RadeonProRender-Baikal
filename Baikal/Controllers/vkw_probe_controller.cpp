@@ -19,12 +19,13 @@ namespace Baikal
         vkw::ExecutionManager& execution_manager,
         uint32_t graphics_queue_index,
         uint32_t compute_queue_index)
-        : memory_manager_(memory_manager)
+
+        : device_(device)
+        , memory_manager_(memory_manager)
         , render_target_manager_(render_target_manager)
         , shader_manager_(shader_manager)
         , pipeline_manager_(pipeline_manager)
         , execution_manager_(execution_manager)
-        , device_(device)
         , utils_(device_)
         , graphics_queue_index_(graphics_queue_index)
         , compute_queue_index_(compute_queue_index)

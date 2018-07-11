@@ -49,23 +49,25 @@ namespace Baikal
      Scene represents a collection of objects such as ligths, meshes, volumes, etc. It also has a functionality
      to add, remove and change these objects.
      */
+
+    // Dirty flags are used to perform partial buffer updates to save traffic
+    using DirtyFlags = std::uint32_t;
+    enum class DirtyFlag : int {
+        kNone = 0x0,
+        kLights = 0x01,
+        kShapes = 0x02,
+        kShapeTransforms = 0x4,
+        kCamera = 0x8,
+        kBackground = 0x10,
+        kMaterial = 0x20,
+        kAll = kLights | kShapes | kShapeTransforms | kCamera | kBackground | kMaterial
+    };
+
     class Scene1
     {
     public:
         using Ptr = std::shared_ptr<Scene1>;
         static Ptr Create();
-        
-        // Dirty flags are used to perform partial buffer updates to save traffic
-        using DirtyFlags = std::uint32_t;
-        enum
-        {
-            kNone,
-            kLights,
-            kShapes,
-            kShapeTransforms,
-            kCamera,
-            kBackground
-        };
 
         struct EnvironmentOverride
         {
@@ -103,7 +105,7 @@ namespace Baikal
         // Get state change since last clear
         DirtyFlags GetDirtyFlags() const;
         // Set specified flag in dirty state
-        void SetDirtyFlag(DirtyFlags flag) const;
+        void SetDirtyFlag(DirtyFlag flag) const;
         // Clear all flags
         void ClearDirtyFlags() const;
 

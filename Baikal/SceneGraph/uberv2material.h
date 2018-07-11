@@ -23,6 +23,7 @@ THE SOFTWARE.
 #pragma once
 
 #include "material.h"
+#include <unordered_set>
 
 namespace Baikal
 {
@@ -107,13 +108,13 @@ namespace Baikal
         bool IsActive(const Input &input) const override;
 
     protected:
+
         UberV2Material();
         bool is_link_to_reflection_;
         bool is_double_sided_;
         bool is_multiscatter_;
         uint32_t layers_;
-        std::set<std::string> m_active_inputs;
-
+        std::unordered_set<std::string> m_active_inputs;
     };
 
 }

@@ -264,7 +264,7 @@ namespace Baikal
             VkBuffer directional_lights_transforms = scene.directional_lights_transforms != VK_NULL_HANDLE ? scene.directional_lights_transforms.get()
                 : dummy_buffer_.get();
 
-            VkImageView env_map = scene.env_map_idx == -1 ? black_pixel_.GetImageView() : scene.textures[scene.env_map_idx].GetImageView();
+            VkImageView env_map = scene.env_map_idx == VkwScene::invalid_idx ? black_pixel_.GetImageView() : scene.textures[scene.env_map_idx].GetImageView();
 
             VkBuffer env_map_irradiance = scene.env_map_irradiance_sh9 != VK_NULL_HANDLE ? scene.env_map_irradiance_sh9.get()
                 : dummy_buffer_.get();

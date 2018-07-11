@@ -35,7 +35,7 @@ namespace Baikal
 
     Scene1::~Scene1() = default;
 
-    Scene1::DirtyFlags Scene1::GetDirtyFlags() const
+    DirtyFlags Scene1::GetDirtyFlags() const
     {
         return m_impl->m_dirty_flags;
     }
@@ -45,15 +45,15 @@ namespace Baikal
         m_impl->m_dirty_flags = 0;
     }
 
-    void Scene1::SetDirtyFlag(DirtyFlags flag) const
+    void Scene1::SetDirtyFlag(DirtyFlag flag) const
     {
-        m_impl->m_dirty_flags = m_impl->m_dirty_flags | flag;
+        m_impl->m_dirty_flags = m_impl->m_dirty_flags | static_cast<int>(flag);
     }
 
     void Scene1::SetCamera(Camera::Ptr camera)
     {
         m_impl->m_camera = camera;
-        SetDirtyFlag(kCamera);
+        SetDirtyFlag(DirtyFlag::kCamera);
     }
 
     Camera::Ptr Scene1::GetCamera() const
@@ -75,7 +75,7 @@ namespace Baikal
         {
             m_impl->m_lights.push_back(light);
 
-            SetDirtyFlag(kLights);
+            SetDirtyFlag(DirtyFlag::kLights);
         }
     }
 
@@ -91,7 +91,7 @@ namespace Baikal
         {
             m_impl->m_lights.erase(citer);
             
-            SetDirtyFlag(kLights);
+            SetDirtyFlag(DirtyFlag::kLights);
         }
     }
 
@@ -120,7 +120,7 @@ namespace Baikal
         {
             m_impl->m_shapes.push_back(shape);
             
-            SetDirtyFlag(kShapes);
+            SetDirtyFlag(DirtyFlag::kShapes);
         }
     }
     
@@ -138,7 +138,7 @@ namespace Baikal
         {
             m_impl->m_shapes.erase(citer);
             
-            SetDirtyFlag(kShapes);
+            SetDirtyFlag(DirtyFlag::kShapes);
         }
     }
     
@@ -186,7 +186,7 @@ namespace Baikal
     void Scene1::SetBackgroundImage(Baikal::Texture::Ptr texture)
     {
         m_impl->m_background_texture = texture;
-        SetDirtyFlag(kBackground);
+        SetDirtyFlag(DirtyFlag::kBackground);
     }
 
     Baikal::Texture::Ptr Scene1::GetBackgroundImage() const

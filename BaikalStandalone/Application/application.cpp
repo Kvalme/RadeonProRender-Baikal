@@ -416,6 +416,7 @@ namespace Baikal
         }
 
         app_render_->Update(m_settings);
+        std::cout<<"Frame time: "<< dt.count() * 1000. << std::endl;
     }
 
     bool Application::GradeTimeBenchmarkResults(std::string const& scene, int time_in_sec, std::string& rating, RadeonRays::float3& color)

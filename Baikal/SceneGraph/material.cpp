@@ -8,8 +8,7 @@ namespace Baikal
 {
     Material::Material()
     : m_thin(false)
-    {
-    }
+    {}
 
     void Material::RegisterInput(std::string const& name,
                                  std::string const& desc,
@@ -17,7 +16,7 @@ namespace Baikal
     {
         Input input {{name, desc, std::move(supported_types)}, InputValue()};
 
-        assert(input.info.supported_types.size() > 0);
+        assert(!input.info.supported_types.empty());
 
         input.value.type = *input.info.supported_types.begin();
 
@@ -44,48 +43,22 @@ namespace Baikal
     void Material::ClearInputs()
     {
         m_inputs.clear();
+        m_materials_collected.clear();
+        m_textures_collected.clear();
     }
 
 
     // Iterator of dependent materials (plugged as inputs)
     std::unique_ptr<Iterator> Material::CreateMaterialIterator() const
     {
-        std::set<Material::Ptr> materials;
-
-        std::for_each(m_inputs.cbegin(), m_inputs.cend(),
-                      [&materials](std::pair<std::string, Input> const& map_entry)
-                      {
-                          if (map_entry.second.value.type == InputType::kMaterial &&
-                              map_entry.second.value.mat_value != nullptr)
-                          {
-                              materials.insert(map_entry.second.value.mat_value);
-                          }
-                      }
-                      );
-
+        std::set<Material::Ptr> materials(m_materials_collected);
         return std::make_unique<ContainerIterator<std::set<Material::Ptr>>>(std::move(materials));
     }
 
     // Iterator of textures (plugged as inputs)
     std::unique_ptr<Iterator> Material::CreateTextureIterator() const
     {
-        std::set<Texture::Ptr> textures;
-
-        std::for_each(m_inputs.cbegin(), m_inputs.cend(),
-                      [&textures](std::pair<std::string, Input> const& map_entry)
-                      {
-                          if (map_entry.second.value.type == InputType::kTexture &&
-                              map_entry.second.value.tex_value != nullptr)
-                          {
-                              textures.insert(map_entry.second.value.tex_value);
-                          }
-                          else if (map_entry.second.value.type == InputType::kInputMap)
-                          {
-                              map_entry.second.value.input_map_value->CollectTextures(textures);
-                          }
-                      }
-                      );
-
+        std::set<Texture::Ptr> textures(m_textures_collected);
         return std::make_unique<ContainerIterator<std::set<Texture::Ptr>>>(std::move(textures));
     }
 
@@ -93,7 +66,6 @@ namespace Baikal
     std::unique_ptr<Iterator> Material::CreateInputMapsIterator() const
     {
         std::set<Baikal::InputMap::Ptr> input_maps;
-
         for (auto &input : m_inputs)
         {
             if (IsActive(input.second) && (input.second.value.type == InputType::kInputMap))
@@ -101,8 +73,7 @@ namespace Baikal
                 input_maps.insert(input.second.value.input_map_value);
             }
         }
-
-        return std::make_unique<ContainerIterator<std::set<Baikal::InputMap::Ptr>>>(std::move(input_maps));
+        return std::make_unique<ContainerIterator<std::set<Baikal::InputMap::Ptr> > >(std::move(input_maps));
     }
 
     // Iterator of InputMap leafs
@@ -120,12 +91,12 @@ namespace Baikal
                 }
                 else
                 {
+                    //input_maps.insert(input.second.value.input_map_value);
                     input_maps.insert(input.second.value.input_map_value);
                 }
             }
         }
-
-        return std::make_unique<ContainerIterator<std::set<Baikal::InputMap::Ptr>>>(std::move(input_maps));
+        return std::make_unique<ContainerIterator<std::set<Baikal::InputMap::Ptr> > >(std::move(input_maps));
     }
 
     // Set input value
@@ -169,6 +140,7 @@ namespace Baikal
         auto& input = GetInput(name, InputType::kTexture);
         input.value.type = InputType::kTexture;
         input.value.tex_value = texture;
+        m_textures_collected.insert(texture);
         SetDirty(true);
     }
 
@@ -177,6 +149,7 @@ namespace Baikal
         auto& input = GetInput(name, InputType::kMaterial);
         input.value.type = InputType::kMaterial;
         input.value.mat_value = material;
+        m_materials_collected.insert(material);
         SetDirty(true);
     }
 
@@ -185,6 +158,12 @@ namespace Baikal
         auto& input = GetInput(name, InputType::kInputMap);
         input.value.type = InputType::kInputMap;
         input.value.input_map_value = inputMap;
+        if (inputMap)
+        {
+            std::set<Texture::Ptr> textures;
+            inputMap->CollectTextures(textures);
+            m_textures_collected.insert(textures.begin(), textures.end());
+        }
         SetDirty(true);
     }
 

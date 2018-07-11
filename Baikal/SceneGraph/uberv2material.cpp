@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 #include "uberv2material.h"
 #include "inputmaps.h"
+#include <algorithm>
 
 using namespace Baikal;
 using namespace RadeonRays;
@@ -104,6 +105,8 @@ UberV2Material::UberV2Material()
     //Normal mapping
     RegisterInput("uberv2.shading_normal", "Shading normal", { InputType::kInputMap });
     SetInputValue("uberv2.shading_normal", f_zero);
+
+    m_active_inputs.reserve(21u);
 }
 
 bool UberV2Material::HasEmission() const
@@ -136,10 +139,7 @@ void UberV2Material::SetLayers(uint32_t layers)
 
     auto add_inputs = [&](const std::vector<std::string> inputs)
     {
-        for (auto input_name : inputs)
-        {
-            m_active_inputs.insert(input_name);
-        }
+        m_active_inputs.insert(inputs.begin(), inputs.end());
     };
 
     m_active_inputs.clear();

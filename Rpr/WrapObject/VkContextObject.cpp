@@ -201,7 +201,8 @@ FramebufferObject* VkContextObject::CreateFrameBufferFromGLTexture(rpr_GLenum ta
 void VkContextObject::PrepareScene()
 {
     m_current_scene->AddEmissive();
-
+    
+    m_current_scene->GetScene()->GetCamera()->SetDirty(true);
     Baikal::VkwScene& scene = m_cfg.controller_->CompileScene(m_current_scene->GetScene());
     m_cfg.controller_->PostUpdate(*m_current_scene->GetScene(), scene);
 }

@@ -63,8 +63,8 @@ void main()
 
 	vec2 motion = position_ss - prev_position_ss - camera_jitter;
 
-	out_gbuffer_0 = vec4(n * 0.5f + 0.5f, ior.x);
+	out_gbuffer_0 = vec4(n * 0.5f + 0.5f, transparency.x);
 	out_gbuffer_1 = vec4(diffuse, 1.0);
 	out_gbuffer_2 = vec4(motion, 0, 0);
-	out_gbuffer_3 = vec4(roughness.x, metalness.x, mesh_id, transparency.x);
+	out_gbuffer_3 = vec4(roughness.x, metalness.x, mesh_id, ior.x);
 }

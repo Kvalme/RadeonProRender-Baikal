@@ -116,8 +116,8 @@ void main()
 
 	if (is_geometry == 0.f)
 	{	
-		const float aspect 	= camera.data.params.x;
-		const float fov 	= camera.data.params.y;
+		const float aspect 		= camera.data.params.x;
+		const float fov 		= camera.data.params.y;
 
 		vec2 env_uv = (uv * 2.0f - vec2(1.0f)) * tan(fov);
         env_uv.x = env_uv.x * aspect;
@@ -128,12 +128,11 @@ void main()
 
 		vec3 sp = CartesianToSpherical(r.xyz);
 		
-		float phi = sp.y;
-		float theta = sp.z;
+		float phi = 1.0f - sp.y / (2.f * PI);
+		float theta = 1.0f - sp.z / PI;
 
-		vec2 st = vec2(phi / (2 * PI), 1.0f - theta / PI);
-
-		env_map = texture(env_image, st).xyz;
+		const bool 	invert_x = false;
+		env_map = texture(env_image, vec2(invert_x ? 1.0f - phi : phi, theta)).xyz;
 	}
 
 	BRDFInputs brdf_inputs;
@@ -244,7 +243,8 @@ void main()
 		}
 
 
-		vec3 F0 = vec3(0.04); 
+		// Calculate indirect lighting
+		vec3 F0 = vec3(0.04);
 		F0 = mix(F0, brdf_inputs.albedo, brdf_inputs.metallic);
 
 		float NdotV = clamp(dot(N, V), 0.f, 1.f);
@@ -258,7 +258,7 @@ void main()
 		vec3 reflection = PrefilteredReflection(R, brdf_inputs.roughness).rgb;
 
 		VkSH9Color env_map_data = env_map_irradiance.data;
-		vec3 env_irradiance = EvaluateSHIrradiance(N, env_map_data) / PI;
+		vec3 env_irradiance = EvaluateSHIrradiance(N, env_map_data);
 		vec3 indirect_diffuse = (brdf_inputs.albedo / PI) * env_irradiance;
 		vec3 indirect_specular = reflection * (brdf.x * F + brdf.y);
 

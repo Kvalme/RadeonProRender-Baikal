@@ -129,8 +129,7 @@ vec3 prefilterEnvMap(vec3 R, float roughness)
 			float omegaS = 1.0 / (float(numSamples) * pdf);
 			// Solid angle of 1 pixel across all cube faces
 			float omegaP = 4.0 * PI / (6.0 * envMapDim * envMapDim);
-			// Biased (+1.0) mip level for better result
-			float mipLevel = roughness == 0.0 ? 0.0 : max(0.5 * log2(omegaS / omegaP) + 1.0, 0.0f);
+			float mipLevel = roughness == 0.0 ? 0.0 : max(0.5 * log2(omegaS / omegaP), 0.0f);
             mipLevel = clamp(mipLevel, 0.0f, push_consts.data.max_mips);
             color += textureLod(env_map, L, mipLevel).rgb * dotNL;
 
@@ -152,19 +151,11 @@ void main()
     const uint y = gl_GlobalInvocationID.y;
     const uint face = gl_GlobalInvocationID.z;
 
-    vec3 s = (x >= size.x || y >= size.y) ? vec3(0.f) : imageLoad(env_map_mips[mip], ivec3(x, y, face)).rgb;
+    if (x > size.x || y > size.y)
+		return;
 
-    float u = (x + 0.5f) / size.x;
-    float v = (y + 0.5f) / size.y;
-
-    u = u * 2.0f - 1.0f;
-    v = v * 2.0f - 1.0f;
-
-    const float temp = 1.0f + u * u + v * v;
-    const float weight = 4.0f / (sqrt(temp) * temp);
-
-    vec3 dir = MapXYSToDirection(x, y, face, size.x, size.y);
-    vec3 data = prefilterEnvMap(dir, push_consts.data.roughness);
+    vec3 dir 	= MapXYSToDirection(x, y, face, size.x, size.y);
+    vec3 data 	= prefilterEnvMap(dir, push_consts.data.roughness);
 
     imageStore(prefiltered_env_map, ivec3(x, y, face), vec4(data, 1));
 }

@@ -12,7 +12,7 @@ vec3 Uncharted2Tonemap(vec3 x)
 
 vec3 Tonemap(vec3 v)
 {
-	float exposure_bias = 2.0f;
+	float exposure_bias = 1.0f;
 
 	v 					= Uncharted2Tonemap(exposure_bias * v);
 	vec3 white_scale	= 1.0f / Uncharted2Tonemap(vec3(11.2f));

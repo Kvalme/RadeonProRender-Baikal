@@ -31,9 +31,12 @@ namespace Baikal
 
     {
         command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, compute_queue_index_));
+        
+        const uint32_t num_mips = static_cast<uint32_t>(floor(log2(env_map_size))) + 1;
 
         nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         linear_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        linear_sampler_cube_map_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, static_cast<float>(num_mips));
 
         vkGetDeviceQueue(device_, graphics_queue_index, 0, &graphics_queue_);
         vkGetDeviceQueue(device_, compute_queue_index, 0, &compute_queue_);
@@ -66,7 +69,6 @@ namespace Baikal
         convert_to_cubemap_shader_.SetArg(1, env_cube_map_.GetImageView(), nearest_sampler_.get());
         convert_to_cubemap_shader_.CommitArgs();
 
-        const uint32_t num_mips = static_cast<uint32_t>(floor(log2(env_map_size))) + 1;
         const uint32_t num_cube_faces = 6;
 
         sh9_buffers_.resize(num_mips);
@@ -198,7 +200,7 @@ namespace Baikal
         };
 
         prefilter_reflections_shader_.SetArgArray(0, env_map_mips, linear_sampler_.get());
-        prefilter_reflections_shader_.SetArg(1, env_cube_map_.GetImageView(), linear_sampler_.get());
+        prefilter_reflections_shader_.SetArg(1, env_cube_map_.GetImageView(), linear_sampler_cube_map_.get());
 
         for (uint32_t mip = 0; mip < num_mips; mip++)
         {

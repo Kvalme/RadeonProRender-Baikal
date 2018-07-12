@@ -72,6 +72,7 @@ namespace Baikal
 
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
         vkw::VkScopedObject<VkSampler>                  linear_sampler_;
+        vkw::VkScopedObject<VkSampler>                  linear_sampler_cube_map_;
 
         vkw::Shader                                     convert_to_cubemap_shader_;
         vkw::ComputePipeline                            convert_to_cubemap_pipeline_;

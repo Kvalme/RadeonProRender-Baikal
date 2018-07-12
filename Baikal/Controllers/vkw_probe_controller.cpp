@@ -208,10 +208,10 @@ namespace Baikal
             const uint32_t group_size = 8;
             const uint32_t group_count_x = (width + group_size - 1) / group_size;
             const uint32_t group_count_y = (height + group_size - 1) / group_size;
-          
+
             prefilter_reflections_shader_.SetArg(2, out.ibl_skylight_reflections.GetImageView(mip), linear_sampler_.get());
             prefilter_reflections_shader_.CommitArgs();
-            
+
             float roughness = (float)mip / (float)(num_mips - 1);
             PushConstsStruct push_constants = { mip, num_mips, roughness };
 

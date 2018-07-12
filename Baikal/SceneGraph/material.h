@@ -166,6 +166,8 @@ namespace Baikal
     private:
         // Input map
         InputMap m_inputs;
+        std::set<Material::Ptr> m_materials_collected;
+        std::set<Texture::Ptr> m_textures_collected;
         // Thin material
         bool m_thin;
     };

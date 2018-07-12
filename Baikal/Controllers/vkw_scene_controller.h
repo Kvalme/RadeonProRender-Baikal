@@ -60,16 +60,17 @@ namespace Baikal
     {
     public:
         // Constructor
-        VkwSceneController( VkDevice device, 
+        VkwSceneController( VkDevice device,
                             VkPhysicalDevice physical_device,
-                            vkw::MemoryAllocator& memory_allocator, 
+                            vkw::MemoryAllocator& memory_allocator,
                             vkw::MemoryManager& memory_manager,
                             vkw::ShaderManager& shader_manager,
                             vkw::RenderTargetManager& render_target_manager,
                             vkw::PipelineManager& pipeline_manager,
                             vkw::ExecutionManager& execution_manager,
                             uint32_t graphics_queue_index,
-                            uint32_t compute_queue_index);
+                            uint32_t compute_queue_index,
+                            DirtyFlags compile_update_flags);
         // Destructor
         virtual ~VkwSceneController();
 

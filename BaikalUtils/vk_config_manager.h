@@ -68,7 +68,7 @@ public:
         VkDebugReportCallbackEXT        debug_report_callback_;
     };
 
-    static void CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions);
+    static void CreateConfig(VkConfig& renderers, const std::vector<const char*> &requested_extensions, Baikal::DirtyFlags update_flags);
     static void CreateConfig(VkConfig& renderers, VkInstance instance, VkDevice device, VkPhysicalDevice physical_device,
         uint32_t graphics_queue_family_idx, uint32_t compute_queue_family_idx);
 

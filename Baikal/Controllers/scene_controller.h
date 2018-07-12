@@ -54,7 +54,7 @@ namespace Baikal
     {
     public:
         // Constructor
-        SceneController();
+        SceneController(DirtyFlags update_on_compile = static_cast<DirtyFlags>(DirtyFlag::kAll));
         // Destructor
         virtual ~SceneController() = default;
 
@@ -73,6 +73,9 @@ namespace Baikal
         void DropCameraDirty(Scene1 const& scene) const;
         // set dirty flag to false for iterator
         void DropDirty(Iterator& light_iterator) const;
+        // check flag for necessity of update on compile
+        bool HasCompileFlag(DirtyFlag flag) const;
+        static bool HasFlag(DirtyFlags flags, DirtyFlag flag);
     public:
         // Update camera data only.
         virtual void UpdateCamera(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, CompiledScene& out) const = 0;
@@ -101,6 +104,7 @@ namespace Baikal
         // Actions after all updates happened
         virtual void PostUpdate(Scene1 const& scene, CompiledScene& out) const = 0;
     private:
+        DirtyFlags m_update_on_compile_flags;
         mutable Scene1::Ptr m_current_scene;
         // Scene cache map (CPU scene -> GPU scene mapping)
         mutable std::map<Scene1::Ptr, CompiledScene> m_scene_cache;

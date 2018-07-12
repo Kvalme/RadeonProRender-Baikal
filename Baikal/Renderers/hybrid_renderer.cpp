@@ -3,24 +3,24 @@
 namespace Baikal
 {
     HybridRenderer::HybridRenderer(VkDevice device, vkw::MemoryManager& memory_manager,
-        vkw::ShaderManager& shader_manager,
-        vkw::RenderTargetManager& render_target_manager,
-        vkw::PipelineManager& pipeline_manager,
-        uint32_t graphics_queue_index,
-        uint32_t compute_queue_index)
-        : memory_manager_(memory_manager)
-        , render_target_manager_(render_target_manager)
-        , shader_manager_(shader_manager)
-        , pipeline_manager_(pipeline_manager)
-        , device_(device)
-        , utils_(device_)
-        , graphics_queue_index_(graphics_queue_index)
-        , compute_queue_index_(compute_queue_index)
-        , framebuffer_width_(0)
-        , framebuffer_height_(0)
-        , inv_framebuffer_width_(0)
-        , inv_framebuffer_height_(0)
-        , txaa_frame_idx_(0)
+                                   vkw::ShaderManager& shader_manager,
+                                   vkw::RenderTargetManager& render_target_manager,
+                                   vkw::PipelineManager& pipeline_manager,
+                                   uint32_t graphics_queue_index,
+                                   uint32_t compute_queue_index)
+            : memory_manager_(memory_manager)
+            , render_target_manager_(render_target_manager)
+            , shader_manager_(shader_manager)
+            , pipeline_manager_(pipeline_manager)
+            , device_(device)
+            , utils_(device_)
+            , graphics_queue_index_(graphics_queue_index)
+            , compute_queue_index_(compute_queue_index)
+            , framebuffer_width_(0)
+            , framebuffer_height_(0)
+            , inv_framebuffer_width_(0)
+            , inv_framebuffer_height_(0)
+            , txaa_frame_idx_(0)
     {
         command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, graphics_queue_index_));
 
@@ -30,7 +30,7 @@ namespace Baikal
         linear_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
         linear_sampler_clamp_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         prefiltered_reflections_clamp_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, 11.f);
-        
+
         deferred_finished_  = utils_.CreateSemaphore();
         g_buffer_finisned_  = utils_.CreateSemaphore();
         txaa_finished_      = utils_.CreateSemaphore();
@@ -38,20 +38,20 @@ namespace Baikal
         vkGetDeviceQueue(device_, graphics_queue_index, 0, &graphics_queue_);
         vkGetDeviceQueue(device_, compute_queue_index, 0, &compute_queue_);
 
-        txaa_sample_locations_ = 
-        {
-            RadeonRays::float2(-7.0f / 8.0f, 1.0f / 8.0f),
-            RadeonRays::float2(-5.0f / 8.0f, -5.0f / 8.0f),
-            RadeonRays::float2(-1.0f / 8.0f, -3.0f / 8.0f),
-            RadeonRays::float2(3.0f / 8.0f, -7.0f / 8.0f),
-            RadeonRays::float2(5.0f / 8.0f, -1.0f / 8.0f),
-            RadeonRays::float2(7.0f / 8.0f, 7.0f / 8.0f),
-            RadeonRays::float2(1.0f / 8.0f, 3.0f / 8.0f),
-            RadeonRays::float2(-3.0f / 8.0f, 5.0f / 8.0f)
-        };
+        txaa_sample_locations_ =
+                {
+                        RadeonRays::float2(-7.0f / 8.0f, 1.0f / 8.0f),
+                        RadeonRays::float2(-5.0f / 8.0f, -5.0f / 8.0f),
+                        RadeonRays::float2(-1.0f / 8.0f, -3.0f / 8.0f),
+                        RadeonRays::float2(3.0f / 8.0f, -7.0f / 8.0f),
+                        RadeonRays::float2(5.0f / 8.0f, -1.0f / 8.0f),
+                        RadeonRays::float2(7.0f / 8.0f, 7.0f / 8.0f),
+                        RadeonRays::float2(1.0f / 8.0f, 3.0f / 8.0f),
+                        RadeonRays::float2(-3.0f / 8.0f, 5.0f / 8.0f)
+                };
 
         VkExtent3D tex_size = {2, 2, 1};
-        
+
         float black_pixel_data[4] = { 0.f, 0.f, 0.f, 0.f };
         float inf_pixel_data[4] = { 1e20f, 1e20f, 1e20f, 1e20f };
 
@@ -63,7 +63,7 @@ namespace Baikal
     }
 
     void HybridRenderer::Clear(RadeonRays::float3 const& val,
-        Output& output) const
+                               Output& output) const
     {
 
     }
@@ -71,9 +71,9 @@ namespace Baikal
     void HybridRenderer::BuildDeferredCommandBuffer(VkDeferredPushConstants const& push_consts)
     {
         static std::vector<VkClearValue> clear_values =
-        {
-            { 0.f, 0.f, 0.f, 1.0f }
-        };
+                {
+                        { 0.f, 0.f, 0.f, 1.0f }
+                };
 
         VkDeviceSize offsets[1] = { 0 };
 
@@ -94,9 +94,9 @@ namespace Baikal
         VkBuffer vb = fullscreen_quad_vb_.get();
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
         vkCmdBindIndexBuffer(command_buffer, fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
-        
+
         vkCmdPushConstants(command_buffer, deferred_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VkDeferredPushConstants), &push_consts);
-        
+
         vkCmdDrawIndexed(command_buffer, 6, 1, 0, 0, 0);
 
         command_buffer_builder_->EndRenderPass();
@@ -107,82 +107,82 @@ namespace Baikal
     void HybridRenderer::BuildGbufferCommandBuffer(VkwScene const& scene)
     {
         static std::vector<VkClearValue> clear_values =
+                {
+                        { 0.f, 0.f, 0.f, 0.f },
+                        { 0.f, 0.f, 0.f, 1.f },
+                        { 0.f, 0.f, 0.f, 1.f },
+                        { 0.f, 0.f, 0.f, 1.f },
+                        { 1.f, 0.f }
+                };
+
+        command_buffer_builder_->BeginCommandBuffer();
+
+        VkCommandBuffer command_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.pipeline.get());
+
+        VkDeviceSize offsets[1] = { 0 };
+
+        VkBuffer vb = scene.mesh_vertex_buffer.get();
+        command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
+
+        for (size_t transform_pass = 0; transform_pass < scene.mesh_transforms.size(); transform_pass++)
         {
-            { 0.f, 0.f, 0.f, 0.f },
-            { 0.f, 0.f, 0.f, 1.f },
-            { 0.f, 0.f, 0.f, 1.f },
-            { 0.f, 0.f, 0.f, 1.f },
-            { 1.f, 0.f }
-        };
+            VkDescriptorSet desc_set = mrt_descriptor_sets[transform_pass].descriptor_set.get();
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
 
-         command_buffer_builder_->BeginCommandBuffer();
+            vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
+            vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
 
-         VkCommandBuffer command_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
+            vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
+            vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
 
-         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.pipeline.get());
+            size_t max_range = std::min((transform_pass + 1) * kMaxTransforms, scene.meshes.size());
+            size_t transform_id = 0;
 
-         VkDeviceSize offsets[1] = { 0 };
+            for (size_t mesh_id = transform_pass * kMaxTransforms; mesh_id < max_range; mesh_id++)
+            {
+                VkwScene::VkwMesh const& mesh = scene.meshes[mesh_id];
 
-         VkBuffer vb = scene.mesh_vertex_buffer.get();
-         command_buffer_builder_->BeginRenderPass(clear_values, g_buffer_);
+                VkwScene::Material::Value const diffuse = scene.materials[mesh.material_id].diffuse_color;
+                VkwScene::Material::Value const metalness = scene.materials[mesh.material_id].reflection_metalness;
+                VkwScene::Material::Value const roughness = scene.materials[mesh.material_id].reflection_roughness;
+                VkwScene::Material::Value const normal = scene.materials[mesh.material_id].shading_normal;
 
-         for (size_t transform_pass = 0; transform_pass < scene.mesh_transforms.size(); transform_pass++)
-         {
-             VkDescriptorSet desc_set = mrt_descriptor_sets[transform_pass].descriptor_set.get();
-             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mrt_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+                float diffuse_tex_id = diffuse.isTexture ? static_cast<float>(diffuse.texture_id) : -1;
+                float metalness_tex_id = metalness.isTexture ? static_cast<float>(metalness.texture_id) : -1;
+                float roughness_tex_id = roughness.isTexture ? static_cast<float>(roughness.texture_id) : -1;
+                float shading_normal_tex_id = normal.isTexture ? static_cast<float>(normal.texture_id) : -1;
 
-             vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
-             vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
+                VkMaterialConstants push_constants;
+                push_constants.data[0]   = static_cast<int>(mesh_id % 255 + 1);
+                push_constants.diffuse   = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
+                push_constants.metalness = float4(metalness.color.x, metalness.color.y, metalness.color.z, metalness_tex_id);
+                push_constants.roughness = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
+                push_constants.normal    = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
 
-             vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
-             vkCmdBindIndexBuffer(command_buffer, scene.mesh_index_buffer.get(), 0, VK_INDEX_TYPE_UINT32);
+                uint32_t vs_push_data[4] = { static_cast<uint32_t>(transform_id), 0, 0, 0 };
+                vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_push_data), &vs_push_data);
+                vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vs_push_data), sizeof(VkMaterialConstants), &push_constants);
 
-             size_t max_range = std::min((transform_pass + 1) * kMaxTransforms, scene.meshes.size());
-             size_t transform_id = 0;
+                vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
 
-             for (size_t mesh_id = transform_pass * kMaxTransforms; mesh_id < max_range; mesh_id++)
-             {
-                 VkwScene::VkwMesh const& mesh = scene.meshes[mesh_id];
+                transform_id++;
+                transform_id = transform_id % kMaxTransforms;
+            }
+        }
 
-                 VkwScene::Material::Value const diffuse = scene.materials[mesh.material_id].diffuse_color;
-                 VkwScene::Material::Value const metalness = scene.materials[mesh.material_id].reflection_metalness;
-                 VkwScene::Material::Value const roughness = scene.materials[mesh.material_id].reflection_roughness;
-                 VkwScene::Material::Value const normal = scene.materials[mesh.material_id].shading_normal;
+        command_buffer_builder_->EndRenderPass();
 
-                 float diffuse_tex_id = diffuse.isTexture ? static_cast<float>(diffuse.texture_id) : -1;
-                 float metalness_tex_id = metalness.isTexture ? static_cast<float>(metalness.texture_id) : -1;
-                 float roughness_tex_id = roughness.isTexture ? static_cast<float>(roughness.texture_id) : -1;
-                 float shading_normal_tex_id = normal.isTexture ? static_cast<float>(normal.texture_id) : -1;
-
-                 VkMaterialConstants push_constants;
-                 push_constants.data[0]   = static_cast<int>(mesh_id % 255 + 1);
-                 push_constants.diffuse   = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
-                 push_constants.metalness = float4(metalness.color.x, metalness.color.y, metalness.color.z, metalness_tex_id);
-                 push_constants.roughness = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
-                 push_constants.normal    = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
-
-                 uint32_t vs_push_data[4] = { static_cast<uint32_t>(transform_id), 0, 0, 0 };
-                 vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_push_data), &vs_push_data);
-                 vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vs_push_data), sizeof(VkMaterialConstants), &push_constants);
-
-                 vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_base, 0, 0);
-
-                 transform_id++;
-                 transform_id = transform_id % kMaxTransforms;
-             }
-         }
-
-         command_buffer_builder_->EndRenderPass();
-
-         g_buffer_cmd_ = command_buffer_builder_->EndCommandBuffer();
+        g_buffer_cmd_ = command_buffer_builder_->EndCommandBuffer();
     }
 
     void HybridRenderer::BuildTXAACommandBuffer(VkwOutput const& output)
     {
         static std::vector<VkClearValue> clear_values =
-        {
-            { 0.f, 0.f, 0.f, 1.0f }
-        };
+                {
+                        { 0.f, 0.f, 0.f, 1.0f }
+                };
 
         VkDeviceSize offsets[1] = { 0 };
 
@@ -359,34 +359,34 @@ namespace Baikal
         }
 
         VkBuffer point_lights = scene.point_lights != VK_NULL_HANDLE ? scene.point_lights.get()
-            : dummy_buffer_.get();
+                                                                     : dummy_buffer_.get();
 
         VkBuffer spot_lights = scene.spot_lights != VK_NULL_HANDLE ? scene.spot_lights.get()
-            : dummy_buffer_.get();
+                                                                   : dummy_buffer_.get();
 
         VkBuffer directional_lights = scene.directional_lights != VK_NULL_HANDLE ? scene.directional_lights.get()
-            : dummy_buffer_.get();
+                                                                                 : dummy_buffer_.get();
 
         VkBuffer point_lights_transforms = scene.point_lights_transforms != VK_NULL_HANDLE ? scene.point_lights_transforms.get()
-            : dummy_buffer_.get();
+                                                                                           : dummy_buffer_.get();
 
         VkBuffer spot_lights_transforms = scene.spot_lights_transforms != VK_NULL_HANDLE ? scene.spot_lights_transforms.get()
-            : dummy_buffer_.get();
+                                                                                         : dummy_buffer_.get();
 
         VkBuffer directional_lights_transforms = scene.directional_lights_transforms != VK_NULL_HANDLE ? scene.directional_lights_transforms.get()
-            : dummy_buffer_.get();
+                                                                                                       : dummy_buffer_.get();
 
         VkImageView env_map = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView()
-            : scene.textures[scene.env_map_idx].GetImageView();
+                                                              : scene.textures[scene.env_map_idx].GetImageView();
 
         VkImageView env_map_prefiltered_reflections = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView()
-            : scene.ibl_skylight_reflections.GetImageView();
+                                                                                      : scene.ibl_skylight_reflections.GetImageView();
 
         VkImageView brdf_lut = scene.env_map_idx == 0xFFFFFFFF ? black_pixel_.GetImageView()
-            : scene.ibl_brdf_lut.GetImageView();
+                                                               : scene.ibl_brdf_lut.GetImageView();
 
         VkBuffer env_map_irradiance = scene.env_map_irradiance_sh9 != VK_NULL_HANDLE ? scene.env_map_irradiance_sh9.get()
-            : dummy_buffer_.get();
+                                                                                     : dummy_buffer_.get();
 
         deferred_shader_.SetArg(5, scene.camera.get());
         deferred_shader_.SetArgArray(6, shadow_image_views, nearest_sampler_.get());
@@ -404,11 +404,11 @@ namespace Baikal
         deferred_shader_.CommitArgs();
 
         VkDeferredPushConstants push_consts = {
-            static_cast<int>(scene.light_count),
-            static_cast<int>(scene.num_point_lights),
-            static_cast<int>(scene.num_spot_lights),
-            static_cast<int>(scene.num_directional_lights),
-            scene.cascade_splits_dist
+                static_cast<int>(scene.light_count),
+                static_cast<int>(scene.num_point_lights),
+                static_cast<int>(scene.num_spot_lights),
+                static_cast<int>(scene.num_directional_lights),
+                scene.cascade_splits_dist
         };
 
         BuildDeferredCommandBuffer(push_consts);
@@ -495,7 +495,7 @@ namespace Baikal
             throw std::runtime_error("HybridRenderer: Internal error");
 
         if (scene.rebuild_deferred_pass)
-        {         
+        {
             UpdateDeferredPass(scene, *vk_output);
             scene.rebuild_deferred_pass = false;
         }
@@ -515,8 +515,8 @@ namespace Baikal
     }
 
     void HybridRenderer::RenderTile(VkwScene const& scene,
-        RadeonRays::int2 const& tile_origin,
-        RadeonRays::int2 const& tile_size)
+                                    RadeonRays::int2 const& tile_origin,
+                                    RadeonRays::int2 const& tile_size)
     {
 
     }
@@ -538,15 +538,15 @@ namespace Baikal
                 inv_framebuffer_height_ = 1.f / static_cast<float>(framebuffer_height_);
 
                 viewport_ = vkw::Utils::CreateViewport(
-                    static_cast<float>(output->width()),
-                    static_cast<float>(output->height()),
-                    0.f, 1.f);
+                        static_cast<float>(output->width()),
+                        static_cast<float>(output->height()),
+                        0.f, 1.f);
 
                 scissor_ =
-                {
-                    { 0, 0 },
-                    { output->width(), output->height() }
-                };
+                        {
+                                { 0, 0 },
+                                { output->width(), output->height() }
+                        };
             }
 
             if (type == OutputType::kColor)
@@ -581,24 +581,24 @@ namespace Baikal
         };
 
         Vertex vertices[4] =
-        {
-            { -1.0f, 1.0f, 0.0f, 1.0f },
-            { 1.0f, 1.0f, 0.0f, 1.0f },
-            { 1.0f, -1.0f, 0.0f, 1.0f },
-            { -1.0f, -1.0f, 0.0f, 1.0f }
-        };
+                {
+                        { -1.0f, 1.0f, 0.0f, 1.0f },
+                        { 1.0f, 1.0f, 0.0f, 1.0f },
+                        { 1.0f, -1.0f, 0.0f, 1.0f },
+                        { -1.0f, -1.0f, 0.0f, 1.0f }
+                };
 
         uint32_t indices[6] = { 0, 1, 2, 2, 3, 0 };
 
         fullscreen_quad_vb_ = memory_manager_.CreateBuffer(4 * sizeof(Vertex),
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            vertices);
+                                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                           VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                                           vertices);
 
         fullscreen_quad_ib_ = memory_manager_.CreateBuffer(6 * sizeof(uint32_t),
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            indices);
+                                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                           VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                                           indices);
 
         mrt_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/mrt.vert.spv", "../Baikal/Kernels/VK/mrt.frag.spv");
         deferred_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/deferred.frag.spv");
@@ -614,11 +614,11 @@ namespace Baikal
     void HybridRenderer::ResizeRenderTargets(uint32_t width, uint32_t height)
     {
         static std::vector<vkw::RenderTargetCreateInfo> attachments = {
-            { width, height, VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},     // normals
-            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // albedo
-            { width, height, VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },               // motion
-            { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // roughness, metalness, mesh id
-            { width, height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
+                { width, height, VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},     // normals
+                { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // albedo
+                { width, height, VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },               // motion
+                { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // roughness, metalness, mesh id
+                { width, height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
         };
 
         std::vector<VkPipelineColorBlendAttachmentState> blend_attachment_states;
@@ -658,11 +658,11 @@ namespace Baikal
         g_buffer_ = render_target_manager_.CreateRenderTarget(attachments);
 
         static std::vector<vkw::RenderTargetCreateInfo> deferred_attachments = {
-            { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT }
+                { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT }
         };
 
         static std::vector<vkw::RenderTargetCreateInfo> history_attachments = {
-            { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_ATTACHMENT_LOAD_OP_LOAD }
+                { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_ATTACHMENT_LOAD_OP_LOAD }
         };
 
         deferred_buffer_ = render_target_manager_.CreateRenderTarget(deferred_attachments);
@@ -673,18 +673,18 @@ namespace Baikal
         copy_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(copy_shader_, history_buffer_.render_pass.get());
 
         command_buffer_builder_->BeginCommandBuffer();
-        
+
         VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
         VkClearColorValue clear_color = { 0, 0, 0, 1 };
         VkCommandBuffer clear_cmd_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
 
         memory_manager_.TransitionImageLayout(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_FORMAT_R16G16B16A16_SFLOAT,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
+                                              VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
 
         vkCmdClearColorImage(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &image_range);
 
         memory_manager_.TransitionImageLayout(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_FORMAT_R16G16B16A16_SFLOAT,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+                                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
         vkw::CommandBuffer cmd_buffer = command_buffer_builder_->EndCommandBuffer();
 

@@ -253,13 +253,15 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, VkInstance instance, VkDevice 
                                                               *cfg.descriptor_manager_,
                                                               *cfg.pipeline_manager_,
                                                               *cfg.execution_manager_,
-                                                              *cfg.utils_);
+                                                              *cfg.utils_,
+                                                              static_cast<Baikal::DirtyFlags>
+                                                              (Baikal::DirtyFlag::kAll & ~Baikal::DirtyFlag::kMaterial));
 
     cfg.controller_ = cfg.factory_->CreateSceneController();
     cfg.renderer_ = cfg.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);
 }
 
-void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*> &requested_extensions)
+void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*> &requested_extensions, Baikal::DirtyFlags update_flags)
 {
     cfg.instance_ = CreateInstance(requested_extensions);
 
@@ -267,7 +269,7 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*>
                                     cfg.compute_queue_family_idx_,
                                     cfg.graphics_queue_family_idx_,
                                     &cfg.physical_device_);
-    
+
     cfg.memory_allocator_ = std::unique_ptr<vkw::MemoryAllocator>(new vkw::MemoryAllocator(cfg.device_.get(), cfg.physical_device_));
 
     cfg.memory_manager_ = std::unique_ptr<vkw::MemoryManager>(new vkw::MemoryManager(cfg.device_.get(),
@@ -292,7 +294,8 @@ void VkConfigManager::CreateConfig(VkConfig& cfg, const std::vector<const char*>
                                                               *cfg.descriptor_manager_,
                                                               *cfg.pipeline_manager_,
                                                               *cfg.execution_manager_,
-                                                              *cfg.utils_);
+                                                              *cfg.utils_,
+                                                              update_flags);
 
     cfg.controller_ = cfg.factory_->CreateSceneController();
     cfg.renderer_ = cfg.factory_->CreateRenderer(Baikal::VkwRenderFactory::RendererType::kHybrid);

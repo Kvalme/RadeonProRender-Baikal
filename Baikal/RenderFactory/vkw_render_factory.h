@@ -56,14 +56,16 @@ namespace Baikal
             , vkw::PipelineManager&       pipeline_manager
             , vkw::ExecutionManager&      execution_manager
             , vkw::Utils&                 utils
+            , DirtyFlags                  update_flags
+              = static_cast<DirtyFlags>(DirtyFlag::kAll)
         );
 
         // Create a renderer of specified type
         std::unique_ptr<Renderer<VkwScene>> CreateRenderer(RendererType type) const override;
-        
+
         // Create an output of specified type
         std::unique_ptr<Output> CreateOutput(std::uint32_t w, std::uint32_t h) const override;
-        
+
         // Create post effect of specified type
         std::unique_ptr<PostEffect> CreatePostEffect(PostEffectType type) const override;
 
@@ -83,5 +85,6 @@ namespace Baikal
         uint32_t                                    compute_queue_family_index_;
         VkDevice                                    device_;
         VkPhysicalDevice                            physical_device_;
+        DirtyFlags                                  update_flags_;
     };
 }

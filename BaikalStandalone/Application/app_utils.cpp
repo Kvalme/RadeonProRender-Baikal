@@ -166,6 +166,10 @@ namespace Baikal
             s.cmd_line_mode = true;
         }
 
+        bool materials_exclude = CmdOptionExists(argv, argv + argc, "-nomaterialupdate");
+        s.update_flags = materials_exclude ? static_cast<DirtyFlags>(DirtyFlag::kAll & ~DirtyFlag::kMaterial)
+                         : s.update_flags;
+
         return s;
     }
 
@@ -239,6 +243,7 @@ namespace Baikal
         , envmapmul(1.f)
         , platform_index(-1)
         , device_index(-1)
+        , update_flags(static_cast<DirtyFlags>(DirtyFlag::kAll))
     {
         #ifdef HYBRID_RENDERER
             camera_zcap = RadeonRays::float2(1.0f, 800.0f);

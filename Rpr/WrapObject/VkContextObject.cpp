@@ -84,7 +84,7 @@ VkContextObject::VkContextObject(rpr_creation_flags creation_flags, const rpr_co
 
             if (!interop_info)
             {
-                VkConfigManager::CreateConfig(m_cfg, std::vector<const char*>());
+                VkConfigManager::CreateConfig(m_cfg, std::vector<const char*>(),static_cast<Baikal::DirtyFlags>(Baikal::DirtyFlag::kAll & ~Baikal::DirtyFlag::kMaterial));
             }
             else
             {

@@ -34,8 +34,10 @@ namespace Baikal
         vkw::PipelineManager& pipeline_manager,
         vkw::ExecutionManager& execution_manager,
         uint32_t graphics_queue_index,
-        uint32_t compute_queue_index)
-        : memory_allocator_(memory_allocator)
+        uint32_t compute_queue_index,
+        DirtyFlags compile_update_flags)
+        : SceneController(compile_update_flags)
+        , memory_allocator_(memory_allocator)
         , memory_manager_(memory_manager)
         , render_target_manager_(render_target_manager)
         , shader_manager_(shader_manager)

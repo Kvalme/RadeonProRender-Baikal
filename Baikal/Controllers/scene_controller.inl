@@ -18,7 +18,9 @@ namespace Baikal
 {
     template <typename CompiledScene>
     inline
-    SceneController<CompiledScene>::SceneController() {}
+    SceneController<CompiledScene>::SceneController(DirtyFlags update_on_compile)
+    : m_update_on_compile_flags(update_on_compile)
+    {}
 
     template <typename CompiledScene>
     inline
@@ -35,9 +37,22 @@ namespace Baikal
 
     template <typename CompiledScene>
     inline
+    bool SceneController<CompiledScene>::HasCompileFlag(DirtyFlag flag) const {
+        return HasFlag(m_update_on_compile_flags, flag);
+    }
+
+    template <typename CompiledScene>
+    inline
+    bool SceneController<CompiledScene>::HasFlag(DirtyFlags flags, DirtyFlag flag) {
+        return (static_cast<DirtyFlag>(flags) & flag) != DirtyFlag::kNone;
+    }
+
+    template <typename CompiledScene>
+    inline
     CompiledScene& SceneController<CompiledScene>::CompileScene(
         Scene1::Ptr scene
     ) const {
+
         // The overall approach is:
         // 1) Check if materials have changed, update collector if yes
         // 2) Check if textures have changed, update collector if yes
@@ -48,222 +63,209 @@ namespace Baikal
         // As soon as we have this mapping we are analyzing dirty flags and
         // updating necessary parts.
 
-        // We need to make sure collectors are empty before proceeding
-        m_material_collector.Clear();
-        m_texture_collector.Clear();
-        m_volume_collector.Clear();
-        m_input_maps_collector.Clear();
-        m_input_map_leafs_collector.Clear();
-
         // Create shape and light iterators
         auto shape_iter = scene->CreateShapeIterator();
         auto light_iter = scene->CreateLightIterator();
 
         auto default_material = GetDefaultMaterial();
-        // Collect materials from shapes first
-        m_material_collector.Collect(*shape_iter,
-                              // This function adds all materials to resulting map
-                              // recursively via Material dependency API
-                              [default_material](SceneObject::Ptr item) ->
-                              std::set<SceneObject::Ptr>
-                              {
-                                  // Resulting material set
-                                  std::set<SceneObject::Ptr> mats;
-                                  // Material stack
-                                  std::stack<Material::Ptr> material_stack;
 
-                                  // Get material from current shape
-                                  auto shape = std::static_pointer_cast<Shape>(item);
-                                  auto material = shape->GetMaterial();
+        if (HasCompileFlag(DirtyFlag::kMaterial) || !m_material_collector.GetNumItems()) {
+            // We need to make sure collectors are empty before proceeding
+            m_material_collector.Clear();
+            m_volume_collector.Clear();
+            m_input_maps_collector.Clear();
+            m_input_map_leafs_collector.Clear();
+            // Collect materials from shapes first
+            m_material_collector.Collect(*shape_iter,
+                    // This function adds all materials to resulting map
+                    // recursively via Material dependency API
+                                         [default_material](SceneObject::Ptr item) ->
+                                                 std::set<SceneObject::Ptr> {
+                                             // Resulting material set
+                                             std::set<SceneObject::Ptr> mats;
+                                             // Material stack
+                                             std::stack<Material::Ptr> material_stack;
 
-                                  // If shape does not have a material, use default one
-                                  if (!material)
-                                  {
-                                      material = default_material;
-                                  }
+                                             // Get material from current shape
+                                             auto shape = std::static_pointer_cast<Shape>(item);
+                                             auto material = shape->GetMaterial();
 
-                                  // Push to stack as an initializer
-                                  material_stack.push(material);
+                                             // If shape does not have a material, use default one
+                                             if (!material) {
+                                                 material = default_material;
+                                             }
 
-                                  // Drain the stack
-                                  while (!material_stack.empty())
-                                  {
-                                      // Get current material
-                                      auto m = material_stack.top();
-                                      material_stack.pop();
+                                             // Push to stack as an initializer
+                                             material_stack.push(material);
 
-                                      // Emplace into the set
-                                      mats.emplace(m);
+                                             // Drain the stack
+                                             while (!material_stack.empty()) {
+                                                 // Get current material
+                                                 auto m = material_stack.top();
+                                                 material_stack.pop();
 
-                                      // Create dependency iterator
-                                      auto mat_iter = m->CreateMaterialIterator();
+                                                 // Emplace into the set
+                                                 mats.emplace(m);
 
-                                      // Push all dependencies into the stack
-                                      for (; mat_iter->IsValid(); mat_iter->Next())
-                                      {
-                                          material_stack.push(
-                                            mat_iter->ItemAs<Material>()
-                                          );
-                                      }
-                                  }
+                                                 // Create dependency iterator
+                                                 auto mat_iter = m->CreateMaterialIterator();
 
-                                  // Return resulting set
-                                  return mats;
-                              });
+                                                 // Push all dependencies into the stack
+                                                 for (; mat_iter->IsValid(); mat_iter->Next()) {
+                                                     material_stack.push(
+                                                             mat_iter->ItemAs<Material>()
+                                                     );
+                                                 }
+                                             }
 
-        // Commit stuff (we can iterate over it after commit has happened)
-        m_material_collector.Commit();
+                                             // Return resulting set
+                                             return mats;
+                                         });
 
-        // set iterator position at begin
-        shape_iter->Reset();
-        // Collect volume materials from shapes first
-        m_volume_collector.Collect(*shape_iter,
-                                    [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr>
-                                    {
-                                        // Resulting material set
-                                        std::set<SceneObject::Ptr> vol_mats;
+            // Commit stuff (we can iterate over it after commit has happened)
+            m_material_collector.Commit();
 
-                                        // Get volume material from current shape
-                                        auto shape = std::static_pointer_cast<Shape>(item);
-                                        auto volume_material = shape->GetVolumeMaterial();
+            // set iterator position at begin
+            shape_iter->Reset();
+            // Collect volume materials from shapes first
+            m_volume_collector.Collect(*shape_iter,
+                                       [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr> {
+                                           // Resulting material set
+                                           std::set<SceneObject::Ptr> vol_mats;
 
-                                        if (volume_material)
-                                            vol_mats.emplace(volume_material);
+                                           // Get volume material from current shape
+                                           auto shape = std::static_pointer_cast<Shape>(item);
+                                           auto volume_material = shape->GetVolumeMaterial();
 
-                                        return vol_mats;
-                                    });
+                                           if (volume_material)
+                                               vol_mats.emplace(volume_material);
 
-        // Commit stuff
-        m_volume_collector.Commit();
+                                           return vol_mats;
+                                       });
 
-        // Now we need to collect textures from our materials
-        // Create material iterator
-        auto mat_iter = m_material_collector.CreateIterator();
+            // Commit stuff
+            m_volume_collector.Commit();
 
-        // Collect textures from materials
-        m_texture_collector.Collect(*mat_iter,
-                                    [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr>
-                              {
-                                  // Texture set
-                                  std::set<SceneObject::Ptr> textures;
+            auto mat_iter = m_material_collector.CreateIterator();
+            m_input_maps_collector.Collect(*mat_iter,
+                                           [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr> {
+                                               // Texture set
+                                               std::set<SceneObject::Ptr> input_maps;
 
-                                  auto material = std::static_pointer_cast<Material>(item);
+                                               auto material = std::static_pointer_cast<Material>(item);
 
-                                  // Create texture dependency iterator
-                                  auto tex_iter = material->CreateTextureIterator();
+                                               // Create texture dependency iterator
+                                               auto input_map_iter = material->CreateInputMapsIterator();
 
-                                  // Emplace all dependent textures
-                                  for (; tex_iter->IsValid(); tex_iter->Next())
-                                  {
-                                      textures.emplace(tex_iter->ItemAs<Texture>());
-                                  }
+                                               // Emplace all dependent textures
+                                               for (; input_map_iter->IsValid(); input_map_iter->Next()) {
+                                                   input_maps.emplace(input_map_iter->ItemAs<InputMap>());
+                                               }
 
-                                  // Return resulting set
-                                  return textures;
-                              });
+                                               // Return resulting set
+                                               return input_maps;
+                                           });
+            m_input_maps_collector.Commit();
 
-        // Now we need to collect textures from volumes
-        // Create volume iterator
-        auto vol_iter = m_volume_collector.CreateIterator();
+            mat_iter->Reset();
+            m_input_map_leafs_collector.Collect(*mat_iter,
+                                                [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr> {
+                                                    // Texture set
+                                                    std::set<SceneObject::Ptr> input_maps;
 
-        // Collect textures from materials
-        m_texture_collector.Collect(*vol_iter,
-            [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr>
-        {
-            // Texture set
-            std::set<SceneObject::Ptr> textures;
+                                                    auto material = std::static_pointer_cast<Material>(item);
 
-            auto volume = std::static_pointer_cast<VolumeMaterial>(item);
+                                                    // Create texture dependency iterator
+                                                    auto input_map_iter = material->CreateInputMapLeafsIterator();
 
-            // Create texture dependency iterator
-            auto tex_iter = volume->CreateTextureIterator();
+                                                    // Emplace all dependent textures
+                                                    for (; input_map_iter->IsValid(); input_map_iter->Next()) {
+                                                        input_maps.emplace(input_map_iter->ItemAs<InputMap>());
+                                                    }
 
-            // Emplace all dependent textures
-            for (; tex_iter->IsValid(); tex_iter->Next())
-            {
-                textures.emplace(tex_iter->ItemAs<Texture>());
-            }
+                                                    // Return resulting set
+                                                    return input_maps;
+                                                });
+            m_input_map_leafs_collector.Commit();
+        }
 
-            // Return resulting set
-            return textures;
-        });
+        if (HasCompileFlag(DirtyFlag::kLights) || !m_texture_collector.GetNumItems()) {
+            m_texture_collector.Clear();
+            // Now we need to collect textures from our materials
+            // Create material iterator
+            auto mat_iter = m_material_collector.CreateIterator();
 
-        // Collect textures from lights
-        m_texture_collector.Collect(*light_iter,
-                                    [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr>
-                              {
-                                  // Resulting set
-                                  std::set<SceneObject::Ptr> textures;
+            // Collect textures from materials
+            m_texture_collector.Collect(*mat_iter,
+                                        [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr> {
+                                            // Texture set
+                                            std::set<SceneObject::Ptr> textures;
 
-                                  auto light = std::static_pointer_cast<Light>(item);
+                                            auto material = std::static_pointer_cast<Material>(item);
 
-                                  // Create texture dependency iterator
-                                  auto tex_iter = light->CreateTextureIterator();
+                                            // Create texture dependency iterator
+                                            auto tex_iter = material->CreateTextureIterator();
 
-                                  // Emplace all dependent textures
-                                  for (; tex_iter->IsValid(); tex_iter->Next())
-                                  {
-                                      textures.emplace(tex_iter->ItemAs<Texture>());
-                                  }
+                                            // Emplace all dependent textures
+                                            for (; tex_iter->IsValid(); tex_iter->Next()) {
+                                                textures.emplace(tex_iter->ItemAs<Texture>());
+                                            }
 
-                                  // Return resulting set
-                                  return textures;
-                              });
+                                            // Return resulting set
+                                            return textures;
+                                        });
 
-        mat_iter->Reset();
-        m_input_maps_collector.Collect(*mat_iter,
-                                [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr>
-                                {
-                                    // Texture set
-                                    std::set<SceneObject::Ptr> input_maps;
+            // Now we need to collect textures from volumes
+            // Create volume iterator
+            auto vol_iter = m_volume_collector.CreateIterator();
 
-                                    auto material = std::static_pointer_cast<Material>(item);
+            // Collect textures from materials
+            m_texture_collector.Collect(*vol_iter,
+                                        [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr> {
+                                            // Texture set
+                                            std::set<SceneObject::Ptr> textures;
 
-                                    // Create texture dependency iterator
-                                    auto input_map_iter = material->CreateInputMapsIterator();
+                                            auto volume = std::static_pointer_cast<VolumeMaterial>(item);
 
-                                    // Emplace all dependent textures
-                                    for (; input_map_iter->IsValid(); input_map_iter->Next())
-                                    {
-                                        input_maps.emplace(input_map_iter->ItemAs<InputMap>());
-                                    }
+                                            // Create texture dependency iterator
+                                            auto tex_iter = volume->CreateTextureIterator();
 
-                                    // Return resulting set
-                                    return input_maps;
-                                });
-        m_input_maps_collector.Commit();
+                                            // Emplace all dependent textures
+                                            for (; tex_iter->IsValid(); tex_iter->Next()) {
+                                                textures.emplace(tex_iter->ItemAs<Texture>());
+                                            }
 
-        mat_iter->Reset();
-        m_input_map_leafs_collector.Collect(*mat_iter,
-                                [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr>
-                                {
-                                    // Texture set
-                                    std::set<SceneObject::Ptr> input_maps;
+                                            // Return resulting set
+                                            return textures;
+                                        });
 
-                                    auto material = std::static_pointer_cast<Material>(item);
+            // Collect textures from lights
+            m_texture_collector.Collect(*light_iter,
+                                        [](SceneObject::Ptr item) -> std::set<SceneObject::Ptr> {
+                                            // Resulting set
+                                            std::set<SceneObject::Ptr> textures;
 
-                                    // Create texture dependency iterator
-                                    auto input_map_iter = material->CreateInputMapLeafsIterator();
+                                            auto light = std::static_pointer_cast<Light>(item);
 
-                                    // Emplace all dependent textures
-                                    for (; input_map_iter->IsValid(); input_map_iter->Next())
-                                    {
-                                        input_maps.emplace(input_map_iter->ItemAs<InputMap>());
-                                    }
+                                            // Create texture dependency iterator
+                                            auto tex_iter = light->CreateTextureIterator();
 
-                                    // Return resulting set
-                                    return input_maps;
-                                });
-        m_input_map_leafs_collector.Commit();
+                                            // Emplace all dependent textures
+                                            for (; tex_iter->IsValid(); tex_iter->Next()) {
+                                                textures.emplace(tex_iter->ItemAs<Texture>());
+                                            }
 
+                                            // Return resulting set
+                                            return textures;
+                                        });
+            // Add background texture from scene into texture collector
+            auto background_texture = scene->GetBackgroundImage();
+            if (background_texture)
+                m_texture_collector.Collect(background_texture);
 
-        // Add background texture from scene into texture collector
-        auto background_texture = scene->GetBackgroundImage();
-        if (background_texture)
-            m_texture_collector.Collect(background_texture);
-
-        // Commit textures
-        m_texture_collector.Commit();
+            // Commit textures
+            m_texture_collector.Commit();
+        }
 
         // Try to find scene in cache first
         auto iter = m_scene_cache.find(scene);
@@ -360,7 +362,7 @@ namespace Baikal
             auto camera_changed = camera->IsDirty();
 
             // Update camera if needed
-            if (dirty & Scene1::kCamera || camera_changed)
+            if (HasFlag(dirty, DirtyFlag::kCamera) || camera_changed)
             {
                 UpdateCamera(*scene, m_material_collector, m_texture_collector, m_volume_collector, out);
                 DropCameraDirty(*scene);
@@ -400,7 +402,7 @@ namespace Baikal
 
 
                 // Update lights if needed
-                if (dirty & Scene1::kLights || lights_changed ||
+                if (HasFlag(dirty, DirtyFlag::kLights) || lights_changed ||
                     should_update_textures || should_update_materials)
                 {
                     UpdateLights(*scene, m_material_collector, m_texture_collector, out);
@@ -433,7 +435,7 @@ namespace Baikal
                 }
 
                 // Update shapes if needed
-                if (dirty & Scene1::kShapes)
+                if (HasFlag(dirty, DirtyFlag::kShapes))
                 {
                     UpdateShapes(*scene, m_material_collector, m_texture_collector, m_volume_collector, out);
                     shape_iter->Reset();
@@ -476,7 +478,8 @@ namespace Baikal
             }
 
             // If background image need an update, do it.
-            if ((scene->GetDirtyFlags() & Scene1::kBackground) == Scene1::kBackground)
+            if ((static_cast<DirtyFlag>(scene->GetDirtyFlags()) & DirtyFlag::kBackground)
+                == DirtyFlag::kBackground)
             {
                 UpdateSceneAttributes(*scene, m_texture_collector, out);
             }

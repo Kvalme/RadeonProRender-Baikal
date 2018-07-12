@@ -22,7 +22,8 @@ namespace Baikal
         , vkw::DescriptorManager&     descriptor_manager
         , vkw::PipelineManager&       pipeline_manager
         , vkw::ExecutionManager&      execution_manager
-        , vkw::Utils&                 utils)            : memory_allocator_(memory_allocator)
+        , vkw::Utils&                 utils
+        , DirtyFlags                  update_flags)     : memory_allocator_(memory_allocator)
                                                         , memory_manager_(memory_manager)
                                                         , render_target_manager_(render_target_manager)
                                                         , shader_manager_(shader_manager)
@@ -34,6 +35,7 @@ namespace Baikal
                                                         , compute_queue_family_index_(compute_queue_family_index)
                                                         , device_(device)
                                                         , physical_device_(physical_device)
+                                                        , update_flags_(update_flags)
     {
     }
 
@@ -43,12 +45,12 @@ namespace Baikal
         switch (type)
         {
             case RendererType::kHybrid:
-                return std::unique_ptr<Renderer<VkwScene>>(new HybridRenderer(  device_, 
-                                                                                memory_manager_, 
-                                                                                shader_manager_, 
-                                                                                render_target_manager_, 
+                return std::unique_ptr<Renderer<VkwScene>>(new HybridRenderer(  device_,
+                                                                                memory_manager_,
+                                                                                shader_manager_,
+                                                                                render_target_manager_,
                                                                                 pipeline_manager_,
-                                                                                graphics_queue_family_index_, 
+                                                                                graphics_queue_family_index_,
                                                                                 compute_queue_family_index_));
             case RendererType::kUnidirectionalPathTracer:
                 throw std::runtime_error("Renderer not supported");
@@ -82,6 +84,7 @@ namespace Baikal
                                                     pipeline_manager_,
                                                     execution_manager_,
                                                     graphics_queue_family_index_,
-                                                    compute_queue_family_index_);
+                                                    compute_queue_family_index_,
+                                                    update_flags_);
     }
 }

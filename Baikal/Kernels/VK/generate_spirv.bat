@@ -1,17 +1,22 @@
-glslc -c -MD fullscreen_quad.vert -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD output.frag -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD mrt.vert -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD mrt.frag -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD deferred.vert -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD deferred.frag -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD depth_only.vert -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD depth_only.frag -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD convert_to_cubemap.comp -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD cubemap_sh9_project.comp -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD cubemap_sh9_downsample.comp -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD cubemap_sh9_final.comp -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD prefilter_reflections.comp -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD generate_cube_mips.comp -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD generate_brdf_lut.comp -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD txaa.frag -Dfloat4=vec4 -Dmatrix=mat4
-glslc -c -MD copy_rt.frag -Dfloat4=vec4 -Dmatrix=mat4
+for %%s in (
+        fullscreen_quad.vert
+        output.frag
+        mrt.vert
+        mrt.frag
+        deferred.vert
+        deferred.frag
+        depth_only.vert
+        depth_only.frag
+        convert_to_cubemap.comp
+        cubemap_sh9_project.comp
+        cubemap_sh9_downsample.comp
+        cubemap_sh9_final.comp
+        prefilter_reflections.comp
+        generate_cube_mips.comp
+        generate_brdf_lut.comp
+        txaa.frag
+        copy_rt.frag
+       ) do (
+         glslc -c -MD %%s -Dfloat4=vec4 -Dmatrix=mat4 -flimit-file limits.conf
+         del %%s.spv.d
+       )

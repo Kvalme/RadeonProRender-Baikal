@@ -4,7 +4,7 @@ const int kSpot = 0x3;
 const int kIbl = 0x4;
 const int kArea = 0x5;
 
-const int kMaxTextures = 64;
+const int kMaxTextures = 512;
 const int kMaxLights = 20;
 const int kMaxTransforms = 1024;
 

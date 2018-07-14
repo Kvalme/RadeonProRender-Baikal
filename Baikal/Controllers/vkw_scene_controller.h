@@ -67,7 +67,6 @@ namespace Baikal
                             vkw::ShaderManager& shader_manager,
                             vkw::RenderTargetManager& render_target_manager,
                             vkw::PipelineManager& pipeline_manager,
-                            vkw::ExecutionManager& execution_manager,
                             uint32_t graphics_queue_index,
                             uint32_t compute_queue_index,
                             DirtyFlags compile_update_flags);
@@ -129,7 +128,10 @@ namespace Baikal
         vkw::RenderTargetManager&                       render_target_manager_;
         vkw::ShaderManager&                             shader_manager_;
         vkw::PipelineManager&                           pipeline_manager_;
-        vkw::ExecutionManager&                          execution_manager_;
+
+        std::unique_ptr<vkw::CommandBufferBuilder>      command_builder_;
+        std::unique_ptr<vkw::ExecutionManager>          compute_execution_manager_;
+        std::unique_ptr<vkw::ExecutionManager>          graphics_execution_manager_;
         // Vulkan logical device
         VkDevice                                        device_;
         // Vulkan physical device

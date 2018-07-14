@@ -26,10 +26,11 @@ namespace Baikal
 
         InitializeResources();
 
-        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        linear_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);       
         linear_sampler_clamp_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         prefiltered_reflections_clamp_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, 11.f);
+
+        linear_samplers_repeat_.push_back(utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 0.f, 1.0f));
 
         deferred_finished_  = utils_.CreateSemaphore();
         g_buffer_finisned_  = utils_.CreateSemaphore();
@@ -346,16 +347,19 @@ namespace Baikal
     void HybridRenderer::UpdateDeferredPass(VkwScene const& scene, VkwOutput const& vk_output)
     {
         std::vector<VkImageView> shadow_image_views;
+        std::vector<VkSampler> shadow_samplers;
 
         for (auto const& tex : scene.shadows)
         {
             shadow_image_views.push_back(tex.attachments[0].view.get());
+            shadow_samplers.push_back(nearest_sampler_.get());
         }
 
         // Fill array with dummy textures to make validation layer happy
         while (shadow_image_views.size() < kMaxLights)
         {
             shadow_image_views.push_back(inf_pixel_.GetImageView());
+            shadow_samplers.push_back(nearest_sampler_.get());
         }
 
         VkBuffer point_lights = scene.point_lights != VK_NULL_HANDLE ? scene.point_lights.get()
@@ -389,14 +393,14 @@ namespace Baikal
                                                                                      : dummy_buffer_.get();
 
         deferred_shader_.SetArg(5, scene.camera.get());
-        deferred_shader_.SetArgArray(6, shadow_image_views, nearest_sampler_.get());
+        deferred_shader_.SetArgArray(6, shadow_image_views, shadow_samplers);
         deferred_shader_.SetArg(7, point_lights);
         deferred_shader_.SetArg(8, spot_lights);
         deferred_shader_.SetArg(9, directional_lights);
         deferred_shader_.SetArg(10, point_lights_transforms);
         deferred_shader_.SetArg(11, spot_lights_transforms);
         deferred_shader_.SetArg(12, directional_lights_transforms);
-        deferred_shader_.SetArg(13, env_map, linear_sampler_.get());
+        deferred_shader_.SetArg(13, env_map, linear_samplers_repeat_[0].get());
         deferred_shader_.SetArg(14, env_map_irradiance);
         deferred_shader_.SetArg(15, env_map_prefiltered_reflections, prefiltered_reflections_clamp_sampler_.get());
         deferred_shader_.SetArg(16, brdf_lut, linear_sampler_clamp_.get());
@@ -427,17 +431,31 @@ namespace Baikal
     void HybridRenderer::UpdateGbufferPass(VkwScene const& scene)
     {
         mrt_texture_image_views_.clear();
+        mrt_texture_samplers_.clear();
+
         mrt_texture_image_views_.reserve(kMaxTextures);
+        mrt_texture_samplers_.reserve(kMaxTextures);
 
         for (auto const& tex : scene.textures)
         {
             mrt_texture_image_views_.push_back(tex.GetImageView());
+
+            uint32_t num_mips = tex.GetNumMips();
+
+            if (static_cast<uint32_t>(linear_samplers_repeat_.size()) < num_mips)
+            {
+                for (size_t i = linear_samplers_repeat_.size(); i < num_mips; i++)
+                    linear_samplers_repeat_.push_back(utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 0.f, 1.0f + static_cast<float>(i)));
+            }
+
+            mrt_texture_samplers_.push_back(linear_samplers_repeat_[num_mips - 1].get());
         }
 
         // Fill array with dummy textures to make validation layer happy
         while (mrt_texture_image_views_.size() < kMaxTextures)
         {
             mrt_texture_image_views_.push_back(black_pixel_.GetImageView());
+            mrt_texture_samplers_.push_back(linear_samplers_repeat_[0].get());
         }
 
         if (mrt_descriptor_sets.size() < scene.mesh_transforms.size())
@@ -451,7 +469,7 @@ namespace Baikal
                 mrt_descriptor_sets[idx].SetArg(0, scene.camera.get());
                 mrt_descriptor_sets[idx].SetArg(1, scene.mesh_transforms[idx].get());
                 mrt_descriptor_sets[idx].SetArg(2, jitter_buffer_.get());
-                mrt_descriptor_sets[idx].SetArgArray(3, mrt_texture_image_views_, linear_sampler_.get());
+                mrt_descriptor_sets[idx].SetArgArray(3, mrt_texture_image_views_, mrt_texture_samplers_);
                 mrt_descriptor_sets[idx].CommitArgs();
             }
         }
@@ -678,13 +696,19 @@ namespace Baikal
         VkClearColorValue clear_color = { 0, 0, 0, 1 };
         VkCommandBuffer clear_cmd_buffer = command_buffer_builder_->GetCurrentCommandBuffer();
 
+        VkImageSubresourceRange image_sub_range = {};
+        image_sub_range.baseMipLevel = 0;
+        image_sub_range.levelCount = 1;
+        image_sub_range.baseArrayLayer = 0;
+        image_sub_range.layerCount = 1;
+
         memory_manager_.TransitionImageLayout(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_FORMAT_R16G16B16A16_SFLOAT,
-                                              VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
+                                              VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image_sub_range);
 
         vkCmdClearColorImage(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &image_range);
 
         memory_manager_.TransitionImageLayout(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_FORMAT_R16G16B16A16_SFLOAT,
-                                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+                                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, image_sub_range);
 
         vkw::CommandBuffer cmd_buffer = command_buffer_builder_->EndCommandBuffer();
 

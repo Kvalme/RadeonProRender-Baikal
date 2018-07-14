@@ -93,6 +93,7 @@ namespace Baikal
         std::vector<vkw::DescriptorSet>                 mrt_descriptor_sets;
         vkw::GraphicsPipeline                           mrt_pipeline_;
         std::vector<VkImageView>                        mrt_texture_image_views_;
+        std::vector<VkSampler>                          mrt_texture_samplers_;
 
         vkw::Shader                                     deferred_shader_;
         vkw::GraphicsPipeline                           deferred_pipeline_;
@@ -117,9 +118,11 @@ namespace Baikal
         VkDevice                                        device_;
 
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
-        vkw::VkScopedObject<VkSampler>                  linear_sampler_;
         vkw::VkScopedObject<VkSampler>                  linear_sampler_clamp_;
         vkw::VkScopedObject<VkSampler>                  prefiltered_reflections_clamp_sampler_;
+
+        // Samplers take into account existing mips, index in array gives sampler with corresponding mips num
+        std::vector<vkw::VkScopedObject<VkSampler>>     linear_samplers_repeat_;
 
         vkw::VkScopedObject<VkSemaphore>                g_buffer_finisned_;
         vkw::VkScopedObject<VkSemaphore>                deferred_finished_;

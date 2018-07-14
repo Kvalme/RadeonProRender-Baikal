@@ -52,7 +52,6 @@ public:
         std::unique_ptr<vkw::ShaderManager>         shader_manager_;
         std::unique_ptr<vkw::DescriptorManager>     descriptor_manager_;
         std::unique_ptr<vkw::PipelineManager>       pipeline_manager_;
-        std::unique_ptr<vkw::ExecutionManager>      execution_manager_;
 
         std::unique_ptr<vkw::Utils>                 utils_;
 

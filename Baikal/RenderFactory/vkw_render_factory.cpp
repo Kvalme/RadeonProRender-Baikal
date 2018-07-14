@@ -21,7 +21,6 @@ namespace Baikal
         , vkw::ShaderManager&         shader_manager
         , vkw::DescriptorManager&     descriptor_manager
         , vkw::PipelineManager&       pipeline_manager
-        , vkw::ExecutionManager&      execution_manager
         , vkw::Utils&                 utils
         , DirtyFlags                  update_flags)     : memory_allocator_(memory_allocator)
                                                         , memory_manager_(memory_manager)
@@ -29,7 +28,6 @@ namespace Baikal
                                                         , shader_manager_(shader_manager)
                                                         , descriptor_manager_(descriptor_manager)
                                                         , pipeline_manager_(pipeline_manager)
-                                                        , execution_manager_(execution_manager)
                                                         , utils_(utils)
                                                         , graphics_queue_family_index_(graphics_queue_family_index)
                                                         , compute_queue_family_index_(compute_queue_family_index)
@@ -82,7 +80,6 @@ namespace Baikal
                                                     shader_manager_,
                                                     render_target_manager_,
                                                     pipeline_manager_,
-                                                    execution_manager_,
                                                     graphics_queue_family_index_,
                                                     compute_queue_family_index_,
                                                     update_flags_);

@@ -184,12 +184,16 @@ namespace Baikal
             out.ibl_skylight_reflections.SetCubeTexture(&memory_manager_, extent, VK_FORMAT_R16G16B16A16_SFLOAT, true);
         }
 
-        std::vector<VkImageView> env_map_mips;
+        std::vector<VkImageView>    env_map_mips;
+        std::vector<VkSampler>      env_map_samplers;
+        
         env_map_mips.resize(num_mips);
+        env_map_samplers.resize(num_mips);
 
         for (uint32_t i = 0; i < num_mips; i++)
         {
             env_map_mips[i] = env_cube_map_.GetImageView(i);
+            env_map_samplers[i] = linear_sampler_.get();
         }
 
         struct PushConstsStruct
@@ -199,7 +203,7 @@ namespace Baikal
             float roughness;
         };
 
-        prefilter_reflections_shader_.SetArgArray(0, env_map_mips, linear_sampler_.get());
+        prefilter_reflections_shader_.SetArgArray(0, env_map_mips, env_map_samplers);
         prefilter_reflections_shader_.SetArg(1, env_cube_map_.GetImageView(), linear_sampler_cube_map_.get());
 
         for (uint32_t mip = 0; mip < num_mips; mip++)

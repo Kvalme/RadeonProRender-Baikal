@@ -32,7 +32,6 @@ namespace Baikal
         vkw::ShaderManager& shader_manager,
         vkw::RenderTargetManager& render_target_manager,
         vkw::PipelineManager& pipeline_manager,
-        vkw::ExecutionManager& execution_manager,
         uint32_t graphics_queue_index,
         uint32_t compute_queue_index,
         DirtyFlags compile_update_flags)
@@ -42,14 +41,17 @@ namespace Baikal
         , render_target_manager_(render_target_manager)
         , shader_manager_(shader_manager)
         , pipeline_manager_(pipeline_manager)
-        , execution_manager_(execution_manager)
         , device_(device)
         , physical_device_(physical_device)
         , shapes_changed_(false)
         , camera_changed_(false)
     {
+        compute_execution_manager_.reset(new vkw::ExecutionManager(device_, compute_queue_index));
+        graphics_execution_manager_.reset(new vkw::ExecutionManager(device_, graphics_queue_index));
+        command_builder_.reset(new vkw::CommandBufferBuilder(device_, graphics_queue_index));
+
         shadow_controller_.reset(new VkwShadowController(device, memory_manager, shader_manager, render_target_manager, pipeline_manager, graphics_queue_index, compute_queue_index));
-        probe_controller_.reset(new VkwProbeController(device, memory_manager, shader_manager, render_target_manager, pipeline_manager, execution_manager, graphics_queue_index, compute_queue_index));
+        probe_controller_.reset(new VkwProbeController(device, memory_manager, shader_manager, render_target_manager, pipeline_manager, *compute_execution_manager_.get(), graphics_queue_index, compute_queue_index));
     }
 
     Material::Ptr VkwSceneController::GetDefaultMaterial() const
@@ -636,7 +638,8 @@ namespace Baikal
 
         VkFormat fmt = GetTextureFormat(texture);
 
-        vk_texture.SetTexture(&memory_manager_, size, fmt, false, texture.GetSizeInBytes(), texture.GetData());
+        vk_texture.SetTexture(&memory_manager_, size, fmt, true, texture.GetSizeInBytes(), texture.GetData());
+        vk_texture.GenerateMips(*command_builder_.get(), *graphics_execution_manager_.get());
     }
 
     void VkwSceneController::WriteVolume(VolumeMaterial const& volume, Collector& tex_collector, void* data) const

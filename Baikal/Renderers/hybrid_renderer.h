@@ -64,6 +64,8 @@ namespace Baikal
         // Set output
         void SetOutput(OutputType type, Output* output) override;
 
+        void EnableTonemapper(bool enabled);
+
         void SetRandomSeed(std::uint32_t seed) override;
 
         // Set max number of light bounces
@@ -161,5 +163,7 @@ namespace Baikal
         RadeonRays::matrix                              prev_jitter_;
         const uint32_t                                  txaa_num_samples_ = 8;
         uint32_t                                        txaa_frame_idx_;
+
+        bool                                            tonemap_output_;
     };
 }

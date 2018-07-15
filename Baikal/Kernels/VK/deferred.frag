@@ -96,6 +96,9 @@ void main()
 	vec4	buffer_data3 = texture(g_buffer_3, uv);
 
 	float depth			= texture(g_buffer_4, uv).x;
+	
+	float roughness		= buffer_data3.x;
+	float metalness		= buffer_data3.y;
 	float mesh_id		= buffer_data3.z;
 
 	float is_geometry	= mesh_id > 0.f ? 1.f : 0.f;
@@ -137,8 +140,8 @@ void main()
 
 	BRDFInputs brdf_inputs;
 	brdf_inputs.albedo = albedo.xyz;
-	brdf_inputs.roughness = 0.1f;
-	brdf_inputs.metallic = 0.5f;
+	brdf_inputs.roughness = roughness;
+	brdf_inputs.metallic = metalness;
 	brdf_inputs.transparency = 0.f;
 
 	if (is_geometry == 1.f)
@@ -268,6 +271,10 @@ void main()
 		ambient_lighting = kD * indirect_diffuse + indirect_specular;
 	}
 	
-	vec3 final		= Tonemap(ambient_lighting + env_map + direct_lighting);
+	bool tonemap_output = bool(push_constants.data.options.x);
+	
+	vec3 final		= ambient_lighting + env_map + direct_lighting;
+	final			= tonemap_output ? Tonemap(final) : final;
+
 	color			= pow(vec4(final, 1.f), vec4(1.f / 2.2f));
 }

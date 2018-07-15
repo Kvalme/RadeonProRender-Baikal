@@ -21,6 +21,7 @@ namespace Baikal
             , inv_framebuffer_width_(0)
             , inv_framebuffer_height_(0)
             , txaa_frame_idx_(0)
+            , tonemap_output_(true)
     {
         command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, graphics_queue_index_));
 
@@ -412,7 +413,8 @@ namespace Baikal
                 static_cast<int>(scene.num_point_lights),
                 static_cast<int>(scene.num_spot_lights),
                 static_cast<int>(scene.num_directional_lights),
-                scene.cascade_splits_dist
+                scene.cascade_splits_dist,
+                RadeonRays::float4(static_cast<float>(tonemap_output_), 0.f, 0.f, 0.f)
         };
 
         BuildDeferredCommandBuffer(push_consts);
@@ -584,6 +586,12 @@ namespace Baikal
                 deferred_shader_.CommitArgs();
             }
         }
+    }
+
+
+    void HybridRenderer::EnableTonemapper(bool enabled)
+    {
+        tonemap_output_ = enabled;
     }
 
     void HybridRenderer::SetRandomSeed(std::uint32_t seed)

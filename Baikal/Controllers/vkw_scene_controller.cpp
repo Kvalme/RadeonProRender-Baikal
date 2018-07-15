@@ -154,7 +154,8 @@ namespace Baikal
                 mesh_bb.grow(pos);
                 scene_bounds.grow(pos);
 
-                Vertex vertex = { pos, mesh->GetNormals()[v], mesh->GetUVs()[v] };
+                RadeonRays::float2 uv = mesh->GetUVs()[v];
+                Vertex vertex = { pos, mesh->GetNormals()[v], RadeonRays::float2(uv.x, 1.0f - uv.y) };
                 vertex_buffer_.push_back(vertex);
             }
 

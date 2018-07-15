@@ -41,20 +41,21 @@ void main()
 	int ior_idx   			= int(material.data.ior.w);
 	int transparency_idx 	= int(material.data.transparency.w);
 
-	vec2 uv_ = vec2(uv.x, 1.0f - uv.y);
+	vec4 diffuse 	 	= diffuse_idx < 0 ? material.data.diffuse : texture(textures[diffuse_idx], uv);
+	vec3 metalness   	= metalness_idx < 0 ? material.data.metalness.xyz : texture(textures[metalness_idx], uv).xyz;
+	vec3 roughness 	 	= roughness_idx < 0 ? material.data.roughness.xyz : texture(textures[roughness_idx], uv).xyz;
+	vec3 ior	 	 	= ior_idx < 0 ? material.data.ior.xyz : texture(textures[ior_idx], uv).xyz;
+	vec3 transparency 	= transparency_idx < 0 ? material.data.transparency.xyz : texture(textures[transparency_idx], uv).xyz;
 
-	vec3 diffuse 	 	= diffuse_idx < 0 ? material.data.diffuse.xyz : pow(texture(textures[diffuse_idx], uv_).xyz, vec3(2.2f));
-	vec3 metalness   	= metalness_idx < 0 ? material.data.metalness.xyz : texture(textures[metalness_idx], uv_).xyz;
-	vec3 roughness 	 	= roughness_idx < 0 ? material.data.roughness.xyz : texture(textures[roughness_idx], uv_).xyz;
-	vec3 ior	 	 	= ior_idx < 0 ? material.data.ior.xyz : texture(textures[ior_idx], uv_).xyz;
-	vec3 transparency 	= transparency_idx < 0 ? material.data.transparency.xyz : texture(textures[transparency_idx], uv_).xyz;
+	// convert to linear space
+	diffuse.xyz = pow(diffuse.xyz, vec3(2.2f));
 
 	if (normal_idx >= 0)
 	{
 		// TBN calculation on the fly
-		mat3 TBN = CotangentFrame(n, position, uv_);
+		mat3 TBN = CotangentFrame(n, position, uv);
 
-		vec3 bump2normal = ConvertBumpToNormal(textures[normal_idx], uv_).xyz;
+		vec3 bump2normal = ConvertBumpToNormal(textures[normal_idx], uv).xyz;
 		n = TBN * bump2normal;
 	}
 
@@ -64,7 +65,7 @@ void main()
 	vec2 motion = position_ss - prev_position_ss - camera_jitter;
 
 	out_gbuffer_0 = vec4(n * 0.5f + 0.5f, transparency.x);
-	out_gbuffer_1 = vec4(diffuse, 1.0);
+	out_gbuffer_1 = vec4(diffuse.xyz, 1.0);
 	out_gbuffer_2 = vec4(motion, 0, 0);
 	out_gbuffer_3 = vec4(roughness.x, metalness.x, mesh_id, ior.x);
 }

@@ -30,9 +30,10 @@ namespace Baikal
         nearest_sampler_ = utils_.CreateSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);       
         linear_sampler_clamp_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         prefiltered_reflections_clamp_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, 11.f);
+        shadow_sampler_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, 1.f, VK_TRUE, VK_COMPARE_OP_LESS);
 
         linear_samplers_repeat_.push_back(utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 0.f, 1.0f));
-
+        
         deferred_finished_  = utils_.CreateSemaphore();
         g_buffer_finisned_  = utils_.CreateSemaphore();
         txaa_finished_      = utils_.CreateSemaphore();
@@ -353,14 +354,14 @@ namespace Baikal
         for (auto const& tex : scene.shadows)
         {
             shadow_image_views.push_back(tex.attachments[0].view.get());
-            shadow_samplers.push_back(nearest_sampler_.get());
+            shadow_samplers.push_back(shadow_sampler_.get());
         }
 
         // Fill array with dummy textures to make validation layer happy
         while (shadow_image_views.size() < kMaxLights)
         {
             shadow_image_views.push_back(inf_pixel_.GetImageView());
-            shadow_samplers.push_back(nearest_sampler_.get());
+            shadow_samplers.push_back(shadow_sampler_.get());
         }
 
         VkBuffer point_lights = scene.point_lights != VK_NULL_HANDLE ? scene.point_lights.get()

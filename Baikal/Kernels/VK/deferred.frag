@@ -26,7 +26,7 @@ layout (binding = 5) uniform CameraInfo
 	VkCamera data;
 } camera;
 
-layout (binding = 6) uniform sampler2D shadow_map[kMaxLights];
+layout (binding = 6) uniform sampler2DShadow shadow_map[kMaxLights];
 
 // Lights info
 layout (binding = 7) uniform PointLightsInfo

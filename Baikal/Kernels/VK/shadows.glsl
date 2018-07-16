@@ -1,3 +1,4 @@
+/*
 float SampleShadow(sampler2D s, vec3 p, vec3 shadow_uv, float bias, float scale)
 {
 	float shadow = 1.0f;
@@ -11,4 +12,25 @@ float SampleShadow(sampler2D s, vec3 p, vec3 shadow_uv, float bias, float scale)
 	}
 
 	return shadow;
+}
+*/
+
+float SampleShadow(sampler2DShadow s, vec3 p, vec3 shadow_uv, float bias, float scale)
+{
+	float shadow = 0.0f;
+	shadow_uv.z = shadow_uv.z - bias;
+	
+	int count = 0;
+	int range = 1;
+
+	for (int x = -range; x <= range; x++)
+	{
+		for (int y = -range; y <= range; y++)
+		{
+			shadow += texture(s, vec3(shadow_uv + vec3(vec2(x, y) * scale * 0.5f, 0.f))).r;
+			count++;
+		}
+	}
+
+	return shadow / count;
 }

@@ -119,6 +119,7 @@ namespace Baikal
 
         VkDevice                                        device_;
 
+        vkw::VkScopedObject<VkSampler>                  shadow_sampler_;
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
         vkw::VkScopedObject<VkSampler>                  linear_sampler_clamp_;
         vkw::VkScopedObject<VkSampler>                  prefiltered_reflections_clamp_sampler_;

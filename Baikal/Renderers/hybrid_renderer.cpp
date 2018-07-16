@@ -570,6 +570,8 @@ namespace Baikal
                         };
             }
 
+            ClearTemporalHistory();
+
             if (type == OutputType::kColor)
             {
                 VkwOutput* vk_output = dynamic_cast<VkwOutput*>(output);
@@ -698,7 +700,10 @@ namespace Baikal
         deferred_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(deferred_shader_, deferred_buffer_.render_pass.get());
         mrt_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(mrt_shader_, g_buffer_.render_pass.get(), &pipeline_state);
         copy_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(copy_shader_, history_buffer_.render_pass.get());
+    }
 
+    void HybridRenderer::ClearTemporalHistory()
+    {
         command_buffer_builder_->BeginCommandBuffer();
 
         VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
@@ -712,12 +717,12 @@ namespace Baikal
         image_sub_range.layerCount = 1;
 
         memory_manager_.TransitionImageLayout(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_FORMAT_R16G16B16A16_SFLOAT,
-                                              VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image_sub_range);
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image_sub_range);
 
         vkCmdClearColorImage(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &image_range);
 
         memory_manager_.TransitionImageLayout(clear_cmd_buffer, history_buffer_.attachments[0].image.get(), VK_FORMAT_R16G16B16A16_SFLOAT,
-                                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, image_sub_range);
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, image_sub_range);
 
         vkw::CommandBuffer cmd_buffer = command_buffer_builder_->EndCommandBuffer();
 

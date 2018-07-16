@@ -73,7 +73,8 @@ namespace Baikal
     protected:
         void InitializeResources();
         void ResizeRenderTargets(uint32_t width, uint32_t height);
-        
+        void ClearTemporalHistory();
+
         void UpdateDeferredPass(VkwScene const& scene, VkwOutput const& vk_output);
         void UpdateGbufferPass(VkwScene const& scene);
         void UpdateJitterBuffer();

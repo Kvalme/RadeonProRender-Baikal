@@ -691,7 +691,7 @@ namespace Baikal
         };
 
         static std::vector<vkw::RenderTargetCreateInfo> history_attachments = {
-                { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_ATTACHMENT_LOAD_OP_LOAD }
+                { width, height, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE }
         };
 
         deferred_buffer_ = render_target_manager_.CreateRenderTarget(deferred_attachments);

@@ -27,7 +27,12 @@ void main()
 {
     int probe_idx = push_consts.probe_idx;
 
-    SH9Color src_sh[6] = { srcShColor[0], srcShColor[1], srcShColor[2], srcShColor[3], srcShColor[4], srcShColor[5] };
+    SH9Color src_sh[6];
+
+    for (int i = 0; i < 6; i++)
+    {
+        src_sh[i] = srcShColor[i];
+    }
     
     for (int j = 0; j < 9; j++)
         dstShColor[probe_idx].coefficients[j] = vec4(0.f);

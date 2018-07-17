@@ -34,7 +34,7 @@ layout (binding = 2) uniform JitterInfo
 } jitter;
 
 layout(push_constant) uniform VsPushConsts {
-    uvec4 	data; // transform id
+    uint data[4]; // transform id
 } vs_consts;
 
 out gl_PerVertex
@@ -44,7 +44,7 @@ out gl_PerVertex
 
 void main()
 {
-	uint transform_idx 	= clamp(vs_consts.data.x, 0, kMaxTransforms);
+	uint transform_idx 	= clamp(vs_consts.data[0], 0, kMaxTransforms);
 	matrix	transform 	= transforms.data[transform_idx];
 
 	position_ps 		= inPosition * transform * camera.data.view_proj * jitter.data.jitter;

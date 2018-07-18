@@ -246,7 +246,8 @@ namespace Baikal
         , update_flags(static_cast<DirtyFlags>(DirtyFlag::kAll))
     {
         #ifdef HYBRID_RENDERER
-            camera_zcap = RadeonRays::float2(1.0f, 800.0f);
+            // planes are swapped - we use inverse z
+            camera_zcap = RadeonRays::float2(800.0f, 1.0f);
         #endif
     }
 }

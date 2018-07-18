@@ -115,7 +115,7 @@ namespace Baikal
                         { 0.f, 0.f, 0.f, 1.f },
                         { 0.f, 0.f, 0.f, 1.f },
                         { 0.f, 0.f, 0.f, 1.f },
-                        { 1.f, 0.f }
+                        { 0.f, 0.f }
                 };
 
         command_buffer_builder_->BeginCommandBuffer();
@@ -680,9 +680,19 @@ namespace Baikal
         rasterization_state.depthClampEnable = VK_FALSE;
         rasterization_state.lineWidth = 1.0f;
 
+        VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {};
+        depth_stencil_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depth_stencil_state.pNext = nullptr;
+        depth_stencil_state.depthTestEnable = VK_TRUE;
+        depth_stencil_state.depthWriteEnable = VK_TRUE;
+        depth_stencil_state.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+        depth_stencil_state.back.compareOp = VK_COMPARE_OP_ALWAYS;
+        depth_stencil_state.front = depth_stencil_state.back;
+
         vkw::GraphicsPipelineState pipeline_state;
         pipeline_state.color_blend_state = &color_blend_state;
         pipeline_state.rasterization_state = &rasterization_state;
+        pipeline_state.depth_stencil_state = &depth_stencil_state;
 
         g_buffer_ = render_target_manager_.CreateRenderTarget(attachments);
 

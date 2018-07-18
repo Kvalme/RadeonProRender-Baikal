@@ -245,14 +245,14 @@ namespace Baikal
     {
         std::vector<RadeonRays::float4> frustum_corners_ws =
         {
-            RadeonRays::float4(-1.0f,  1.0f, 0.0f, 1.0f),
-            RadeonRays::float4(1.0f,  1.0f, 0.0f, 1.0f),
-            RadeonRays::float4(1.0f, -1.0f, 0.0f, 1.0f),
-            RadeonRays::float4(-1.0f, -1.0f, 0.0f, 1.0f),
             RadeonRays::float4(-1.0f,  1.0f, 1.0f, 1.0f),
             RadeonRays::float4(1.0f,  1.0f, 1.0f, 1.0f),
             RadeonRays::float4(1.0f, -1.0f, 1.0f, 1.0f),
             RadeonRays::float4(-1.0f, -1.0f, 1.0f, 1.0f),
+            RadeonRays::float4(-1.0f,  1.0f, 0.0f, 1.0f),
+            RadeonRays::float4(1.0f,  1.0f, 0.0f, 1.0f),
+            RadeonRays::float4(1.0f, -1.0f, 0.0f, 1.0f),
+            RadeonRays::float4(-1.0f, -1.0f, 0.0f, 1.0f),
         };
 
         const matrix proj = MakeProjectionMatrix(camera);
@@ -409,9 +409,9 @@ namespace Baikal
                     const float shadow_clip_threshold = 0.01f;
                     const float near_plane = 0.1f;
                     const float far_plane = std::sqrt(std::abs(max_emitted_radiance / shadow_clip_threshold));
-
+                    
                     const matrix view = lookat_lh_dx(p, p - d * 2.0f, float3(0.f, 1.f, 0.f));
-                    const matrix proj = perspective_proj_fovy_rh_gl(acos(cone_shape.y), 1.0f, near_plane, far_plane);
+                    const matrix proj = PerspectiveProjFovyRhVulkan(acos(cone_shape.y), 1.0f, near_plane, far_plane);
 
                     spot_light_view_proj.push_back(proj * view);
                     lights_view_proj.push_back(proj * view);
@@ -520,8 +520,8 @@ namespace Baikal
         }
 
         out.cascade_splits_dist = RadeonRays::float4(split_dists_[0], split_dists_[1], split_dists_[2], split_dists_[3]);
-        out.cascade_splits_dist *= camera->GetDepthRange().y;
-        out.cascade_splits_dist.w *= camera->GetDepthRange().y;
+        out.cascade_splits_dist *= camera->GetDepthRange().x;
+        out.cascade_splits_dist.w *= camera->GetDepthRange().x;
 
         if (shadowmap_descriptor_sets_.size() < out.mesh_transforms.size())
         {

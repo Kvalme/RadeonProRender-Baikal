@@ -14,8 +14,11 @@ for %%s in (
         prefilter_reflections.comp
         generate_cube_mips.comp
         generate_brdf_lut.comp
+        log_luminance.frag
+        log_luminance_adapt.frag
         txaa.frag
         copy_rt.frag
+        tonemap.frag
        ) do (
          glslc -c -MD %%s -Dfloat4=vec4 -Dmatrix=mat4 -flimit-file limits.conf
          del %%s.spv.d

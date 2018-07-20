@@ -51,7 +51,7 @@ namespace BaikalRPR
             // VK_FORMAT_UNDEFINED means that any format is available
             if (surface_formats[0].format == VK_FORMAT_UNDEFINED)
             {
-                window_surface_format.format = VK_FORMAT_B8G8R8A8_UNORM;
+                window_surface_format.format = VK_FORMAT_B8G8R8A8_SRGB;
                 window_surface_format.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
             }
             else
@@ -61,7 +61,7 @@ namespace BaikalRPR
         }
         else
         {
-            std::vector<VkFormat> request_surface_format = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
+            std::vector<VkFormat> request_surface_format = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8_SRGB, VK_FORMAT_R8G8B8_SRGB };
             VkColorSpaceKHR request_surface_color_space = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 
             bool found = false;

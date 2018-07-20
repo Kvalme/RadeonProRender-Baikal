@@ -100,3 +100,8 @@ vec3 CartesianToSpherical(vec3 cart)
 	
 	return vec3(r, phi, theta);
 }
+
+float Luminance(vec3 clr)
+{
+    return max(dot(clr, vec3(0.299f, 0.587f, 0.114f)), 0.00001f);
+}

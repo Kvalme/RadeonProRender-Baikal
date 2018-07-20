@@ -5,6 +5,8 @@
 
 #include "common_structures.glsl"
 #include "tonemap.glsl"
+#include "common.glsl"
+#include "utils.glsl"
 
 layout (location = 0) in vec2 tex_coord;
 
@@ -13,11 +15,6 @@ layout (binding = 2) uniform sampler2D history_buffer;
 layout (binding = 3) uniform sampler2D motion_buffer;
 
 layout (location = 0) out vec4 color;
-
-float Luminance(vec3 clr)
-{
-    return dot(clr, vec3(0.299f, 0.587f, 0.114f));
-}
 
  float FilterCubic(float x, float B, float C)
 {

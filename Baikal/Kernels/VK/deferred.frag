@@ -271,10 +271,6 @@ void main()
 		ambient_lighting = kD * indirect_diffuse + indirect_specular;
 	}
 	
-	bool tonemap_output = bool(push_constants.data.options.x);
-	
 	vec3 final		= ambient_lighting + env_map + direct_lighting;
-	final			= tonemap_output ? Tonemap(final) : final;
-
-	color			= pow(vec4(final, 1.f), vec4(1.f / 2.2f));
+	color			= vec4(final, 1.0f);
 }

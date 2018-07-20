@@ -81,12 +81,16 @@ namespace Baikal
 
         void BuildDeferredCommandBuffer(VkDeferredPushConstants const& push_consts);
         void BuildGbufferCommandBuffer(VkwScene const& scene);
-        void BuildTXAACommandBuffer(VkwOutput const& output);
-        void BuildCopyCmdBuffer();
+        void BuildTXAACommandBuffer();
+        void BuildCopyCommandBuffer();
+        void BuildCalcLuminanceCommandBuffer();
+        void BuildTonemapperCommandBuffer(VkwOutput const& output);
 
         void DrawGbufferPass(VkwScene const& scene);
         void DrawDeferredPass(VkwScene const& scene);
+        void DrawCalcLuminancePass();
         void DrawTXAAPass();
+        void DrawTonemapPass();
         void CopyToHistoryBuffer(VkwOutput const& output);
     protected:
         vkw::VkScopedObject<VkBuffer>                   fullscreen_quad_vb_;
@@ -100,6 +104,15 @@ namespace Baikal
 
         vkw::Shader                                     deferred_shader_;
         vkw::GraphicsPipeline                           deferred_pipeline_;
+
+        vkw::Shader                                     log_luminance_shader_;
+        vkw::GraphicsPipeline                           log_luminance_pipeline_;
+
+        vkw::Shader                                     log_luminance_adapt_shader_;
+        vkw::GraphicsPipeline                           log_luminance_adapt_pipeline_;
+
+        vkw::Shader                                     tonemap_shader_;
+        vkw::GraphicsPipeline                           tonemap_pipeline_;
 
         vkw::Shader                                     txaa_shader_;
         vkw::GraphicsPipeline                           txaa_pipeline_;
@@ -115,14 +128,23 @@ namespace Baikal
         vkw::RenderTarget                               g_buffer_;
         vkw::RenderTarget                               deferred_buffer_;
         vkw::RenderTarget                               history_buffer_;
+        vkw::RenderTarget                               txaa_buffer_;
 
-        std::unique_ptr<vkw::CommandBufferBuilder>      command_buffer_builder_;
+        vkw::RenderTarget                               luminance_buffer_;
+        vkw::Texture                                    luminance_downsampled_buffer_;
+        vkw::RenderTarget                               prev_lum_buffer_;
+        vkw::RenderTarget                               adapted_lum_buffer_;
+
+        std::unique_ptr<vkw::CommandBufferBuilder>      graphics_command_buffer_builder_;
+        std::unique_ptr<vkw::CommandBufferBuilder>      compute_command_buffer_builder_;
+        std::unique_ptr<vkw::ExecutionManager>          compute_execution_manager_;
 
         VkDevice                                        device_;
 
         vkw::VkScopedObject<VkSampler>                  shadow_sampler_;
         vkw::VkScopedObject<VkSampler>                  nearest_sampler_;
         vkw::VkScopedObject<VkSampler>                  linear_sampler_clamp_;
+        vkw::VkScopedObject<VkSampler>                  linear_lum_sampler_clamp_;
         vkw::VkScopedObject<VkSampler>                  prefiltered_reflections_clamp_sampler_;
 
         // Samplers take into account existing mips, index in array gives sampler with corresponding mips num
@@ -131,6 +153,8 @@ namespace Baikal
         vkw::VkScopedObject<VkSemaphore>                g_buffer_finisned_;
         vkw::VkScopedObject<VkSemaphore>                deferred_finished_;
         vkw::VkScopedObject<VkSemaphore>                txaa_finished_;
+        vkw::VkScopedObject<VkSemaphore>                calc_luminance_finished_;
+        vkw::VkScopedObject<VkSemaphore>                tonemap_finished_;
 
         vkw::Utils                                      utils_;
         
@@ -141,9 +165,14 @@ namespace Baikal
         vkw::CommandBuffer                              deferred_cmd_;
         vkw::CommandBuffer                              txaa_cmd_;
         vkw::CommandBuffer                              copy_cmd_;
+        vkw::CommandBuffer                              tonemap_cmd_;
+        vkw::CommandBuffer                              calc_luminance_cmd_;
+        vkw::CommandBuffer                              histogram_adapt_cmd_;
 
         vkw::VkScopedObject<VkBuffer>                   dummy_buffer_;
         vkw::VkScopedObject<VkBuffer>                   jitter_buffer_;
+
+        vkw::CommandBuffer                              histogram_cmd_buf_;
 
         VkViewport                                      viewport_;
         VkRect2D                                        scissor_;
@@ -166,6 +195,7 @@ namespace Baikal
         const uint32_t                                  txaa_num_samples_ = 8;
         uint32_t                                        txaa_frame_idx_;
 
+        float                                           dt_;
         bool                                            tonemap_output_;
     };
 }

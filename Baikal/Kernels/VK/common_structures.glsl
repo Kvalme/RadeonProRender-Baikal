@@ -57,7 +57,16 @@ struct VkDeferredPushConstants
 {
     int         num_lights[4];
     float4      cascade_splits;
-    float4      options;        // x - enable tonemapper
+};
+
+struct VkTonemapperPushConstants
+{
+    float4 data; // x - enable tonemapper, y - max luma mip
+};
+
+struct VkLumaAdaptPushConstants
+{
+    float4 data; // x - dt, y - tau
 };
 
 struct VkSH9Color

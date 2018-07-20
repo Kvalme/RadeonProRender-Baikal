@@ -99,7 +99,7 @@ void FramebufferObject::GetData(uint32_t data_type, void *out_data)
         VkImageView *img = static_cast<VkImageView*>(out_data);
         Baikal::VkwOutput* output = dynamic_cast<Baikal::VkwOutput*>(m_output);
         auto rt = output->GetRenderTarget();
-        *img = rt.attachments[0].view.get();
+        *img = rt.GetImageView();
     }
     else if (data_type == RPR_VK_SEMAPHORE_OBJECT)
     {

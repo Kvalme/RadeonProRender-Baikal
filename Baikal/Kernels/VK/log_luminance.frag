@@ -15,5 +15,6 @@ layout (location = 0) out vec4 color;
 
 void main()
 {
-	color = log(Luminance(max(textureLod(image, tex_coord, 0.f).rgb, 0.0f) + 0.00001f).xxxx);
+	float luminance = max(Luminance(textureLod(image, tex_coord, 0.f).rgb), 0.05f);
+	color = log(luminance).xxxx;
 }

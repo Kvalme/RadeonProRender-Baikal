@@ -15,7 +15,7 @@ namespace Baikal
             , render_target_manager_(render_target_manager)
         {
             std::vector<vkw::RenderTargetCreateInfo> attachments = {
-                {w, h, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT},
+                {w, h, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT},
             };
 
             render_target_ = render_target_manager.CreateRenderTarget(attachments);

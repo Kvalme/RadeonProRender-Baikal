@@ -23,8 +23,8 @@ namespace Baikal
             , inv_framebuffer_width_(0)
             , inv_framebuffer_height_(0)
             , txaa_frame_idx_(0)
-            , tonemap_output_(true)
             , dt_(1.0f / 60.f)
+            , tonemap_output_(true)
     {
         graphics_command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, graphics_queue_index_));
         compute_command_buffer_builder_.reset(new vkw::CommandBufferBuilder(device, compute_queue_index_));

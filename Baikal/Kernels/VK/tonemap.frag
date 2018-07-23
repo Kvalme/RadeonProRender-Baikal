@@ -23,7 +23,7 @@ layout(push_constant) uniform PushConsts {
 
 void main()
 {
-	float avg_luminance = exp(textureLod(luminance, 0.5f, push_constants.data.data.y)).x;
+	float avg_luminance = 2.0f; //exp(textureLod(luminance, 0.5f, push_constants.data.data.y)).x;
 	vec3 current 		= textureLod(image, tex_coord, 0.f).rgb;
 
 	color.rgb = bool(push_constants.data.data.x) ? TonemapReinhard(current, avg_luminance) : current;

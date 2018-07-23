@@ -313,7 +313,7 @@ namespace Baikal
         VkImage image = luminance_buffer_.attachments[0].image.get();
         VkFormat format = luminance_buffer_.attachments[0].format;
 
-        vkw::MemoryManager::TransitionImageLayout(command_buffer, image, luminance_buffer_.attachments[0].format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, sub_range);
+        vkw::MemoryManager::TransitionImageLayout(command_buffer, image, luminance_buffer_.attachments[0].format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, sub_range);
         
         // Blit from luminance framebuffer to luminance texture with linear filtering
         VkImageBlit image_blit = {};

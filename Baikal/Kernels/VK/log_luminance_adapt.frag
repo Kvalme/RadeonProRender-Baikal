@@ -27,6 +27,7 @@ void main()
 	float tau	 	= push_constants.data.data.y;
 
 	float adapt		= prev + (current - prev) * (1 - exp(-dt * tau));
+	adapt 			= isnan(adapt) ? 0.05f : adapt;
 
 	color			= log(adapt).xxxx;
 }

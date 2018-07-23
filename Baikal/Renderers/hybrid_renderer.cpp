@@ -122,20 +122,25 @@ namespace Baikal
                 VkwScene::Material::Value const metalness = scene.materials[mesh.material_id].reflection_metalness;
                 VkwScene::Material::Value const roughness = scene.materials[mesh.material_id].reflection_roughness;
                 VkwScene::Material::Value const normal = scene.materials[mesh.material_id].shading_normal;
+                VkwScene::Material::Value const ior = scene.materials[mesh.material_id].reflection_ior;
+                VkwScene::Material::Value const transparency = scene.materials[mesh.material_id].transparency;
 
                 float diffuse_tex_id = diffuse.isTexture ? static_cast<float>(diffuse.texture_id) : -1;
                 float metalness_tex_id = metalness.isTexture ? static_cast<float>(metalness.texture_id) : -1;
                 float roughness_tex_id = roughness.isTexture ? static_cast<float>(roughness.texture_id) : -1;
+                float ior_tex_id = ior.isTexture ? static_cast<float>(ior.texture_id) : -1;
                 float shading_normal_tex_id = normal.isTexture ? static_cast<float>(normal.texture_id) : -1;
+                float transparency_tex_id = transparency.isTexture ? static_cast<float>(transparency.texture_id) : -1;
 
                 VkMaterialConstants push_constants;
-                push_constants.data[0]   = static_cast<int>(mesh_id % 255 + 1);
-                push_constants.diffuse   = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
-                push_constants.metalness = float4(metalness.color.x, metalness.color.y, metalness.color.z, metalness_tex_id);
-                push_constants.roughness = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
-                push_constants.normal    = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
+                push_constants.diffuse      = float4(diffuse.color.x, diffuse.color.y, diffuse.color.z, diffuse_tex_id);
+                push_constants.metalness    = float4(metalness.color.x, metalness.color.y, metalness.color.z, metalness_tex_id);
+                push_constants.roughness    = float4(roughness.color.x, roughness.color.y, roughness.color.z, roughness_tex_id);
+                push_constants.normal       = float4(normal.color.x, normal.color.y, normal.color.z, shading_normal_tex_id);
+                push_constants.ior          = float4(ior.color.x, ior.color.y, ior.color.z, ior_tex_id);
+                push_constants.transparency = float4(transparency.color.x, transparency.color.y, transparency.color.z, transparency_tex_id);
 
-                uint32_t vs_push_data[4] = { static_cast<uint32_t>(transform_id), 0, 0, 0 };
+                uint32_t vs_push_data[4] = { static_cast<uint32_t>(transform_id), static_cast<uint32_t>(mesh_id % 255 + 1), 0, 0 };
                 vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_push_data), &vs_push_data);
                 vkCmdPushConstants(command_buffer, mrt_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vs_push_data), sizeof(VkMaterialConstants), &push_constants);
 

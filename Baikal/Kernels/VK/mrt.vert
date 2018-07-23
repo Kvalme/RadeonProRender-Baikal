@@ -17,6 +17,7 @@ layout (location = 5) out flat matrix view;
 layout (location = 9) out vec4 position_ps;
 layout (location = 10) out vec4 prev_position_ps;
 layout (location = 11) out flat vec2 camera_jitter;
+layout (location = 12) out flat uint mesh_id;
 
 layout (binding = 0) uniform CameraInfo
 {
@@ -34,7 +35,7 @@ layout (binding = 2) uniform JitterInfo
 } jitter;
 
 layout(push_constant) uniform VsPushConsts {
-    uint data[4]; // transform id
+    uint data[4]; // transform id, mesh id
 } vs_consts;
 
 out gl_PerVertex
@@ -44,6 +45,8 @@ out gl_PerVertex
 
 void main()
 {
+	mesh_id				= vs_consts.data[1];
+
 	uint transform_idx 	= clamp(vs_consts.data[0], 0, kMaxTransforms);
 	matrix	transform 	= transforms.data[transform_idx];
 

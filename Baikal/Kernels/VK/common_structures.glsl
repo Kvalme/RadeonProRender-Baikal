@@ -43,8 +43,6 @@ struct VkCamera
 
 struct VkMaterialConstants
 {
-    int data[4];
-
     float4 diffuse;
     float4 normal;
     float4 roughness;

@@ -16,6 +16,7 @@ layout (location = 5) in flat matrix view;
 layout (location = 9) in vec4 position_ps;
 layout (location = 10) in vec4 prev_position_ps;
 layout (location = 11) in flat vec2 camera_jitter;
+layout (location = 12) in flat uint mesh_id;
 
 layout (location = 0) out vec4 out_gbuffer_0;	// normals
 layout (location = 1) out vec4 out_gbuffer_1;   // albedo, ior
@@ -31,8 +32,6 @@ layout (binding = 3) uniform sampler2D textures[kMaxTextures];
 void main()
 {
 	vec3 n = normalize(normal.xyz);
-
-	float mesh_id 			= material.data.data[0].x;
 
 	int diffuse_idx 		= int(material.data.diffuse.w);
 	int normal_idx 			= int(material.data.normal.w);

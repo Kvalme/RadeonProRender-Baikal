@@ -43,6 +43,7 @@ namespace Baikal
         , pipeline_manager_(pipeline_manager)
         , device_(device)
         , physical_device_(physical_device)
+        , default_material_(UberV2Material::Create())
         , shapes_changed_(false)
         , camera_changed_(false)
     {
@@ -71,7 +72,7 @@ namespace Baikal
         {
             throw std::runtime_error("VkwSceneController supports only perspective camera");
         }
-        
+
         const matrix proj = MakeProjectionMatrix(*camera);
         const matrix view = MakeViewMatrix(*camera);
         const matrix view_proj = proj * view;

@@ -26,7 +26,7 @@ source_group("Application" FILES ${APPLICATION_SOURCES})
 source_group("ImGUI" FILES ${IMGUI_SORUCES})
 source_group("Utils" FILES ${UTILS_SOURCES})
 source_group("Kernels\\GLSL" FILES ${KERNEL_SOURCES})
-    
+
 add_executable(BaikalStandaloneRPR ${SOURCES})
 target_compile_features(BaikalStandaloneRPR PRIVATE cxx_std_14)
 #Add project root since BaikalStandaloneRPR directly includes Baikal/* files
@@ -35,7 +35,7 @@ target_include_directories(BaikalStandaloneRPR
     PRIVATE .
     PRIVATE ${Baikal_SOURCE_DIR}/RadeonRays/RadeonRays/include
     )
-target_link_libraries(BaikalStandaloneRPR PRIVATE RadeonProRender glfw3::glfw3 OpenGL::GL GLEW::GLEW VKW )
+target_link_libraries(BaikalStandaloneRPR PRIVATE RadeonProRender64 glfw3::glfw3 OpenGL::GL GLEW::GLEW VKW )
 
 set_target_properties(BaikalStandaloneRPR
     PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${Baikal_SOURCE_DIR}/BaikalStandaloneRPR)

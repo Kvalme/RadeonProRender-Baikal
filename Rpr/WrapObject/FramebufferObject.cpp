@@ -123,7 +123,7 @@ void FramebufferObject::UpdateGlTex()
         std::vector<cl_mem> objects;
         objects.push_back(m_cl_interop_image);
         m_context.AcquireGLObjects(0, objects);
-        
+
         int argc = 0;
         m_copy_cernel.SetArg(argc++, static_cast<Baikal::ClwOutput*>(GetOutput())->data());
         m_copy_cernel.SetArg(argc++, static_cast<cl_int>(Width()));

@@ -466,7 +466,7 @@ rpr_int rprContextCreateInstance(rpr_context in_context, rpr_shape shape, rpr_sh
     {
         return RPR_ERROR_INVALID_CONTEXT;
     }
-    
+
     if (!mesh || !out_instance)
     {
         return RPR_ERROR_INVALID_PARAMETER;
@@ -485,7 +485,7 @@ rpr_int rprContextCreateInstance(rpr_context in_context, rpr_shape shape, rpr_sh
     return result;
 }
 
-rpr_int rprContextCreateMesh(rpr_context in_context, 
+rpr_int rprContextCreateMesh(rpr_context in_context,
                             rpr_float const * in_vertices, size_t in_num_vertices, rpr_int in_vertex_stride,
                             rpr_float const * in_normals, size_t in_num_normals, rpr_int in_normal_stride,
                             rpr_float const * in_texcoords, size_t in_num_texcoords, rpr_int in_texcoord_stride,
@@ -520,13 +520,13 @@ rpr_int rprContextCreateMesh(rpr_context in_context,
     return result;
 }
 
-rpr_int rprContextCreateMeshEx(rpr_context context, 
-                                                    rpr_float const * vertices, size_t num_vertices, rpr_int vertex_stride, 
-                                                    rpr_float const * normals, size_t num_normals, rpr_int normal_stride, 
-                                                    rpr_int const * perVertexFlag, size_t num_perVertexFlags, rpr_int perVertexFlag_stride, rpr_int numberOfTexCoordLayers, 
-                                                    rpr_float const ** texcoords, size_t const * num_texcoords, rpr_int const * texcoord_stride, 
-                                                    rpr_int const * vertex_indices, rpr_int vidx_stride, rpr_int const * normal_indices, rpr_int nidx_stride, 
-                                                    rpr_int const ** texcoord_indices, rpr_int const * tidx_stride, 
+rpr_int rprContextCreateMeshEx(rpr_context context,
+                                                    rpr_float const * vertices, size_t num_vertices, rpr_int vertex_stride,
+                                                    rpr_float const * normals, size_t num_normals, rpr_int normal_stride,
+                                                    rpr_int const * perVertexFlag, size_t num_perVertexFlags, rpr_int perVertexFlag_stride, rpr_int numberOfTexCoordLayers,
+                                                    rpr_float const ** texcoords, size_t const * num_texcoords, rpr_int const * texcoord_stride,
+                                                    rpr_int const * vertex_indices, rpr_int vidx_stride, rpr_int const * normal_indices, rpr_int nidx_stride,
+                                                    rpr_int const ** texcoord_indices, rpr_int const * tidx_stride,
                                                     rpr_int const * num_face_vertices, size_t num_faces, rpr_shape * out_mesh)
 {
     if (num_perVertexFlags == 0 && numberOfTexCoordLayers == 1)
@@ -551,7 +551,7 @@ rpr_int rprContextCreateMeshEx2(rpr_context context,
     rpr_float const ** texcoords, size_t const * num_texcoords, rpr_int const * texcoord_stride,
     rpr_int const * vertex_indices, rpr_int vidx_stride, rpr_int const * normal_indices, rpr_int nidx_stride,
     rpr_int const ** texcoord_indices, rpr_int const * tidx_stride,
-    rpr_int const * num_face_vertices, size_t num_faces, 
+    rpr_int const * num_face_vertices, size_t num_faces,
     rpr_mesh_info const * mesh_properties, rpr_shape * out_mesh)
 {
     return rprContextCreateMeshEx(context,
@@ -775,7 +775,7 @@ rpr_int rprCameraSetFocalLength(rpr_camera in_camera, rpr_float flength)
         return RPR_ERROR_INVALID_PARAMETER;
     }
 
-    //translate meters to mm 
+    //translate meters to mm
     camera->SetFocalLength(flength);
 
     return RPR_SUCCESS;
@@ -895,7 +895,7 @@ rpr_int rprCameraSetMode(rpr_camera in_camera, rpr_camera_mode mode)
     default:
         UNIMLEMENTED_FUNCTION
     }
-    
+
     return RPR_SUCCESS;
 }
 
@@ -1054,17 +1054,17 @@ rpr_int rprShapeSetTransform(rpr_shape in_shape, rpr_bool transpose, rpr_float c
 }
 
 rpr_int rprShapeSetSubdivisionFactor(rpr_shape shape, rpr_uint factor)
-{	
+{
     UNSUPPORTED_FUNCTION
 }
 
 rpr_int rprShapeSetSubdivisionCreaseWeight(rpr_shape shape, rpr_float factor)
-{	
+{
     UNSUPPORTED_FUNCTION
 }
 
 rpr_int rprShapeSetSubdivisionBoundaryInterop(rpr_shape shape, rpr_subdiv_boundary_interfop_type type)
-{	
+{
     UNSUPPORTED_FUNCTION
 }
 
@@ -1103,7 +1103,7 @@ rpr_int rprShapeSetMaterial(rpr_shape in_shape, rpr_material_node in_node)
     {
         return RPR_ERROR_INVALID_PARAMETER;
     }
-    
+
     rpr_int result = RPR_SUCCESS;
     try
     {
@@ -1174,7 +1174,7 @@ rpr_int rprLightSetTransform(rpr_light in_light, rpr_bool in_transpose, rpr_floa
     LightObject* light = WrapObject::Cast<LightObject>(in_light);
     if (!light)
         return RPR_ERROR_INVALID_PARAMETER;
-    
+
     RadeonRays::matrix m;
     memcpy(&m.m00, in_transform, 16 * sizeof(rpr_float));
     if (!in_transpose)
@@ -1206,7 +1206,7 @@ rpr_int rprShapeGetInfo(rpr_shape in_shape, rpr_shape_info in_info, size_t in_si
     switch (in_info)
     {
     case RPR_SHAPE_TYPE:
-    {   
+    {
         int value = shape->IsInstance() ? RPR_SHAPE_TYPE_INSTANCE : RPR_SHAPE_TYPE_MESH;
         size_ret = sizeof(value);
         data.resize(size_ret);
@@ -1582,7 +1582,7 @@ rpr_int rprEnvironmentLightSetIntensityScale(rpr_light in_env_light, rpr_float i
     {
         return RPR_ERROR_INVALID_PARAMETER;
     }
-    
+
     //set data
     light->SetEnvMultiplier(intensity_scale);
 
@@ -1751,7 +1751,7 @@ rpr_int rprLightGetInfo(rpr_light in_light, rpr_light_info in_info, size_t in_si
     case RPR_SKY_LIGHT_PORTAL_COUNT:
     case RPR_SKY_LIGHT_PORTAL_LIST:
     case RPR_IES_LIGHT_RADIANT_POWER:
-    case RPR_IES_LIGHT_IMAGE_DESC:        
+    case RPR_IES_LIGHT_IMAGE_DESC:
         UNSUPPORTED_FUNCTION
         break;
     default:
@@ -1865,7 +1865,7 @@ rpr_int rprSceneGetInfo(rpr_scene in_scene, rpr_scene_info in_info, size_t in_si
     {
         return RPR_ERROR_INVALID_PARAMETER;
     }
-    
+
     std::vector<char> data;
     size_t size_ret = 0;
     switch (in_info)
@@ -2044,7 +2044,7 @@ rpr_int rprSceneSetBackgroundImage(rpr_scene in_scene, rpr_image in_image)
     {
         return e.m_error;
     }
-    
+
     return RPR_SUCCESS;
 }
 
@@ -2108,6 +2108,24 @@ rpr_int rprFrameBufferGetInfo(rpr_framebuffer in_frame_buffer, rpr_framebuffer_i
     }
     switch (in_info)
     {
+    case RPR_FRAMEBUFFER_DESC:
+    {
+        if (out_size)
+        {
+            *out_size = sizeof(rpr_framebuffer_desc);
+        }
+        if (out_data && in_size < sizeof(rpr_framebuffer_desc))
+        {
+            return RPR_ERROR_INVALID_PARAMETER;
+        }
+        if (out_data)
+        {
+            rpr_framebuffer_desc *fb_desc = static_cast<rpr_framebuffer_desc*>(out_data);
+            fb_desc->fb_width = buff->Width();
+            fb_desc->fb_height = buff->Height();
+        }
+        break;
+    }
     case RPR_FRAMEBUFFER_DATA:
     {
         std::size_t buff_size = sizeof(RadeonRays::float3) * buff->Width() * buff->Height();
@@ -2218,7 +2236,7 @@ rpr_int rprMaterialSystemCreateNode(rpr_material_system in_matsys, rpr_material_
     {
         return RPR_ERROR_INVALID_PARAMETER;
     }
-    
+
     //create material
     try
     {
@@ -2263,7 +2281,7 @@ rpr_int rprMaterialNodeSetInputF(rpr_material_node in_node, rpr_char const * in_
     }
     //collect input
     RadeonRays::float4 input = { in_value_x, in_value_y, in_value_z, in_value_w };
-    
+
     try
     {
         mat->SetInputValue(in_input, input);
@@ -2304,7 +2322,7 @@ rpr_int rprMaterialNodeSetInputImageData(rpr_material_node in_node, rpr_char con
     {
         return RPR_ERROR_INVALID_PARAMETER;
     }
-    
+
     try
     {
         mat->SetInputValue(in_input, img);
@@ -2565,7 +2583,7 @@ rpr_int rprMaterialNodeSetInputN_ext(rpr_material_node in_node, rpr_material_nod
 rpr_int rprMaterialNodeSetInputF_ext(rpr_material_node in_node, rpr_material_node_input in_input, rpr_float in_value_x, rpr_float in_value_y, rpr_float in_value_z, rpr_float in_value_w)
 {
     auto name_it = kRPRInputStrings.find(in_input);
-    return name_it != kRPRInputStrings.end() ? 
+    return name_it != kRPRInputStrings.end() ?
         rprMaterialNodeSetInputF(in_node, name_it->second.c_str(), in_value_x, in_value_y, in_value_z, in_value_w)
         : RPR_ERROR_UNSUPPORTED;
 }
@@ -2597,6 +2615,46 @@ rpr_int rprShapeSetLayerMask(rpr_shape shape, rpr_uint layerMask)
 }
 
 rpr_int rprContextCreateHeteroVolume(rpr_context context, rpr_hetero_volume * out_heteroVolume, size_t gridSizeX, size_t gridSizeY, size_t gridSizeZ, void const * indicesList, size_t numberOfIndices, rpr_hetero_volume_indices_topology indicesListTopology, void const * gridData, size_t gridDataSizeByte, rpr_uint gridDataTopology___unused)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+rpr_int rprImageSetGamma(rpr_image image, rpr_float type)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+rpr_int rprImageSetMipmapEnabled(rpr_image image, rpr_bool enabled)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+rpr_int rprImageSetFilter(rpr_image image, rpr_image_filter_type type)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+RPR_API_ENTRY rpr_int rprHeteroVolumeSetFilter(rpr_hetero_volume heteroVolume, rpr_hetero_volume_filter filter)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+RPR_API_ENTRY rpr_int rprHeteroVolumeSetEmission(rpr_hetero_volume heteroVolume, rpr_float r, rpr_float g, rpr_float b)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+RPR_API_ENTRY rpr_int rprHeteroVolumeSetAlbedo(rpr_hetero_volume heteroVolume, rpr_float r, rpr_float g, rpr_float b)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+RPR_API_ENTRY rpr_int rprHeteroVolumeGetInfo(rpr_hetero_volume heteroVol, rpr_hetero_volume_parameter heteroVol_info, size_t size, void * data, size_t * size_ret)
+{
+    UNSUPPORTED_FUNCTION
+}
+
+RPR_API_ENTRY rpr_int rprBufferGetInfo(rpr_buffer buffer, rpr_buffer_info buffer_info, size_t size, void * data, size_t * size_ret)
 {
     UNSUPPORTED_FUNCTION
 }

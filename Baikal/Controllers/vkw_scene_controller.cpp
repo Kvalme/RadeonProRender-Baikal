@@ -106,6 +106,28 @@ namespace Baikal
         camera_changed_ = true;
     }
 
+    void VkwSceneController::FillPrevTransforms(VkwScene& out) const
+    {
+        std::vector<std::vector<RadeonRays::matrix>>& transforms = prev_mesh_transforms_.empty() ? mesh_transforms_ : prev_mesh_transforms_;
+
+        out.prev_mesh_transforms.resize(transforms.size());
+
+        for (size_t buffer_idx = 0; buffer_idx < transforms.size(); buffer_idx++)
+        {
+            if (out.prev_mesh_transforms[buffer_idx] == VK_NULL_HANDLE)
+            {
+                out.prev_mesh_transforms[buffer_idx].reset();
+                out.prev_mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * kMaxTransforms,
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
+            }
+
+            memory_manager_.WriteBuffer(out.prev_mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * transforms[buffer_idx].size(), transforms[buffer_idx].data());
+        }
+
+        prev_mesh_transforms_.clear();
+    }
+
     void VkwSceneController::UpdateShapes(Scene1 const& scene, Collector& mat_collector, Collector& tex_collector, Collector& vol_collector, VkwScene& out) const
     {
         shapes_changed_ = true;
@@ -114,24 +136,27 @@ namespace Baikal
         uint32_t num_vertices = 0;
         uint32_t num_indices = 0;
 
+        std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
+
+        // optimize
+        prev_mesh_transforms_ = mesh_transforms_;
+
+        uint32_t num_transform_buffers = static_cast<uint32_t>(scene.GetNumShapes() / kMaxTransforms) + 1;
+        
+        out.meshes.clear();
+        out.mesh_transforms.clear();
+        out.mesh_transforms.resize(num_transform_buffers);
+        
         vertex_buffer_.clear();
         index_buffer_.clear();
-        mesh_transforms_.clear();
         mesh_bound_volumes_.clear();
 
-        out.meshes.clear();
+        mesh_transforms_.resize(num_transform_buffers);
 
         RadeonRays::bbox scene_bounds;
 
-        std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
-
-        uint32_t num_transform_buffers = static_cast<uint32_t>(scene.GetNumShapes() / kMaxTransforms) + 1;
-
-        out.mesh_transforms.clear();
-        out.mesh_transforms.resize(num_transform_buffers);
-
         uint32_t mesh_idx = 0;
-
+        
         for (; mesh_iter->IsValid(); mesh_iter->Next())
         {
             Baikal::Shape::Ptr shape = mesh_iter->ItemAs<Baikal::Shape>();
@@ -165,24 +190,22 @@ namespace Baikal
             {
                 index_buffer_.push_back(mesh->GetIndices()[idx] + num_vertices);
             }
+            
+            uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
 
-            mesh_transforms_.push_back(mesh->GetTransform());
+            mesh_transforms_[buffer_idx].push_back(mesh->GetTransform());
 
-            if (mesh_transforms_.size() == kMaxTransforms)
+            if (mesh_transforms_[buffer_idx].size() == kMaxTransforms)
             {
-                uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
-
                 if (out.mesh_transforms[buffer_idx] == VK_NULL_HANDLE)
                 {
                     out.mesh_transforms[buffer_idx].reset();
-
-                    out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                    out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * kMaxTransforms,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
                 }
 
-                memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_.size(), mesh_transforms_.data());
-                mesh_transforms_.clear();
+                memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_[buffer_idx].size(), mesh_transforms_[buffer_idx].data());
             }
 
             num_vertices += static_cast<uint32_t>(mesh->GetNumVertices());
@@ -202,13 +225,12 @@ namespace Baikal
             {
                 out.mesh_transforms[buffer_idx].reset();
 
-                out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * kMaxTransforms,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
             }
 
-            memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_.size(), mesh_transforms_.data());
-            mesh_transforms_.clear();
+            memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_[buffer_idx].size(), mesh_transforms_[buffer_idx].data());
         }
 
         if (out.vertex_count < num_vertices)
@@ -261,6 +283,10 @@ namespace Baikal
         uint32_t mesh_idx = 0;
 
         std::unique_ptr<Iterator> mesh_iter(scene.CreateShapeIterator());
+        
+        size_t num_transform_buffers = scene.GetNumShapes() / kMaxTransforms + 1;
+        mesh_transforms_.resize(num_transform_buffers);
+
         for (; mesh_iter->IsValid(); mesh_iter->Next())
         {
             Baikal::Shape::Ptr shape = mesh_iter->ItemAs<Baikal::Shape>();
@@ -268,27 +294,26 @@ namespace Baikal
 
             if (mesh == nullptr)
                 continue;
+            
+            uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
 
-            mesh_transforms_.push_back(mesh->GetTransform());
+            mesh_transforms_[buffer_idx].push_back(mesh->GetTransform());
 
-            if (mesh_transforms_.size() == kMaxTransforms)
+            if (mesh_transforms_[buffer_idx].size() == kMaxTransforms)
             {
-                uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
-
                 if (out.mesh_transforms[buffer_idx] == VK_NULL_HANDLE)
                 {
                     out.mesh_transforms[buffer_idx].reset();
 
-                    out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                    out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_[buffer_idx].size(),
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
                 }
 
-                memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_.size(), mesh_transforms_.data());
-                mesh_transforms_.clear();
+                memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_[buffer_idx].size(), mesh_transforms_[buffer_idx].data());
             }
 
-            mesh_transforms_.push_back(mesh->GetTransform());
+            mesh_transforms_[buffer_idx].push_back(mesh->GetTransform());
             mesh_idx++;
         }
 
@@ -300,13 +325,12 @@ namespace Baikal
             {
                 out.mesh_transforms[buffer_idx].reset();
 
-                out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_.size(),
+                out.mesh_transforms[buffer_idx] = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix) * mesh_transforms_[buffer_idx].size(),
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr);
             }
 
-            memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_.size(), mesh_transforms_.data());
-            mesh_transforms_.clear();
+            memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_[buffer_idx].size(), mesh_transforms_[buffer_idx].data());
         }
 
         out.rebuild_mrt_pass = true;
@@ -347,6 +371,8 @@ namespace Baikal
 
             num_materials_written++;
         }
+
+        out.rebuild_mrt_pass = true;
     }
 
     void VkwSceneController::UpdateVolumes(Scene1 const& scene, Collector& volume_collector, Collector& tex_collector, VkwScene& out) const
@@ -676,5 +702,7 @@ namespace Baikal
         {
             lights_changed_[a] = false;
         }
+
+        FillPrevTransforms(out);
     }
 }

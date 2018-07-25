@@ -66,4 +66,20 @@ namespace Baikal
 
         return PerspectiveProjFovyRhVulkan(fovy, camera.GetAspectRatio(), z_range.x, z_range.y);
     }
+
+    // From "Hacker's Delight"
+    float RadicalInverseBase2(uint32_t bits)
+    {
+        bits = (bits << 16u) | (bits >> 16u);
+        bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+        bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+        bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+        bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+        return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
+    }
+
+    RadeonRays::float2 Hammersley2D(uint64_t sample_idx, uint64_t num_samples)
+    {
+        return RadeonRays::float2(float(sample_idx) / float(num_samples), RadicalInverseBase2(uint32_t(sample_idx)));
+    }
 }

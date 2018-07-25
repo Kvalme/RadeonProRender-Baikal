@@ -112,6 +112,8 @@ namespace Baikal
         // Collector is required to convert texture pointers into indices.
         void WriteInputMapLeaf(InputMap const& leaf, Collector& tex_collector, void* data) const;
 
+        void FillPrevTransforms(VkwScene& out) const;
+
         void PostUpdate(Scene1 const& scene, VkwScene& out) const;
     protected:
         struct Vertex
@@ -144,11 +146,12 @@ namespace Baikal
         std::unique_ptr<VkwProbeController>             probe_controller_;
 
         // Storage to prevent re-allocations on each scene update
-        mutable std::vector<Vertex>                     vertex_buffer_;
-        mutable std::vector<uint32_t>                   index_buffer_;
-        mutable std::vector<RadeonRays::bbox>           mesh_bound_volumes_;
-        mutable std::vector<RadeonRays::matrix>         mesh_transforms_;
-        mutable std::vector<char>                       texture_data_;
+        mutable std::vector<Vertex>                                  vertex_buffer_;
+        mutable std::vector<uint32_t>                                index_buffer_;
+        mutable std::vector<RadeonRays::bbox>                        mesh_bound_volumes_;
+        mutable std::vector<std::vector<RadeonRays::matrix>>         mesh_transforms_;
+        mutable std::vector<std::vector<RadeonRays::matrix>>         prev_mesh_transforms_;
+        mutable std::vector<char>                                    texture_data_;
 
         // TODO: flags needed for shadows post-update. Find better solution
         mutable bool                                    shapes_changed_;

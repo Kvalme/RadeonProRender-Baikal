@@ -680,6 +680,7 @@ namespace Baikal
                 static_cast<int>(scene.num_directional_lights),
                 scene.cascade_splits_dist,
                 static_cast<float>(msaa_num_samples_),
+                scene.ibl_multiplier
         };
 
         BuildDeferredCommandBuffer(push_consts);

@@ -108,6 +108,7 @@ vec3 CalcLighting(vec3 N, vec4 albedo, vec4 buffer_data3, float depth)
 	uint num_point_lights = clamp(push_constants.data.num_lights[1], 0, kMaxLights);
 	uint num_spot_lights = clamp(push_constants.data.num_lights[2], 0, kMaxLights);
 	uint num_directional_lights = clamp(push_constants.data.num_lights[3], 0, kMaxLights);
+	float ibl_multiplier = clamp(push_constants.data.options[1], 0.f, FLT_MAX);
 
 	vec3 ambient_lighting = vec3(0.f);
 	vec3 direct_lighting = vec3(0.f);
@@ -131,7 +132,7 @@ vec3 CalcLighting(vec3 N, vec4 albedo, vec4 buffer_data3, float depth)
 		float theta = 1.0f - sp.z / PI;
 
 		const bool 	invert_x = false;
-		env_map = texture(env_image, vec2(invert_x ? 1.0f - phi : phi, theta)).xyz;
+		env_map = texture(env_image, vec2(invert_x ? 1.0f - phi : phi, theta)).xyz * ibl_multiplier;
 	}
 
 	BRDFInputs brdf_inputs;

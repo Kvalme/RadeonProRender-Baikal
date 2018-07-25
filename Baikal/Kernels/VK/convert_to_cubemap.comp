@@ -10,6 +10,11 @@ layout (local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in
 layout (binding = 0) uniform sampler2D spheremap;
 layout (binding = 1, rgba16f) uniform writeonly imageCube cubemap;
 
+layout(push_constant) uniform PushConsts
+{
+    float ibl_multiplier;
+} push_constants;
+
 vec3 MapXYSToDirection(uint x, uint y, uint s, int width, int height)
 {
     const float u = ((x + 0.5f) / float(width)) * 2.0f - 1.0f;
@@ -47,6 +52,7 @@ vec3 MapXYSToDirection(uint x, uint y, uint s, int width, int height)
 void main() 
 {
     ivec2 size = imageSize(cubemap);
+    float ibl_multiplier = push_constants.ibl_multiplier;
     int num_pixels = size.x * size.y;
 
     const uint x = gl_GlobalInvocationID.x;
@@ -61,7 +67,7 @@ void main()
     // convert dir to uv
     vec3 sp = CartesianToSpherical(dir);
 	vec2 st = vec2(sp.y / (2 * PI), 1.0f - sp.z / PI);
-    vec4 v = textureLod(spheremap, st, 0.0f);
+    vec4 v = textureLod(spheremap, st, 0.0f) * ibl_multiplier;
 
     imageStore(cubemap, ivec3(x, y, face), v);
 }

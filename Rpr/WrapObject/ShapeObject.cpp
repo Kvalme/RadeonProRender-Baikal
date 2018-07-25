@@ -118,6 +118,11 @@ ShapeObject* ShapeObject::CreateMesh(rpr_float const * in_vertices, size_t in_nu
         in_texcoord_indices, in_tidx_stride,
         in_num_face_vertices, in_num_faces);
 
+    /*for (uint32_t v = 0; v < verts.size(); ++v)
+    {
+        verts[v] = verts[v] * 100.f;
+    }*/
+
     //generate indices
     std::vector<std::uint32_t> inds;
     std::uint32_t indent = 0;
@@ -211,7 +216,7 @@ uint64_t ShapeObject::GetNormalCount()
     {
         throw Exception(RPR_ERROR_INTERNAL_ERROR, "ShapeObject: mesh is nullptr.");
     }
-    
+
     return mesh->GetNumNormals();
 }
 void ShapeObject::GetNormalData(float* out) const
@@ -221,7 +226,7 @@ void ShapeObject::GetNormalData(float* out) const
     {
         throw Exception(RPR_ERROR_INTERNAL_ERROR, "ShapeObject: mesh is nullptr.");
     }
-    
+
     //need to copy data, because RadeonRays::float3 contains 4 float,
     //but we need only 3
     const RadeonRays::float3 * data = mesh->GetNormals();
@@ -247,7 +252,7 @@ uint64_t ShapeObject::GetUVCount()
 const RadeonRays::float2* ShapeObject::GetUVData() const
 {
     auto mesh = std::dynamic_pointer_cast<Baikal::Mesh>(m_shape);
-    
+
     if (!mesh)
     {
         throw Exception(RPR_ERROR_INTERNAL_ERROR, "ShapeObject: mesh is nullptr.");

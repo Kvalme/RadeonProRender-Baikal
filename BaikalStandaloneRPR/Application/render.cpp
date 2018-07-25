@@ -146,7 +146,7 @@ namespace BaikalRPR
 
         CHECK(rprImportFromGLTF(fname.c_str(), m_context, m_matsys, m_rprxcontext, &m_scene));
 
-        CHECK(rprCameraLookAt(m_camera, -50.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f));
+        CHECK(rprCameraLookAt(m_camera, -500.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f));
         CHECK(rprCameraSetSensorSize(m_camera, settings.camera_sensor_size.x * 1000.f, settings.camera_sensor_size.y * 1000.f));
         CHECK(rprSceneSetCamera(m_scene, m_camera));
 

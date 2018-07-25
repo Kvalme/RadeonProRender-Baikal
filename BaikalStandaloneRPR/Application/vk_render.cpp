@@ -25,7 +25,6 @@ THE SOFTWARE.
 #include "Output/vkwoutput.h"
 
 #include "RadeonProRender_VK.h"
-#include "RprSupport.h"
 
 namespace BaikalRPR
 {
@@ -54,12 +53,11 @@ namespace BaikalRPR
         interop_info.physical_device = m_cfg.physical_device_;
         interop_info.compute_queue_family_idx = m_cfg.compute_queue_family_idx_;
         interop_info.graph_queue_family_idx = m_cfg.graphics_queue_family_idx_;
-
+        
         void *params[3] = { RPR_VK_INTEROP_INFO, &interop_info, 0};
 
         CHECK(rprCreateContext(RPR_API_VERSION, nullptr, 0, RPR_CREATION_FLAGS_ENABLE_GPU0 | RPR_CREATION_FLAGS_ENABLE_VK_INTEROP, params, nullptr, &m_context));
         CHECK(rprContextCreateMaterialSystem(m_context, 0, &m_matsys));
-        CHECK(rprxCreateContext(m_matsys, 0, &m_rprxcontext));
 
     }
 

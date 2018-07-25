@@ -539,7 +539,7 @@ namespace Baikal
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.pSignalSemaphores = &render_finished;
-        submit_info.signalSemaphoreCount = 1;
+        submit_info.signalSemaphoreCount = 0;
         submit_info.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size());
         submit_info.pWaitSemaphores = wait_semaphores.data();
         submit_info.pWaitDstStageMask = stage_wait_bits.data();

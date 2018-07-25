@@ -349,6 +349,7 @@ namespace Baikal
             num_materials_written++;
         }
         out.rebuild_mrt_pass = true;
+        out.rebuild_deferred_pass = true;
     }
 
     void VkwSceneController::UpdateVolumes(Scene1 const& scene, Collector& volume_collector, Collector& tex_collector, VkwScene& out) const
@@ -387,6 +388,7 @@ namespace Baikal
             ++num_textures_written;
         }
         out.rebuild_mrt_pass = true;
+        out.rebuild_deferred_pass = true;
     }
 
     void VkwSceneController::WriteMaterial(Material const& material, Collector& mat_collector, Collector& tex_collector, void* data) const

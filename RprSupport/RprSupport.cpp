@@ -54,6 +54,7 @@ static const std::map<rprx_parameter, std::string> kRPRXInputStrings =
     { RPRX_UBER_MATERIAL_REFRACTION_WEIGHT, "uberv2.refraction.weight" },
     { RPRX_UBER_MATERIAL_REFRACTION_ROUGHNESS, "uberv2.refraction.roughness" },
     { RPRX_UBER_MATERIAL_REFRACTION_IOR, "uberv2.refraction.ior" },
+    { RPRX_UBER_MATERIAL_REFRACTION_IOR_MODE, "uberv2.refraction.ior_mode" },
     { RPRX_UBER_MATERIAL_REFRACTION_THIN_SURFACE, "uberv2.refraction.thin_surface" },
     { RPRX_UBER_MATERIAL_COATING_COLOR, "uberv2.coating.color" },
     { RPRX_UBER_MATERIAL_COATING_WEIGHT, "uberv2.coating.weight" },
@@ -62,12 +63,16 @@ static const std::map<rprx_parameter, std::string> kRPRXInputStrings =
     { RPRX_UBER_MATERIAL_EMISSION_WEIGHT, "uberv2.emission.weight" },
     { RPRX_UBER_MATERIAL_EMISSION_MODE, "uberv2.emission.mode" },
     { RPRX_UBER_MATERIAL_TRANSPARENCY, "uberv2.transparency" },
-    { RPRX_UBER_MATERIAL_DIFFUSE_NORMAL, "uberv2.normal" },
+    { RPRX_UBER_MATERIAL_NORMAL, "uberv2.normal" },
+    { RPRX_UBER_MATERIAL_BUMP, "uberv2.bump" },
     { RPRX_UBER_MATERIAL_DISPLACEMENT, "uberv2.displacement" },
+    { RPRX_UBER_MATERIAL_SSS_ABSORPTION_COLOR, "uberv2.sss.absorption_color" },
     { RPRX_UBER_MATERIAL_SSS_SCATTER_COLOR, "uberv2.sss.scatter_color" },
+    { RPRX_UBER_MATERIAL_SSS_ABSORPTION_DISTANCE, "uberv2.sss.absorption_distance" },
     { RPRX_UBER_MATERIAL_SSS_SCATTER_DISTANCE, "uberv2.sss.scatter_distance" },
     { RPRX_UBER_MATERIAL_SSS_SCATTER_DIRECTION, "uberv2.sss.scatter_direction" },
     { RPRX_UBER_MATERIAL_SSS_WEIGHT, "uberv2.sss.weight" },
+    { RPRX_UBER_MATERIAL_SSS_SUBSURFACE_COLOR, "uberv2.sss.subsurface_color" },
     { RPRX_UBER_MATERIAL_SSS_MULTISCATTER, "uberv2.sss.multiscatter" }
 };
 
@@ -105,7 +110,8 @@ rpr_int rprxMaterialSetParameterN(rprx_context context, rprx_material material, 
 
     auto it = kRPRXInputStrings.find(parameter);
 
-    if (parameter == RPRX_UBER_MATERIAL_DIFFUSE_NORMAL)
+    if (parameter == RPRX_UBER_MATERIAL_BUMP ||
+        parameter == RPRX_UBER_MATERIAL_NORMAL)
     {
         rpr_uint layers = 0;
 
@@ -133,6 +139,8 @@ rpr_int rprxMaterialSetParameterU(rprx_context context, rprx_material material, 
         return RPR_ERROR_INVALID_PARAMETER;
 
     auto it = kRPRXInputStrings.find(parameter);
+    if (parameter == RPRX_UBER_MATERIAL_REFLECTION_ANISOTROPY_ROTATION)
+        return RPR_SUCCESS;
 
     return (it != kRPRXInputStrings.end()) ?
         rprMaterialNodeSetInputU((rpr_material_node)material, it->second.c_str(), value) :

@@ -21,14 +21,14 @@
 extern "C" {
 #endif
 
-#define RPRX_SUPPORT_API_VERSION 0x0000002
-#define RPRX_FLAGS_ENABLE_LOGGING 0x1
+#define RPRX_SUPPORT_API_VERSION 0x0000002 
+#define RPRX_FLAGS_ENABLE_LOGGING 0x1 
 
 /*rprx_material_type*/
-#define RPRX_MATERIAL_UBER 0x1
-#define RPRX_MATERIAL_ARCHITECTURAL 0x2
-#define RPRX_MATERIAL_SKIN 0x3
-#define RPRX_MATERIAL_CARPAINT 0x4
+#define RPRX_MATERIAL_UBER 0x1 
+#define RPRX_MATERIAL_ARCHITECTURAL 0x2 
+#define RPRX_MATERIAL_SKIN 0x3 
+#define RPRX_MATERIAL_CARPAINT 0x4 
 
 typedef rpr_uint rprx_material_type;
 typedef rpr_uint rprx_parameter;
@@ -47,63 +47,58 @@ typedef _rprxcontext *rprx_context;
 typedef _rprxmaterial *rprx_material;
 
 /*rprx_material_type*/
-#define RPRX_UBER_MATERIAL_DIFFUSE_COLOR 0x100U
-#define RPRX_UBER_MATERIAL_DIFFUSE_WEIGHT 0x101U
-#define RPRX_UBER_MATERIAL_DIFFUSE_ROUGHNESS 0x102U
-#define RPRX_UBER_MATERIAL_DIFFUSE_NORMAL 0x103U
-#define RPRX_UBER_MATERIAL_REFLECTION_COLOR 0x104U
-#define RPRX_UBER_MATERIAL_REFLECTION_WEIGHT 0x105U
-#define RPRX_UBER_MATERIAL_REFLECTION_ROUGHNESS 0x106U
-#define RPRX_UBER_MATERIAL_REFLECTION_ANISOTROPY 0x107U
-#define RPRX_UBER_MATERIAL_REFLECTION_ANISOTROPY_ROTATION 0x108U
-#define RPRX_UBER_MATERIAL_REFLECTION_MODE 0x109U
-#define RPRX_UBER_MATERIAL_REFLECTION_IOR 0x10AU
-#define RPRX_UBER_MATERIAL_REFLECTION_METALNESS 0x10AU
-#define RPRX_UBER_MATERIAL_REFLECTION_NORMAL 0x10CU
-#define RPRX_UBER_MATERIAL_REFRACTION_COLOR 0x10DU
-#define RPRX_UBER_MATERIAL_REFRACTION_WEIGHT 0x10EU
-#define RPRX_UBER_MATERIAL_REFRACTION_ROUGHNESS 0x10FU
-#define RPRX_UBER_MATERIAL_REFRACTION_IOR 0x110U
-#define RPRX_UBER_MATERIAL_REFRACTION_THIN_SURFACE 0x112U
-#define RPRX_UBER_MATERIAL_REFRACTION_ABSORPTION_COLOR 0x113U
-#define RPRX_UBER_MATERIAL_REFRACTION_ABSORPTION_DISTANCE 0x114U
-#define RPRX_UBER_MATERIAL_REFRACTION_CAUSTICS 0x115U
-#define RPRX_UBER_MATERIAL_COATING_COLOR 0x116U
-#define RPRX_UBER_MATERIAL_COATING_WEIGHT 0x117U
-#define RPRX_UBER_MATERIAL_COATING_ROUGHNESS 0x118U
-#define RPRX_UBER_MATERIAL_COATING_MODE 0x119U
-#define RPRX_UBER_MATERIAL_COATING_IOR 0x11AU
-#define RPRX_UBER_MATERIAL_COATING_METALNESS 0x11BU
-#define RPRX_UBER_MATERIAL_COATING_NORMAL 0x11CU
-#define RPRX_UBER_MATERIAL_COATING_TRANSMISSION_COLOR 0x11DU
-#define RPRX_UBER_MATERIAL_COATING_THICKNESS 0x11EU
-#define RPRX_UBER_MATERIAL_SHEEN 0x11FU
-#define RPRX_UBER_MATERIAL_SHEEN_TINT 0x120U
-#define RPRX_UBER_MATERIAL_SHEEN_WEIGHT 0x121U
-#define RPRX_UBER_MATERIAL_EMISSION_COLOR 0x122U
-#define RPRX_UBER_MATERIAL_EMISSION_WEIGHT 0x132U
-#define RPRX_UBER_MATERIAL_EMISSION_MODE 0x124U
-#define RPRX_UBER_MATERIAL_TRANSPARENCY 0x125U
-#define RPRX_UBER_MATERIAL_DISPLACEMENT 0x126U
-#define RPRX_UBER_MATERIAL_SSS_SCATTER_COLOR 0x127U
-#define RPRX_UBER_MATERIAL_SSS_SCATTER_DISTANCE 0x128U
-#define RPRX_UBER_MATERIAL_SSS_SCATTER_DIRECTION 0x129U
-#define RPRX_UBER_MATERIAL_SSS_WEIGHT 0x12AU
-#define RPRX_UBER_MATERIAL_SSS_MULTISCATTER 0x12BU
-#define RPRX_UBER_MATERIAL_BACKSCATTER_WEIGHT 0x12CU
-#define RPRX_UBER_MATERIAL_BACKSCATTER_COLOR 0x12DU
+#define RPRX_UBER_MATERIAL_DIFFUSE_COLOR 0x100U 
+#define RPRX_UBER_MATERIAL_DIFFUSE_WEIGHT 0x101U 
+#define RPRX_UBER_MATERIAL_DIFFUSE_ROUGHNESS 0x102U 
+#define RPRX_UBER_MATERIAL_REFLECTION_COLOR 0x103U 
+#define RPRX_UBER_MATERIAL_REFLECTION_WEIGHT 0x104U 
+#define RPRX_UBER_MATERIAL_REFLECTION_ROUGHNESS 0x105U 
+#define RPRX_UBER_MATERIAL_REFLECTION_ANISOTROPY 0x106U 
+#define RPRX_UBER_MATERIAL_REFLECTION_ANISOTROPY_ROTATION 0x107U 
+#define RPRX_UBER_MATERIAL_REFLECTION_MODE 0x108U 
+#define RPRX_UBER_MATERIAL_REFLECTION_IOR 0x109U 
+#define RPRX_UBER_MATERIAL_REFLECTION_METALNESS 0x109U 
+#define RPRX_UBER_MATERIAL_REFRACTION_COLOR 0x10AU 
+#define RPRX_UBER_MATERIAL_REFRACTION_WEIGHT 0x10BU 
+#define RPRX_UBER_MATERIAL_REFRACTION_ROUGHNESS 0x10CU 
+#define RPRX_UBER_MATERIAL_REFRACTION_IOR 0x10DU 
+#define RPRX_UBER_MATERIAL_REFRACTION_IOR_MODE 0x10EU 
+#define RPRX_UBER_MATERIAL_REFRACTION_THIN_SURFACE 0x10FU 
+#define RPRX_UBER_MATERIAL_COATING_COLOR 0x110U 
+#define RPRX_UBER_MATERIAL_COATING_WEIGHT 0x111U 
+#define RPRX_UBER_MATERIAL_COATING_ROUGHNESS 0x112U 
+#define RPRX_UBER_MATERIAL_COATING_MODE 0x113U 
+#define RPRX_UBER_MATERIAL_COATING_IOR 0x114U 
+#define RPRX_UBER_MATERIAL_COATING_METALNESS 0x114U 
+#define RPRX_UBER_MATERIAL_EMISSION_COLOR 0x115U 
+#define RPRX_UBER_MATERIAL_EMISSION_WEIGHT 0x116U 
+#define RPRX_UBER_MATERIAL_EMISSION_MODE 0x117U 
+#define RPRX_UBER_MATERIAL_TRANSPARENCY 0x118U 
+#define RPRX_UBER_MATERIAL_NORMAL 0x119U 
+#define RPRX_UBER_MATERIAL_BUMP 0x11AU 
+#define RPRX_UBER_MATERIAL_DISPLACEMENT 0x11BU 
+#define RPRX_UBER_MATERIAL_SSS_ABSORPTION_COLOR 0x11CU 
+#define RPRX_UBER_MATERIAL_SSS_SCATTER_COLOR 0x11DU 
+#define RPRX_UBER_MATERIAL_SSS_ABSORPTION_DISTANCE 0x11EU 
+#define RPRX_UBER_MATERIAL_SSS_SCATTER_DISTANCE 0x11FU 
+#define RPRX_UBER_MATERIAL_SSS_SCATTER_DIRECTION 0x120U 
+#define RPRX_UBER_MATERIAL_SSS_WEIGHT 0x121U 
+#define RPRX_UBER_MATERIAL_SSS_SUBSURFACE_COLOR 0x122U 
+#define RPRX_UBER_MATERIAL_SSS_MULTISCATTER 0x123U 
 
-#define RPRX_UBER_MATERIAL_REFLECTION_MODE_PBR 0x1U
-#define RPRX_UBER_MATERIAL_REFLECTION_MODE_METALNESS 0x2U
-#define RPRX_UBER_MATERIAL_COATING_MODE_PBR 0x1U
-#define RPRX_UBER_MATERIAL_COATING_MODE_METALNESS 0x2U
-#define RPRX_UBER_MATERIAL_EMISSION_MODE_SINGLESIDED 0x1U
-#define RPRX_UBER_MATERIAL_EMISSION_MODE_DOUBLESIDED 0x2U
+#define RPRX_UBER_MATERIAL_REFLECTION_MODE_PBR 0x1U 
+#define RPRX_UBER_MATERIAL_REFLECTION_MODE_METALNESS 0x2U 
+#define RPRX_UBER_MATERIAL_REFRACTION_MODE_SEPARATE 0x1U 
+#define RPRX_UBER_MATERIAL_REFRACTION_MODE_LINKED 0x2U 
+#define RPRX_UBER_MATERIAL_COATING_MODE_PBR 0x1U 
+#define RPRX_UBER_MATERIAL_COATING_MODE_METALNESS 0x2U 
+#define RPRX_UBER_MATERIAL_EMISSION_MODE_SINGLESIDED 0x1U 
+#define RPRX_UBER_MATERIAL_EMISSION_MODE_DOUBLESIDED 0x2U 
 
 /*rprx_parameter_type*/
-#define RPRX_PARAMETER_TYPE_FLOAT4 0x1U
-#define RPRX_PARAMETER_TYPE_UINT 0x2U
-#define RPRX_PARAMETER_TYPE_NODE 0x3U
+#define RPRX_PARAMETER_TYPE_FLOAT4 0x1U 
+#define RPRX_PARAMETER_TYPE_UINT 0x2U 
+#define RPRX_PARAMETER_TYPE_NODE 0x3U 
 
 /** @brief Create RPRX context.
     *
@@ -130,7 +125,7 @@ extern RPR_API_ENTRY rpr_int rprxCreateMaterial(rprx_context context, rprx_mater
 
 /** @brief Delete RPRX material
     *
-    *   The function deletes the material passed in. The function also remove material from
+    *   The function deletes the material passed in. The function also remove material from 
     *   the set of tracked materials.
 	*
 	*   Warning : this function will manipulate all the rpr_shape objects attached to this material (with rprxShapeAttachMaterial)
@@ -207,8 +202,8 @@ extern RPR_API_ENTRY rpr_int rprxShapeDetachMaterial(rprx_context context, rpr_s
     *   Change-commit approach allows to minimize the number of costly unnecessary recompilations and only
     *   recompile once before the rendering has started. As a result of this recompilation the output node
     *   of the material graph might change. If materials is acting in compounds with basic RPR materials
-    *   (for example in blends), this compound materials should be updated with a new output node, so
-    *   the library needs to reapply their inputs. To implement this, the library needs to "track"
+    *   (for example in blends), this compound materials should be updated with a new output node, so 
+    *   the library needs to reapply their inputs. To implement this, the library needs to "track" 
     *   the objects material is bound to.
     *
     *  @param context           RPRX context
@@ -227,7 +222,7 @@ extern RPR_API_ENTRY rpr_int rprxMaterialAttachMaterial(rprx_context context, rp
     *   of the material graph might change. If materials is acting in compounds with basic RPR materials
     *   (for example in blends), this compound materials should be updated with a new output node, so
     *   the library needs to reapply their inputs. To implement this, the library needs to "track"
-    *   the objects material is bound to. rprxMaterialDetachMaterial resets specified parameter back
+    *   the objects material is bound to. rprxMaterialDetachMaterial resets specified parameter back 
     *   to nullptr and removes the node from the set of "tracked" nodes.
     *
     *  @param context           RPRX context
@@ -251,7 +246,7 @@ extern RPR_API_ENTRY rpr_int rprxDeleteContext(rprx_context context);
     *
     *  @param context           RPRX context
     *  @param node              RPR material node
-    *  @param material          RPRX material
+    *  @param material          RPRX material 
     *  @param result            out_result result
     *  @return                  RPR_SUCCESS in case of success, error code otherwise
     */

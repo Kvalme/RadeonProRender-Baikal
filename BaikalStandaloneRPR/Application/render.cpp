@@ -1,17 +1,17 @@
 
 /**********************************************************************
  Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
@@ -29,6 +29,7 @@
 #include "math/mathutils.h"
 
 #include "RadeonProRender_VK.h"
+#include "ProRenderGLTF.h"
 
 namespace BaikalRPR
 {
@@ -124,6 +125,8 @@ namespace BaikalRPR
     void AppRender::LoadScene(AppSettings& settings)
     {
         RadeonRays::rand_init();
+        std::string fname = settings.path + "/" + settings.modelname;
+        std::cout<<"Loading "<<fname<<std::endl;
 
         CHECK(rprContextCreateScene(m_context, &m_scene));
         CHECK(rprContextSetScene(m_context, m_scene));
@@ -135,16 +138,17 @@ namespace BaikalRPR
         float aspect = (float)settings.width / settings.height;
         settings.camera_sensor_size.y = settings.camera_sensor_size.x / aspect;
 
-        CHECK(rprCameraLookAt(m_camera, -5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f));
-        CHECK(rprCameraSetSensorSize(m_camera, settings.camera_sensor_size.x * 1000.f, settings.camera_sensor_size.y * 1000.f));
-        CHECK(rprSceneSetCamera(m_scene, m_camera));
-
-
-        m_sphere = AddSphere("sphere", 64, 32, 2.0f, RadeonRays::float3(0.0f, 0.0f, 0.0f));
+/*        m_sphere = AddSphere("sphere", 64, 32, 2.0f, RadeonRays::float3(0.0f, 0.0f, 0.0f));
         rprSceneAttachShape(m_scene, m_sphere);
 
         m_material = AddDiffuseMaterial("sphere_mtl", RadeonRays::float3(0.8f, 0.8f, 0.8f));
-        CHECK(rprShapeSetMaterial(m_sphere, m_material));
+        CHECK(rprShapeSetMaterial(m_sphere, m_material));*/
+
+        CHECK(rprImportFromGLTF(fname.c_str(), m_context, m_matsys, m_rprxcontext, &m_scene));
+
+        CHECK(rprCameraLookAt(m_camera, -50.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f));
+        CHECK(rprCameraSetSensorSize(m_camera, settings.camera_sensor_size.x * 1000.f, settings.camera_sensor_size.y * 1000.f));
+        CHECK(rprSceneSetCamera(m_scene, m_camera));
 
         rpr_light light = nullptr;
         CHECK(rprContextCreatePointLight(m_context, &light));

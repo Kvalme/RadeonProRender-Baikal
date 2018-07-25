@@ -1,5 +1,7 @@
 #include "hybrid_renderer.h"
 
+#include "Controllers/vkw_scene_helpers.h"
+
 #include <chrono>
 
 namespace Baikal
@@ -154,6 +156,44 @@ namespace Baikal
         graphics_command_buffer_builder_->EndRenderPass();
 
         g_buffer_cmd_ = graphics_command_buffer_builder_->EndCommandBuffer();
+    }
+
+    void HybridRenderer::BuildEdgeDetectCommandBuffer()
+    {
+        static std::vector<VkClearValue> clear_values =
+        {
+            { 0.f, 0.f, 0.f, 1.0f }
+        };
+
+        VkDeviceSize offsets[1] = { 0 };
+
+        graphics_command_buffer_builder_->BeginCommandBuffer();
+
+        VkCommandBuffer command_buffer = graphics_command_buffer_builder_->GetCurrentCommandBuffer();
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, edge_detect_pipeline_.pipeline.get());
+
+        graphics_command_buffer_builder_->BeginRenderPass(clear_values, edge_detect_buffer_);
+
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport_);
+        vkCmdSetScissor(command_buffer, 0, 1, &scissor_);
+
+        VkDescriptorSet desc_set = edge_detect_shader_.descriptor_set.descriptor_set.get();
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, edge_detect_pipeline_.layout.get(), 0, 1, &desc_set, 0, NULL);
+
+        VkBuffer vb = fullscreen_quad_vb_.get();
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
+        vkCmdBindIndexBuffer(command_buffer, fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
+
+        int push_consts = msaa_num_samples_;
+
+        vkCmdPushConstants(command_buffer, edge_detect_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(int), &push_consts);
+
+        vkCmdDrawIndexed(command_buffer, 6, 1, 0, 0, 0);
+
+        graphics_command_buffer_builder_->EndRenderPass();
+
+        edge_detect_cmd_ = graphics_command_buffer_builder_->EndCommandBuffer();
     }
 
     void HybridRenderer::BuildTXAACommandBuffer()
@@ -398,6 +438,38 @@ namespace Baikal
         calc_luminance_cmd_ = graphics_command_buffer_builder_->EndCommandBuffer();
     }
 
+    void HybridRenderer::DrawGbufferPass(VkwScene const& scene)
+    {
+        VkCommandBuffer g_buffer_cmd = g_buffer_cmd_.get();
+        VkSemaphore g_buffer_finised = g_buffer_finisned_.get();
+
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pSignalSemaphores = &g_buffer_finised;
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &g_buffer_cmd;
+
+        if (vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
+            throw std::runtime_error("HybridRenderer: queue submission failed");
+    }
+
+    void HybridRenderer::DrawEdgeDetectPass()
+    {
+        VkCommandBuffer edge_detect_buffer_cmd = edge_detect_cmd_.get();
+        VkSemaphore edge_detect_buffer_finised = edge_detect_finisned_.get();
+
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pSignalSemaphores = &edge_detect_buffer_finised;
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &edge_detect_buffer_cmd;
+
+        if (vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
+            throw std::runtime_error("HybridRenderer: queue submission failed");
+    }
+
     void HybridRenderer::DrawDeferredPass(VkwScene const& scene)
     {
         VkCommandBuffer deferred_cmd_buf = deferred_cmd_.get();
@@ -406,6 +478,9 @@ namespace Baikal
         std::vector<VkPipelineStageFlags> stage_wait_bits;
 
         wait_semaphores.push_back(g_buffer_finisned_.get());
+        wait_semaphores.push_back(edge_detect_finisned_.get());
+
+        stage_wait_bits.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
         stage_wait_bits.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
         for (auto const& shadow_semaphore : scene.shadows_finished_signal)
@@ -426,22 +501,6 @@ namespace Baikal
         submit_info.pWaitDstStageMask = stage_wait_bits.data();
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &deferred_cmd_buf;
-
-        if (vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
-            throw std::runtime_error("HybridRenderer: queue submission failed");
-    }
-
-    void HybridRenderer::DrawGbufferPass(VkwScene const& scene)
-    {
-        VkCommandBuffer g_buffer_cmd = g_buffer_cmd_.get();
-        VkSemaphore g_buffer_finised = g_buffer_finisned_.get();
-
-        VkSubmitInfo submit_info = {};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.pSignalSemaphores = &g_buffer_finised;
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &g_buffer_cmd;
 
         if (vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
             throw std::runtime_error("HybridRenderer: queue submission failed");
@@ -610,7 +669,8 @@ namespace Baikal
         deferred_shader_.SetArg(14, env_map_irradiance);
         deferred_shader_.SetArg(15, env_map_prefiltered_reflections, prefiltered_reflections_clamp_sampler_.get());
         deferred_shader_.SetArg(16, brdf_lut, linear_sampler_clamp_.get());
-
+        deferred_shader_.SetArg(17, edge_detect_buffer_.GetImageView(), nearest_sampler_.get());
+        
         deferred_shader_.CommitArgs();
 
         VkDeferredPushConstants push_consts = {
@@ -618,7 +678,8 @@ namespace Baikal
                 static_cast<int>(scene.num_point_lights),
                 static_cast<int>(scene.num_spot_lights),
                 static_cast<int>(scene.num_directional_lights),
-                scene.cascade_splits_dist
+                scene.cascade_splits_dist,
+                static_cast<float>(msaa_num_samples_),
         };
 
         BuildDeferredCommandBuffer(push_consts);
@@ -626,6 +687,7 @@ namespace Baikal
         txaa_shader_.SetArg(1, deferred_buffer_.GetImageView(), nearest_sampler_.get());
         txaa_shader_.SetArg(2, history_buffer_.GetImageView(), linear_sampler_clamp_.get());
         txaa_shader_.SetArg(3, g_buffer_.GetImageView(2), nearest_sampler_.get());
+        txaa_shader_.SetArg(4, g_buffer_.GetImageView(4), nearest_sampler_.get());
         txaa_shader_.CommitArgs();
 
         uint32_t last_mip = luminance_downsampled_buffer_.GetNumMips() - 1;
@@ -639,6 +701,14 @@ namespace Baikal
 
         BuildTXAACommandBuffer();
         BuildTonemapperCommandBuffer(vk_output);
+
+        edge_detect_shader_.SetArg(0, g_buffer_.GetImageView(0), nearest_sampler_.get());
+        edge_detect_shader_.SetArg(1, g_buffer_.GetImageView(4), nearest_sampler_.get());
+        edge_detect_shader_.SetArg(2, g_buffer_.GetImageView(3), nearest_sampler_.get());
+
+        edge_detect_shader_.CommitArgs();
+
+        BuildEdgeDetectCommandBuffer();
 
         copy_shader_.SetArg(1, txaa_buffer_.GetImageView(), nearest_sampler_.get());
         copy_shader_.CommitArgs();
@@ -686,8 +756,9 @@ namespace Baikal
                 mrt_descriptor_sets[idx] = shader_manager_.CreateDescriptorSet(mrt_shader_);
                 mrt_descriptor_sets[idx].SetArg(0, scene.camera.get());
                 mrt_descriptor_sets[idx].SetArg(1, scene.mesh_transforms[idx].get());
-                mrt_descriptor_sets[idx].SetArg(2, jitter_buffer_.get());
-                mrt_descriptor_sets[idx].SetArgArray(3, mrt_texture_image_views_, mrt_texture_samplers_);
+                mrt_descriptor_sets[idx].SetArg(2, scene.prev_mesh_transforms[idx].get());
+                mrt_descriptor_sets[idx].SetArg(3, jitter_buffer_.get());
+                mrt_descriptor_sets[idx].SetArgArray(4, mrt_texture_image_views_, mrt_texture_samplers_);
                 mrt_descriptor_sets[idx].CommitArgs();
             }
         }
@@ -747,6 +818,7 @@ namespace Baikal
         UpdateJitterBuffer();
 
         DrawGbufferPass(scene);
+        DrawEdgeDetectPass();
         DrawDeferredPass(scene);
         DrawTXAAPass();
         DrawCalcLuminancePass();
@@ -863,23 +935,20 @@ namespace Baikal
         
         mrt_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/mrt.vert.spv", "../Baikal/Kernels/VK/mrt.frag.spv");
         deferred_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/deferred.frag.spv");
+        edge_detect_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/edge_detection.frag.spv");
         txaa_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/txaa.frag.spv");
         copy_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/copy_rt.frag.spv");
         tonemap_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/tonemap.frag.spv");
         log_luminance_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/log_luminance.frag.spv");
         log_luminance_adapt_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/log_luminance_adapt.frag.spv");
 
-        txaa_sample_locations_ =
+        txaa_sample_locations_.resize(txaa_num_samples_);
+
+        for (uint32_t i = 0; i < txaa_num_samples_; i++)
         {
-            RadeonRays::float2(-7.0f / 8.0f, 1.0f / 8.0f),
-            RadeonRays::float2(-5.0f / 8.0f, -5.0f / 8.0f),
-            RadeonRays::float2(-1.0f / 8.0f, -3.0f / 8.0f),
-            RadeonRays::float2(3.0f / 8.0f, -7.0f / 8.0f),
-            RadeonRays::float2(5.0f / 8.0f, -1.0f / 8.0f),
-            RadeonRays::float2(7.0f / 8.0f, 7.0f / 8.0f),
-            RadeonRays::float2(1.0f / 8.0f, 3.0f / 8.0f),
-            RadeonRays::float2(-3.0f / 8.0f, 5.0f / 8.0f)
-        };
+            RadeonRays::float2 sample = Hammersley2D(i, txaa_num_samples_) * 2.0f - RadeonRays::float2(1.f, 1.f);
+            txaa_sample_locations_[i] = sample;
+        }
 
         VkExtent3D tex_size = { 2, 2, 1 };
 
@@ -904,11 +973,12 @@ namespace Baikal
         linear_samplers_repeat_.push_back(utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 0.f, 1.0f));
         linear_lum_sampler_clamp_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, 1.0f);
 
-        deferred_finished_ = utils_.CreateSemaphore();
-        g_buffer_finisned_ = utils_.CreateSemaphore();
-        txaa_finished_ = utils_.CreateSemaphore();
-        tonemap_finished_ = utils_.CreateSemaphore();
-        calc_luminance_finished_ = utils_.CreateSemaphore();
+        deferred_finished_          = utils_.CreateSemaphore();
+        edge_detect_finisned_       = utils_.CreateSemaphore();
+        g_buffer_finisned_          = utils_.CreateSemaphore();
+        txaa_finished_              = utils_.CreateSemaphore();
+        tonemap_finished_           = utils_.CreateSemaphore();
+        calc_luminance_finished_    = utils_.CreateSemaphore();
     }
 
     void HybridRenderer::SetMaxBounces(std::uint32_t max_bounces)
@@ -918,12 +988,30 @@ namespace Baikal
 
     void HybridRenderer::ResizeRenderTargets(uint32_t width, uint32_t height)
     {
+        VkSampleCountFlagBits samples_count = VkSampleCountFlagBits(msaa_num_samples_);
+
         static std::vector<vkw::RenderTargetCreateInfo> attachments = {
-                { width, height, VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT},     // normals
-                { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // albedo
-                { width, height, VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },               // motion
-                { width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },              // roughness, metalness, mesh id
-                { width, height, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
+
+                { width, height, VK_FORMAT_A2B10G10R10_UNORM_PACK32, 
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                                 VK_ATTACHMENT_LOAD_OP_CLEAR,  
+                                 samples_count },           // normals
+                { width, height, VK_FORMAT_R8G8B8A8_UNORM, 
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                                 VK_ATTACHMENT_LOAD_OP_CLEAR, 
+                                 samples_count },          // albedo
+                { width, height, VK_FORMAT_R16G16_SFLOAT, 
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                                 VK_ATTACHMENT_LOAD_OP_CLEAR, 
+                                 samples_count },          // motion
+                { width, height, VK_FORMAT_R8G8B8A8_UNORM, 
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                                 VK_ATTACHMENT_LOAD_OP_CLEAR, 
+                                 samples_count },          // roughness, metalness, mesh id
+                { width, height, VK_FORMAT_D32_SFLOAT, 
+                                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                                 VK_ATTACHMENT_LOAD_OP_CLEAR, 
+                                 samples_count },          // depth
         };
 
         std::vector<VkPipelineColorBlendAttachmentState> blend_attachment_states;
@@ -965,10 +1053,15 @@ namespace Baikal
         depth_stencil_state.back.compareOp = VK_COMPARE_OP_ALWAYS;
         depth_stencil_state.front = depth_stencil_state.back;
 
-        vkw::GraphicsPipelineState pipeline_state;
-        pipeline_state.color_blend_state = &color_blend_state;
-        pipeline_state.rasterization_state = &rasterization_state;
-        pipeline_state.depth_stencil_state = &depth_stencil_state;
+        VkPipelineMultisampleStateCreateInfo multisample_state = {};
+        multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisample_state.rasterizationSamples = samples_count;
+
+        vkw::GraphicsPipelineState mrt_pipeline_state;
+        mrt_pipeline_state.color_blend_state = &color_blend_state;
+        mrt_pipeline_state.rasterization_state = &rasterization_state;
+        mrt_pipeline_state.depth_stencil_state = &depth_stencil_state;
+        mrt_pipeline_state.multisample_state = &multisample_state;
 
         g_buffer_ = render_target_manager_.CreateRenderTarget(attachments);
 
@@ -988,21 +1081,47 @@ namespace Baikal
             { width >> 1, height >> 1, VK_FORMAT_R16_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT }
         };
 
+        static std::vector<vkw::RenderTargetCreateInfo> edge_detect_attachment = {
+            { width, height, VK_FORMAT_R8_UNORM, 
+                             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                             VK_ATTACHMENT_LOAD_OP_CLEAR }
+        };
+
         deferred_buffer_    = render_target_manager_.CreateRenderTarget(deferred_attachments);
         history_buffer_     = render_target_manager_.CreateRenderTarget(history_attachments);
         txaa_buffer_        = render_target_manager_.CreateRenderTarget(txaa_attachments);
-        
         luminance_buffer_   = render_target_manager_.CreateRenderTarget(luminance_attachments);
+        edge_detect_buffer_ = render_target_manager_.CreateRenderTarget(edge_detect_attachment);
 
         luminance_downsampled_buffer_.SetTexture(&memory_manager_, { width >> 2, height >> 2, 1 }, VK_FORMAT_R16_SFLOAT, true);
         
         float num_mips = static_cast<float>(luminance_downsampled_buffer_.GetNumMips());
         linear_lum_sampler_clamp_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, num_mips);
 
-        deferred_pipeline_  = pipeline_manager_.CreateGraphicsPipeline(deferred_shader_, deferred_buffer_.render_pass.get());
-        mrt_pipeline_       = pipeline_manager_.CreateGraphicsPipeline(mrt_shader_, g_buffer_.render_pass.get(), &pipeline_state);
-        copy_pipeline_      = pipeline_manager_.CreateGraphicsPipeline(copy_shader_, history_buffer_.render_pass.get());
-        txaa_pipeline_      = pipeline_manager_.CreateGraphicsPipeline(txaa_shader_, txaa_buffer_.render_pass.get());
+
+        // Use specialization constants to pass number of samples to the shader (used for MSAA resolve)
+        VkSpecializationMapEntry specializationEntry{};
+        specializationEntry.constantID = 0;
+        specializationEntry.offset = 0;
+        specializationEntry.size = sizeof(uint32_t);
+
+        uint32_t specializationData = samples_count;
+
+        VkSpecializationInfo specializationInfo;
+        specializationInfo.mapEntryCount = 1;
+        specializationInfo.pMapEntries = &specializationEntry;
+        specializationInfo.dataSize = sizeof(specializationData);
+        specializationInfo.pData = &specializationData;
+
+        vkw::GraphicsPipelineState msaa_pipeline_state;
+        msaa_pipeline_state.fragment_specialization_info = &specializationInfo;
+
+        deferred_pipeline_      = pipeline_manager_.CreateGraphicsPipeline(deferred_shader_, deferred_buffer_.render_pass.get(), &msaa_pipeline_state);
+        edge_detect_pipeline_   = pipeline_manager_.CreateGraphicsPipeline(edge_detect_shader_, edge_detect_buffer_.render_pass.get(), &msaa_pipeline_state);
+
+        mrt_pipeline_           = pipeline_manager_.CreateGraphicsPipeline(mrt_shader_, g_buffer_.render_pass.get(), &mrt_pipeline_state);
+        copy_pipeline_          = pipeline_manager_.CreateGraphicsPipeline(copy_shader_, history_buffer_.render_pass.get());
+        txaa_pipeline_          = pipeline_manager_.CreateGraphicsPipeline(txaa_shader_, txaa_buffer_.render_pass.get());
         log_luminance_pipeline_ = pipeline_manager_.CreateGraphicsPipeline(log_luminance_shader_, luminance_buffer_.render_pass.get());
 
         log_luminance_shader_.SetArg(0, txaa_buffer_.GetImageView(), linear_lum_sampler_clamp_.get());

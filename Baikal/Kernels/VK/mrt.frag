@@ -27,7 +27,7 @@ layout(push_constant) uniform PushConsts {
     layout(offset = 16) VkMaterialConstants data;
 } material;
 
-layout (binding = 3) uniform sampler2D textures[kMaxTextures];
+layout (binding = 4) uniform sampler2D textures[kMaxTextures];
 
 void main()
 {
@@ -47,7 +47,7 @@ void main()
 	vec3 transparency 	= transparency_idx < 0 ? material.data.transparency.xyz : texture(textures[transparency_idx], uv).xyz;
 
 	// convert to linear space
-	diffuse.xyz = pow(diffuse.xyz, vec3(2.2f));
+	diffuse.xyz = diffuse_idx >=0 ? pow(diffuse.xyz, vec3(2.2f)) : diffuse.xyz;
 
 	if (normal_idx >= 0)
 	{

@@ -12,11 +12,12 @@ layout (location = 0) in vec2 tex_coord;
 
 layout (binding = 1) uniform sampler2D deferred_buffer;
 layout (binding = 2) uniform sampler2D history_buffer;
-layout (binding = 3) uniform sampler2D motion_buffer;
+layout (binding = 3) uniform sampler2DMS motion_buffer;
+layout (binding = 4) uniform sampler2DMS depth_buffer;
 
 layout (location = 0) out vec4 color;
 
- float FilterCubic(float x, float B, float C)
+float FilterCubic(float x, float B, float C)
 {
     float y = 0.0f;
     float x2 = x * x;
@@ -29,11 +30,44 @@ layout (location = 0) out vec4 color;
     return y / 6.0f;
 }
 
+vec2 GetVelocity(vec2 uv)
+{
+	vec2 velocity = vec2(0.0f);
+
+	float closest_depth = 0.0f;
+
+	ivec2 texture_size = textureSize(motion_buffer);
+	ivec2 iuv = ivec2(texture_size * uv);
+
+	for(int vy = -1; vy <= 1; ++vy)
+    {
+		for(int vx = -1; vx <= 1; ++vx)
+        {
+			ivec2 offset = ivec2(vx, vy);
+
+			vec2 neighbor_velocity = texelFetch(motion_buffer, iuv + offset, 0).xy;
+			float neighbor_depth = texelFetch(depth_buffer, iuv + offset, 0).x;
+
+            if(neighbor_depth > closest_depth)
+            {
+            	velocity = neighbor_velocity;
+                closest_depth = neighbor_depth;
+            }
+        }
+    }
+
+	return velocity;
+}
+
 vec3 Reproject(vec2 uv)
 {
-	bool use_standart_reprojection = false;
-	
-	vec2 motion 	= textureLod(motion_buffer, tex_coord, 0.f).xy;
+	const bool use_standart_reprojection = false;
+	const bool use_dilate_velocity = true;
+
+	ivec2 texture_size = textureSize(motion_buffer);
+	ivec2 iuv = ivec2(texture_size * uv);
+
+	vec2 motion 	= use_dilate_velocity ? GetVelocity(uv) : texelFetch(motion_buffer, iuv, 0).xy;
 
 	vec3 reprojected_pixel = vec3(0.f);
 	vec2 reprojected_uv = tex_coord - motion;
@@ -79,12 +113,80 @@ vec3 Reproject(vec2 uv)
 	return reprojected_pixel;
 }
 
-void main()
+vec3 HistoryAABBClamp(vec3 current_pixel, vec3 history)
 {
-	vec3 history = Reproject(tex_coord);
+	vec3 neighbor[8] = 
+	{
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, 0)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, 1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, 0)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, -1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, -1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, 1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, -1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, 1)).rgb
+	};
 
-	// RGB clamp
-	vec3 current 	= textureLod(deferred_buffer, tex_coord, 0.f).rgb;
+	vec3 box_min = current_pixel.rgb;
+	vec3 box_max = current_pixel.rgb;
+
+	for (int i = 0; i < 8; i++)
+	{
+		box_min = min(box_min, neighbor[i]);
+		box_max = max(box_max, neighbor[i]);
+	}
+
+	return clamp(history, box_min, box_max);
+}
+
+// From "Temporal Reprojection Anti-Aliasing"
+// https://github.com/playdeadgames/temporal
+vec3 ClipAABB(vec3 aabbMin, vec3 aabbMax, vec3 prevSample)
+{
+        // note: only clips towards aabb center
+        vec3 p_clip = 0.5 * (aabbMax + aabbMin);
+        vec3 e_clip = 0.5 * (aabbMax - aabbMin);
+
+        vec3 v_clip = prevSample - p_clip;
+        vec3 v_unit = v_clip.xyz / e_clip;
+        vec3 a_unit = abs(v_unit);
+        float ma_unit = max(a_unit.x, max(a_unit.y, a_unit.z));
+
+        if (ma_unit > 1.0)
+            return p_clip + v_clip / ma_unit;
+        else
+            return prevSample;// point inside aabb		
+}
+
+vec3 HistoryAABBClip(vec3 current_pixel, vec3 history)
+{
+	vec3 neighbor[8] = 
+	{
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, 0)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, 1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, 0)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, -1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, -1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, 1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, -1)).rgb,
+		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, 1)).rgb
+	};
+
+	vec3 box_min = current_pixel.rgb;
+	vec3 box_max = current_pixel.rgb;
+
+	for (int i = 0; i < 8; i++)
+	{
+		box_min = min(box_min, neighbor[i]);
+		box_max = max(box_max, neighbor[i]);
+	}
+
+	return ClipAABB(box_min, box_max, history);
+}
+
+vec3 HistoryVarianceClamp(vec3 current_pixel, vec3 history)
+{
+	const float VARIANCE_CLIPPING_GAMMA = 1.0;
 
 	vec3 neighbor[4] = 
 	{
@@ -94,15 +196,28 @@ void main()
 		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, -1)).rgb
 	};
 
-	vec3 box_min = min(current.rgb, min(neighbor[0], min(neighbor[1], min(neighbor[2], neighbor[3]))));
-	vec3 box_max = max(current.rgb, max(neighbor[0], max(neighbor[1], max(neighbor[2], neighbor[3]))));
+	vec3 m1 = current_pixel + neighbor[0] + neighbor[1] + neighbor[2] + neighbor[3];
+	vec3 m2 = current_pixel * current_pixel + neighbor[0] * neighbor[0] 
+											+ neighbor[1] * neighbor[1]
+	 										+ neighbor[2] * neighbor[2]
+											+ neighbor[3] * neighbor[3];
 
-	history = clamp(history, box_min, box_max);
+	vec3 mu = m1 / 5.0;
+	vec3 sigma = sqrt(m2 / 5.0 - mu * mu);
 
+	vec3 box_min = mu - VARIANCE_CLIPPING_GAMMA * sigma;
+	vec3 box_max = mu + VARIANCE_CLIPPING_GAMMA * sigma;
+
+	return clamp(history, box_min, box_max);
+}
+
+void main()
+{
+	vec3 history 	= Reproject(tex_coord);
+	vec3 current 	= textureLod(deferred_buffer, tex_coord, 0.f).rgb;
+	history 		= HistoryAABBClip(current, history);
+	
 	float temporal_aa_weight = 0.9f;
-
-	float weight_a = 1.0f - temporal_aa_weight;
-	float weight_b = 1.0f - weight_a;
 
 	color.rgb = mix(current, history, temporal_aa_weight);
 	color.a = 1.0f;

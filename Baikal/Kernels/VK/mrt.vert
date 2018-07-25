@@ -29,7 +29,12 @@ layout (binding = 1) uniform TransformInfo
 	matrix data[kMaxTransforms];
 } transforms;
 
-layout (binding = 2) uniform JitterInfo
+layout (binding = 2) uniform PrevTransformInfo
+{
+	matrix data[kMaxTransforms];
+} prev_transforms;
+
+layout (binding = 3) uniform JitterInfo
 {
 	VkJitterBuffer data;
 } jitter;
@@ -50,8 +55,11 @@ void main()
 	uint transform_idx 	= clamp(vs_consts.data[0], 0, kMaxTransforms);
 	matrix	transform 	= transforms.data[transform_idx];
 
+	uint prev_transform_idx = clamp(vs_consts.data[0], 0, kMaxTransforms);
+	matrix	prev_transform 	= prev_transforms.data[prev_transform_idx];
+
 	position_ps 		= inPosition * transform * camera.data.view_proj * jitter.data.jitter;
-	prev_position_ps 	= inPosition * transform * camera.data.prev_view_proj * jitter.data.prev_jitter;
+	prev_position_ps 	= inPosition * prev_transform * camera.data.prev_view_proj * jitter.data.prev_jitter;
 
 	normal 				= inNormal * transform;
 	uv					= inUV.xy;

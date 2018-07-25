@@ -99,6 +99,7 @@ namespace Baikal
 
         vkw::VkScopedObject<VkBuffer>                   mesh_bound_volumes;
         std::vector<vkw::VkScopedObject<VkBuffer>>      mesh_transforms;
+        std::vector<vkw::VkScopedObject<VkBuffer>>      prev_mesh_transforms;
         vkw::VkScopedObject<VkBuffer>                   mesh_vertex_buffer;
         vkw::VkScopedObject<VkBuffer>                   mesh_index_buffer;
 

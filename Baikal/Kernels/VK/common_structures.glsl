@@ -55,6 +55,7 @@ struct VkDeferredPushConstants
 {
     int         num_lights[4];
     float4      cascade_splits;
+    float       options[4]; // x - num_samples, y - ibl multiplier
 };
 
 struct VkTonemapperPushConstants

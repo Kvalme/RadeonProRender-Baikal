@@ -118,10 +118,10 @@ ShapeObject* ShapeObject::CreateMesh(rpr_float const * in_vertices, size_t in_nu
         in_texcoord_indices, in_tidx_stride,
         in_num_face_vertices, in_num_faces);
 
-    for (uint32_t v = 0; v < verts.size(); ++v)
+    /*for (uint32_t v = 0; v < verts.size(); ++v)
     {
         verts[v] = verts[v] * 100.f;
-    }
+    }*/
 
     //generate indices
     std::vector<std::uint32_t> inds;

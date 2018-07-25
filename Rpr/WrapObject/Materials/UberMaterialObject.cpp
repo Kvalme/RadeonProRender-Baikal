@@ -20,20 +20,20 @@ void UberMaterialObject::SetInputF(const std::string & input_name, const RadeonR
 {
     // Optimization: if we create a new input, it will take additional time for kernel compilation,
     // so we try to find existing input and set a new float value
-    auto& input = m_mat->GetInput(input_name, Baikal::Material::InputType::kInputMap);
+    /*auto& input = m_mat->GetInput(input_name, Baikal::Material::InputType::kInputMap);
     if (input.value.input_map_value->m_type == Baikal::InputMap::InputMapType::kConstantFloat3)
     {
         auto float_map = std::static_pointer_cast<Baikal::InputMap_ConstantFloat3>(input.value.input_map_value);
         float_map->SetValue(val);
     }
     else
-    {
+    {*/
         auto input_map = Baikal::InputMap_ConstantFloat3::Create(val);
         m_mat->SetInputValue(input_name, input_map);
-    }
+    //}
 }
 
-void UberMaterialObject::SetInputU(const std::string& input_name, rpr_uint val) 
+void UberMaterialObject::SetInputU(const std::string& input_name, rpr_uint val)
 {
 
     // First - check if we set values that are parameters now
@@ -120,7 +120,7 @@ void UberMaterialObject::GetInput(int i, void* out, size_t* out_size)
 {
     //We have only int values as parameters for now
     uint32_t *int_out = static_cast<uint32_t*>(out);
-    *out_size = sizeof(uint32_t); 
+    *out_size = sizeof(uint32_t);
 
     switch (i)
     {

@@ -136,7 +136,7 @@ void main()
 		float theta = 1.0f - sp.z / PI;
 
 		const bool 	invert_x = false;
-		env_map = texture(env_image, vec2(invert_x ? 1.0f - phi : phi, theta)).xyz;
+		env_map = texture(env_image, vec2(invert_x ? 1.0f - phi : phi, theta)).xyz * ibl_multiplier;
 	}
 
 	BRDFInputs brdf_inputs;

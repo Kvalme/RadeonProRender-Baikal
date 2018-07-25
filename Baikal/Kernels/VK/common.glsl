@@ -1,2 +1,3 @@
 #define PI 3.14159265358979f
 #define EPS 0.00000001f
+#define FLT_MAX 3.402823466e+38

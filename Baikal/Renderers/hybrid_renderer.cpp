@@ -618,8 +618,9 @@ namespace Baikal
                 static_cast<int>(scene.num_point_lights),
                 static_cast<int>(scene.num_spot_lights),
                 static_cast<int>(scene.num_directional_lights),
-                scene.ibl_multiplier,
-                scene.cascade_splits_dist
+                scene.cascade_splits_dist,
+                static_cast<float>(msaa_num_samples_),
+                scene.ibl_multiplier
         };
 
         BuildDeferredCommandBuffer(push_consts);

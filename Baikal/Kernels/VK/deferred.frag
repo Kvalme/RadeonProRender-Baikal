@@ -112,7 +112,7 @@ void main()
 	uint num_point_lights = clamp(push_constants.data.num_lights[1], 0, kMaxLights);
 	uint num_spot_lights = clamp(push_constants.data.num_lights[2], 0, kMaxLights);
 	uint num_directional_lights = clamp(push_constants.data.num_lights[3], 0, kMaxLights);
-	float ibl_multiplier = clamp(push_constants.data.ibl_multiplier, 0.f, FLT_MAX);
+	float ibl_multiplier = clamp(push_constants.data.options[1], 0.f, FLT_MAX);
 
 	vec3 ambient_lighting = vec3(0.f);
 	vec3 direct_lighting = vec3(0.f);

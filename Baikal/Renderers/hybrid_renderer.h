@@ -81,6 +81,7 @@ namespace Baikal
 
         void BuildDeferredCommandBuffer(VkDeferredPushConstants const& push_consts);
         void BuildGbufferCommandBuffer(VkwScene const& scene);
+        void BuildEdgeDetectCommandBuffer();
         void BuildTXAACommandBuffer();
         void BuildCopyCommandBuffer();
         void BuildCalcLuminanceCommandBuffer();
@@ -88,6 +89,7 @@ namespace Baikal
 
         void DrawGbufferPass(VkwScene const& scene);
         void DrawDeferredPass(VkwScene const& scene);
+        void DrawEdgeDetectPass();
         void DrawCalcLuminancePass();
         void DrawTXAAPass();
         void DrawTonemapPass();
@@ -101,6 +103,9 @@ namespace Baikal
         vkw::GraphicsPipeline                           mrt_pipeline_;
         std::vector<VkImageView>                        mrt_texture_image_views_;
         std::vector<VkSampler>                          mrt_texture_samplers_;
+
+        vkw::Shader                                     edge_detect_shader_;
+        vkw::GraphicsPipeline                           edge_detect_pipeline_;
 
         vkw::Shader                                     deferred_shader_;
         vkw::GraphicsPipeline                           deferred_pipeline_;
@@ -126,6 +131,7 @@ namespace Baikal
         vkw::PipelineManager&                           pipeline_manager_;
 
         vkw::RenderTarget                               g_buffer_;
+        vkw::RenderTarget                               edge_detect_buffer_;
         vkw::RenderTarget                               deferred_buffer_;
         vkw::RenderTarget                               history_buffer_;
         vkw::RenderTarget                               txaa_buffer_;
@@ -151,6 +157,7 @@ namespace Baikal
         std::vector<vkw::VkScopedObject<VkSampler>>     linear_samplers_repeat_;
 
         vkw::VkScopedObject<VkSemaphore>                g_buffer_finisned_;
+        vkw::VkScopedObject<VkSemaphore>                edge_detect_finisned_;
         vkw::VkScopedObject<VkSemaphore>                deferred_finished_;
         vkw::VkScopedObject<VkSemaphore>                txaa_finished_;
         vkw::VkScopedObject<VkSemaphore>                calc_luminance_finished_;
@@ -162,6 +169,7 @@ namespace Baikal
         vkw::Texture                                    inf_pixel_;
 
         vkw::CommandBuffer                              g_buffer_cmd_;
+        vkw::CommandBuffer                              edge_detect_cmd_;
         vkw::CommandBuffer                              deferred_cmd_;
         vkw::CommandBuffer                              txaa_cmd_;
         vkw::CommandBuffer                              copy_cmd_;
@@ -193,6 +201,7 @@ namespace Baikal
         std::vector<RadeonRays::float2>                 txaa_sample_locations_;
         RadeonRays::matrix                              prev_jitter_;
         const uint32_t                                  txaa_num_samples_ = 8;
+        const uint32_t                                  msaa_num_samples_ = 4;
         uint32_t                                        txaa_frame_idx_;
 
         float                                           dt_;

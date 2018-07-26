@@ -12,13 +12,13 @@ float GGX_D(float roughness, float NdotH)
 {
     float a2 = roughness * roughness;
     float v = (NdotH * NdotH * (a2 - 1) + 1);
-    return a2 / (PI * v * v);
+    return a2 / (PI * v * v + EPS);
 }
 
 float GGX_G1(vec3 N, vec3 V, float k)
 {
     const float NdotV = clamp(dot(N, V), 0.0, 1.0);
-    return NdotV / (NdotV * (1.0 - k) + k);
+    return NdotV / (NdotV * (1.0 - k) + k + EPS);
 }
 
 float GGX_G(float roughness, vec3 N, vec3 V, vec3 L)

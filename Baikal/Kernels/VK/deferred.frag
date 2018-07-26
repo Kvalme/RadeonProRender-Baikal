@@ -15,11 +15,11 @@ layout (location = 0) out vec4 color;
 #include "spherical_harmonics.glsl"
 #include "tonemap.glsl"
 
-layout (binding = 0) uniform sampler2D g_buffer_0; // normals
-layout (binding = 1) uniform sampler2D g_buffer_1; // albedo
-layout (binding = 2) uniform sampler2D g_buffer_2; // motion
-layout (binding = 3) uniform sampler2D g_buffer_3; // roughness, metalness, mesh id
-layout (binding = 4) uniform sampler2D g_buffer_4; // 32-bit depth
+layout (binding = 0) uniform sampler2DMS g_buffer_0; // normals
+layout (binding = 1) uniform sampler2DMS g_buffer_1; // albedo
+layout (binding = 2) uniform sampler2DMS g_buffer_2; // motion
+layout (binding = 3) uniform sampler2DMS g_buffer_3; // roughness, metalness, mesh id
+layout (binding = 4) uniform sampler2DMS g_buffer_4; // 32-bit depth
 
 layout (binding = 5) uniform CameraInfo
 {
@@ -74,6 +74,8 @@ layout(push_constant) uniform PushConsts {
 	VkDeferredPushConstants data;
 } push_constants;
 
+layout (binding = 17) uniform sampler2D scene_edges; // edges for MSAA resolve
+
 vec3 PrefilteredReflection(vec3 R, float roughness)
 {
 	const float MAX_REFLECTION_LOD = 11.0;
@@ -89,14 +91,8 @@ vec3 PrefilteredReflection(vec3 R, float roughness)
 	return mix(a, b, lod - lodf);
 }
 
-void main()
+vec3 CalcLighting(vec3 N, vec4 albedo, vec4 buffer_data3, float depth)
 {
-	vec3 	N 		 	 = texture(g_buffer_0, uv).xyz * 2.f - 1.f;
-	vec4 	albedo	     = texture(g_buffer_1, uv);
-	vec4	buffer_data3 = texture(g_buffer_3, uv);
-
-	float depth			= texture(g_buffer_4, uv).x;
-	
 	float roughness		= buffer_data3.x;
 	float metalness		= buffer_data3.y;
 	float mesh_id		= buffer_data3.z;
@@ -112,6 +108,7 @@ void main()
 	uint num_point_lights = clamp(push_constants.data.num_lights[1], 0, kMaxLights);
 	uint num_spot_lights = clamp(push_constants.data.num_lights[2], 0, kMaxLights);
 	uint num_directional_lights = clamp(push_constants.data.num_lights[3], 0, kMaxLights);
+	float ibl_multiplier = clamp(push_constants.data.options[1], 0.f, FLT_MAX);
 
 	vec3 ambient_lighting = vec3(0.f);
 	vec3 direct_lighting = vec3(0.f);
@@ -135,7 +132,7 @@ void main()
 		float theta = 1.0f - sp.z / PI;
 
 		const bool 	invert_x = false;
-		env_map = texture(env_image, vec2(invert_x ? 1.0f - phi : phi, theta)).xyz;
+		env_map = texture(env_image, vec2(invert_x ? 1.0f - phi : phi, theta)).xyz * ibl_multiplier;
 	}
 
 	BRDFInputs brdf_inputs;
@@ -272,5 +269,31 @@ void main()
 	}
 	
 	vec3 final		= ambient_lighting + env_map + direct_lighting;
-	color			= vec4(final, 1.0f);
+
+	return final;
+}
+
+void main()
+{
+	vec3 acc = vec3(0.f);
+
+	ivec2 size = textureSize(g_buffer_0);
+	ivec2 iuv = ivec2(uv * size);
+
+	int num_samples = int(push_constants.data.options[0]);
+	bool need_msaa_resolve = textureLod(scene_edges, uv, 0).x > 0.0f;
+	num_samples = need_msaa_resolve ? num_samples : 1;
+
+	for (int i = 0; i < num_samples; i++)
+	{
+		vec3 	N 		 	 = texelFetch(g_buffer_0, iuv, i).xyz * 2.f - 1.f;
+		vec4 	albedo	     = texelFetch(g_buffer_1, iuv, i);
+		vec4	buffer_data3 = texelFetch(g_buffer_3, iuv, i);
+		float 	depth		 = texelFetch(g_buffer_4, iuv, i).x;
+
+		acc += CalcLighting(N, albedo, buffer_data3, depth);
+	}
+
+	acc = acc / num_samples;
+	color = vec4(acc, 1.0f);
 }

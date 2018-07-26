@@ -51,6 +51,7 @@ namespace Baikal
             , num_directional_lights(0)
             , sh_count(0)
             , env_map_idx(invalid_idx)
+            , ibl_multiplier(1.f)
             , rebuild_deferred_pass(true)
             , rebuild_mrt_pass(true)
         {}
@@ -99,6 +100,7 @@ namespace Baikal
 
         vkw::VkScopedObject<VkBuffer>                   mesh_bound_volumes;
         std::vector<vkw::VkScopedObject<VkBuffer>>      mesh_transforms;
+        std::vector<vkw::VkScopedObject<VkBuffer>>      prev_mesh_transforms;
         vkw::VkScopedObject<VkBuffer>                   mesh_vertex_buffer;
         vkw::VkScopedObject<VkBuffer>                   mesh_index_buffer;
 
@@ -123,6 +125,7 @@ namespace Baikal
         uint32_t                        num_directional_lights;
         uint32_t                        sh_count;
         uint32_t                        env_map_idx;
+        float                           ibl_multiplier;
 
         std::vector<vkw::Texture>       textures;
         std::vector<VkwMesh>            meshes;

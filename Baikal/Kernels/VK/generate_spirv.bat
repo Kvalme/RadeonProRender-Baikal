@@ -19,6 +19,7 @@ for %%s in (
         txaa.frag
         copy_rt.frag
         tonemap.frag
+        edge_detection.frag
        ) do (
          glslc -c -MD %%s -Dfloat4=vec4 -Dmatrix=mat4 -flimit-file limits.conf
          del %%s.spv.d

@@ -90,15 +90,16 @@ namespace Baikal
     {
         convert_to_cubemap_shader_.SetArg(0, out.textures[out.env_map_idx].GetImageView(), nearest_sampler_.get());
         convert_to_cubemap_shader_.CommitArgs();
-               
+
         const uint32_t num_mips = static_cast<uint32_t>(floor(log2(env_map_size))) + 1;
         
         uint32_t group_size = 8;
         uint32_t group_count_x = (env_map_size + group_size - 1) / group_size;
         uint32_t group_count_y = (env_map_size + group_size - 1) / group_size;
-        
+        float constants[] = { out.ibl_multiplier };
+
         command_buffer_builder_->BeginCommandBuffer();
-        command_buffer_builder_->Dispatch(convert_to_cubemap_pipeline_, convert_to_cubemap_shader_, group_count_x, group_count_y, 6);
+        command_buffer_builder_->Dispatch(convert_to_cubemap_pipeline_, convert_to_cubemap_shader_, group_count_x, group_count_y, 6, sizeof(constants), &constants);
         vkw::CommandBuffer command_buffer = command_buffer_builder_->EndCommandBuffer();
         
         execution_manager_.Submit(command_buffer.get());

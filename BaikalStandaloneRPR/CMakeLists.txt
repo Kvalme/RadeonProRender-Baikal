@@ -27,6 +27,11 @@ source_group("ImGUI" FILES ${IMGUI_SORUCES})
 source_group("Utils" FILES ${UTILS_SOURCES})
 source_group("Kernels\\GLSL" FILES ${KERNEL_SOURCES})
 
+add_library(RPR_GLTF::RPR_GLTF UNKNOWN IMPORTED)
+set_target_properties(RPR_GLTF::RPR_GLTF PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${Baikal_SOURCE_DIR}/3rdparty/RprGltf/include")
+set_property(TARGET RPR_GLTF::RPR_GLTF APPEND PROPERTY IMPORTED_LOCATION "${Baikal_SOURCE_DIR}/3rdparty/RprGltf/bin/x64/libProRenderGLTFD.so")
+
+
 add_executable(BaikalStandaloneRPR ${SOURCES})
 target_compile_features(BaikalStandaloneRPR PRIVATE cxx_std_14)
 #Add project root since BaikalStandaloneRPR directly includes Baikal/* files
@@ -35,7 +40,7 @@ target_include_directories(BaikalStandaloneRPR
     PRIVATE .
     PRIVATE ${Baikal_SOURCE_DIR}/RadeonRays/RadeonRays/include
     )
-target_link_libraries(BaikalStandaloneRPR PRIVATE RadeonProRender64 glfw3::glfw3 OpenGL::GL GLEW::GLEW VKW )
+target_link_libraries(BaikalStandaloneRPR PRIVATE RadeonProRender64 RprSupport64 glfw3::glfw3 OpenGL::GL GLEW::GLEW VKW RPR_GLTF::RPR_GLTF)
 
 set_target_properties(BaikalStandaloneRPR
     PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${Baikal_SOURCE_DIR}/BaikalStandaloneRPR)

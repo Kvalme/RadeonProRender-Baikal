@@ -237,8 +237,8 @@ namespace BaikalRPR
 //            rprx_material material = nullptr;
             auto sphere = CreateSphere();
 
-            RadeonRays::matrix meshAm = translation(RadeonRays::float3(2.5f*s * (i-n/2.f), 0.0f, 0.0f)) * scale(RadeonRays::float3(s,s,s)) ;
-            CHECK(rprShapeSetTransform(sphere, true,&meshAm.m00));
+            RadeonRays::matrix meshAm = translation(RadeonRays::float3(2.5f*s * (i-n/2.f), 0.0f, 0.0f)) * scale(RadeonRays::float3(s,s,s));
+            CHECK(rprShapeSetTransform(sphere, true, &meshAm.m00));
             rprSceneAttachShape( m_scene, sphere );
         }
 

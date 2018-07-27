@@ -1182,11 +1182,11 @@ rpr_int rprLightSetTransform(rpr_light in_light, rpr_bool in_transpose, rpr_floa
         m = m.transpose();
     }
 
-    RadeonRays::matrix rtol(-1.0f, 0.0f, 0.0f, 0.0f,
+/*    RadeonRays::matrix rtol(-1.0f, 0.0f, 0.0f, 0.0f,
                             0.0f, 1.0f, 0.0f, 0.0f,
                             0.0f, 0.0f, 1.0f, 0.0f,
                             0.0f, 0.0f, 0.0f, 1.0f);
-    m = rtol * m;
+    m = rtol * m;*/
 
     light->SetTransform(m);
 
@@ -2121,8 +2121,8 @@ rpr_int rprFrameBufferGetInfo(rpr_framebuffer in_frame_buffer, rpr_framebuffer_i
         if (out_data)
         {
             rpr_framebuffer_desc *fb_desc = static_cast<rpr_framebuffer_desc*>(out_data);
-            fb_desc->fb_width = buff->Width();
-            fb_desc->fb_height = buff->Height();
+            fb_desc->fb_width = (rpr_uint)buff->Width();
+            fb_desc->fb_height = (rpr_uint)buff->Height();
         }
         break;
     }

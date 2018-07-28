@@ -174,13 +174,13 @@ namespace Baikal
 
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
             {
-                RadeonRays::float3 pos = mesh->GetTransform() * mesh->GetVertices()[v];
+                RadeonRays::float3 transformed_pos = mesh->GetTransform() * mesh->GetVertices()[v];
 
-                mesh_bb.grow(pos);
-                scene_bounds.grow(pos);
+                mesh_bb.grow(transformed_pos);
+                scene_bounds.grow(transformed_pos);
 
                 RadeonRays::float2 uv = mesh->GetUVs()[v];
-                Vertex vertex = { pos, mesh->GetNormals()[v], RadeonRays::float2(uv.x, 1.0f - uv.y) };
+                Vertex vertex = { mesh->GetVertices()[v], mesh->GetNormals()[v], RadeonRays::float2(uv.x, 1.0f - uv.y) };
                 vertex_buffer_.push_back(vertex);
             }
 

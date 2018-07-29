@@ -33,6 +33,15 @@ namespace Baikal
     RadeonRays::matrix PerspectiveProjFovyRhVulkan(float l, float r, float b, float t, float n, float f)
     {
         return matrix(2 * n / (r - l), 0, 0, 0,
+        0, 2 * n / (t - b), 0, (r + l) / (r - l),
+        0, (t + b) / (t - b), f / (n - f), -(f * n) / (f - n),
+        0, 0, -1, 0);
+    }
+    
+    // valid for reverse z buffer (n = f)
+    RadeonRays::matrix PerspectiveInfiniteReverseZProjFovyRhVulkan(float l, float r, float b, float t, float n, float f)
+    {
+        return matrix(2 * n / (r - l), 0, 0, 0,
             0, 2 * n / (t - b), 0, (r + l) / (r - l),
             0, (t + b) / (t - b), 0.f, f,
             0, 0, -1, 0);

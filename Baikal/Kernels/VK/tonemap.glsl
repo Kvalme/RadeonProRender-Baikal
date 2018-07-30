@@ -45,7 +45,8 @@ vec3 TonemapReinhard(vec3 color, float avg_luminance, float prescale, float post
 
 vec3 TonemapReinhard(vec3 color, float avg_luminance)
 {
-	const float white_level_2 = 11.2f * 11.2f;
+	const float white_level = 11.2f;
+	const float white_level_2 = white_level * white_level;
 
 	vec3 exposed_color 	= ExposedColor(color, avg_luminance);
 	const float luminance = 0.212671f * exposed_color.x + 0.715160f * exposed_color.y + 0.072169f * exposed_color.z;

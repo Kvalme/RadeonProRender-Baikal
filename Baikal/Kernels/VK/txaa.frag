@@ -113,32 +113,6 @@ vec3 Reproject(vec2 uv)
 	return reprojected_pixel;
 }
 
-vec3 HistoryAABBClamp(vec3 current_pixel, vec3 history)
-{
-	vec3 neighbor[8] = 
-	{
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, 0)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, 1)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, 0)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, -1)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, -1)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, 1)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, -1)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, 1)).rgb
-	};
-
-	vec3 box_min = current_pixel.rgb;
-	vec3 box_max = current_pixel.rgb;
-
-	for (int i = 0; i < 8; i++)
-	{
-		box_min = min(box_min, neighbor[i]);
-		box_max = max(box_max, neighbor[i]);
-	}
-
-	return clamp(history, box_min, box_max);
-}
-
 // From "Temporal Reprojection Anti-Aliasing"
 // https://github.com/playdeadgames/temporal
 vec3 ClipAABB(vec3 aabbMin, vec3 aabbMax, vec3 prevSample)
@@ -181,44 +155,22 @@ vec3 HistoryAABBClip(vec3 current_pixel, vec3 history)
 		box_max = max(box_max, neighbor[i]);
 	}
 
+	box_min = SimpleTonemap(box_min);
+	box_max = SimpleTonemap(box_max);
+	history = SimpleTonemap(history);
+	
 	return ClipAABB(box_min, box_max, history);
-}
-
-vec3 HistoryVarianceClamp(vec3 current_pixel, vec3 history)
-{
-	const float VARIANCE_CLIPPING_GAMMA = 1.0;
-
-	vec3 neighbor[4] = 
-	{
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(1, 0)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, 1)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(-1, 0)).rgb,
-		textureLodOffset(deferred_buffer, tex_coord, 0.0, ivec2(0, -1)).rgb
-	};
-
-	vec3 m1 = current_pixel + neighbor[0] + neighbor[1] + neighbor[2] + neighbor[3];
-	vec3 m2 = current_pixel * current_pixel + neighbor[0] * neighbor[0] 
-											+ neighbor[1] * neighbor[1]
-	 										+ neighbor[2] * neighbor[2]
-											+ neighbor[3] * neighbor[3];
-
-	vec3 mu = m1 / 5.0;
-	vec3 sigma = sqrt(m2 / 5.0 - mu * mu);
-
-	vec3 box_min = mu - VARIANCE_CLIPPING_GAMMA * sigma;
-	vec3 box_max = mu + VARIANCE_CLIPPING_GAMMA * sigma;
-
-	return clamp(history, box_min, box_max);
 }
 
 void main()
 {
 	vec3 history 	= Reproject(tex_coord);
 	vec3 current 	= textureLod(deferred_buffer, tex_coord, 0.f).rgb;
-	history 		= HistoryAABBClip(current, history);
 	
-	float temporal_aa_weight = 0.9f;
+	history			= HistoryAABBClip(current, history);
 
-	color.rgb = mix(current, history, temporal_aa_weight);
-	color.a = 1.0f;
+	color.rgb 		= mix(SimpleTonemap(current), history, 0.9f);
+	color.a 		= 1.0f;
+
+	color.rgb		= InvertSimpleTonemap(color.rgb);
 }

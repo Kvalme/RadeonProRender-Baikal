@@ -207,10 +207,10 @@ vec3 CalcLighting(vec3 N, vec4 albedo, vec4 buffer_data3, float depth)
 
 			vec4 shadow_coords = vec4(world_pos, 1.0f) * directional_lights_view_proj.view_proj[i][cascade_idx];
 			shadow_coords.xy = shadow_coords.xy * cascade_scales[cascade_idx] + cascade_offsets[cascade_idx];
-			
+
 			uint shadow_map_idx = uint(directional_lights.data[i].radiance.w);
 			ivec2 half_shadow_size = textureSize(shadow_map[shadow_map_idx], 0) >> 1;
-			
+
 			float bias = clamp(0.005f * tan(acos(NdotL)), 0.0f, 0.01f);
 			float shadow = SampleShadow(shadow_map[shadow_map_idx], world_pos, shadow_coords.xyz, bias / (cascade_idx + 1), 1.f / (half_shadow_size.x * (cascade_idx + 1)));
 
@@ -291,9 +291,11 @@ void main()
 		vec4	buffer_data3 = texelFetch(g_buffer_3, iuv, i);
 		float 	depth		 = texelFetch(g_buffer_4, iuv, i).x;
 
-		acc += CalcLighting(N, albedo, buffer_data3, depth);
+		acc += SimpleTonemap(CalcLighting(N, albedo, buffer_data3, depth));
 	}
 
 	acc = acc / num_samples;
+	acc = InvertSimpleTonemap(acc);
+	
 	color = vec4(acc, 1.0f);
 }

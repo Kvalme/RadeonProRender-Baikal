@@ -200,7 +200,7 @@ namespace Baikal
         // Sub-sample positions for 8x TAA
         std::vector<RadeonRays::float2>                 txaa_sample_locations_;
         RadeonRays::matrix                              prev_jitter_;
-        const uint32_t                                  txaa_num_samples_ = 8;
+        const uint32_t                                  txaa_num_samples_ = 4;
         const uint32_t                                  msaa_num_samples_ = 4;
         uint32_t                                        txaa_frame_idx_;
 

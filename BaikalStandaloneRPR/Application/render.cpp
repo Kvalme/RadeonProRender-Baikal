@@ -225,7 +225,7 @@ namespace BaikalRPR
         CHECK(rprSceneSetCamera(m_scene, m_camera));
 
         CHECK(rprContextCreateEnvironmentLight(m_context, &m_ibl));
-        CHECK(rprContextCreateImageFromFile(m_context, "../Resources/ibl/Apartment.hdr", &m_img_ibl));
+        CHECK(rprContextCreateImageFromFile(m_context, "../Resources/Textures/sky.hdr", &m_img_ibl));
         CHECK(rprEnvironmentLightSetImage(m_ibl, m_img_ibl));
         CHECK(rprSceneAttachLight(m_scene, m_ibl));
 

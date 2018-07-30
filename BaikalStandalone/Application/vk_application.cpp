@@ -334,24 +334,12 @@ namespace Baikal
     {
         vkCmdEndRenderPass(command_buffers_[frame_idx_]);
 
-        AppVkRender* vk_app_render = dynamic_cast<AppVkRender*>(app_render_.get());
-
-        if (!vk_app_render)
-            throw std::runtime_error("VkApplication: Internal error");
-
-        VkwOutput* vk_output = dynamic_cast<VkwOutput*>(vk_app_render->GetRendererOutput());
-
-        if (!vk_output)
-            throw std::runtime_error("VkApplication: Internal error");
-
-        VkSemaphore render_complete = dynamic_cast<VkwOutput*>(vk_app_render->GetRendererOutput())->GetSemaphore();
-        VkPipelineStageFlags wait_stage[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-        VkSemaphore wait_semaphores[2] = { render_complete, present_semaphores_[frame_idx_] };
+        VkPipelineStageFlags wait_stage[1] = {  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        VkSemaphore wait_semaphores[1] = { present_semaphores_[frame_idx_] };
 
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.waitSemaphoreCount = 2;
+        submit_info.waitSemaphoreCount = 1;
         submit_info.pWaitSemaphores = wait_semaphores;
         submit_info.pWaitDstStageMask = wait_stage;
         submit_info.commandBufferCount = 1;

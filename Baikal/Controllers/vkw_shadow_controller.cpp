@@ -255,7 +255,7 @@ namespace Baikal
             RadeonRays::float4(-1.0f, -1.0f, 0.0f, 1.0f),
         };
 
-        const matrix proj = MakeProjectionMatrix(camera);
+        const matrix proj = MakeProjectionMatrix(camera, 800.0f, 0.1f);
         const matrix view = MakeViewMatrix(camera);
         const matrix inv_view_proj = inverse(proj * view);
 

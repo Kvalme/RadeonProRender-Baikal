@@ -175,13 +175,13 @@ namespace Baikal
 
             for (std::size_t v = 0; v < mesh->GetNumVertices(); v++)
             {
-                RadeonRays::float3 pos = mesh->GetTransform() * mesh->GetVertices()[v];
+                RadeonRays::float3 transformed_pos = mesh->GetTransform() * mesh->GetVertices()[v];
 
-                mesh_bb.grow(pos);
-                scene_bounds.grow(pos);
+                mesh_bb.grow(transformed_pos);
+                scene_bounds.grow(transformed_pos);
 
                 RadeonRays::float2 uv = mesh->GetUVs()[v];
-                Vertex vertex = { pos, mesh->GetNormals()[v], RadeonRays::float2(uv.x, 1.0f - uv.y) };
+                Vertex vertex = { mesh->GetVertices()[v], mesh->GetNormals()[v], RadeonRays::float2(uv.x, 1.0f - uv.y) };
                 vertex_buffer_.push_back(vertex);
             }
 
@@ -465,6 +465,13 @@ namespace Baikal
             return  VkwScene::Material::Value();
         };
 
+        //Fill default values first
+        mat->diffuse_color.color = RadeonRays::float3(0.0f, 0.0f, 0.0f);
+        mat->reflection_roughness.color = RadeonRays::float3(1.0f, 1.0f, 1.0f);
+        mat->reflection_metalness.color = RadeonRays::float3(0.5f, 0.5f, 0.5f);
+        mat->reflection_ior.color = RadeonRays::float3(1.0f, 1.0f, 1.0f);
+        mat->transparency.color = RadeonRays::float3(0.0f, 0.0f, 0.0f);
+
         if ((mat->layers & UberV2Material::Layers::kDiffuseLayer) == UberV2Material::Layers::kDiffuseLayer)
         {
             mat->diffuse_color = input_to_material_value(material.GetInputValue("uberv2.diffuse.color"));
@@ -583,7 +590,7 @@ namespace Baikal
                 {
                     Baikal::ImageBasedLight *ibl = static_cast<Baikal::ImageBasedLight *>(light.get());
                     out.env_map_idx = tex_collector.GetItemIndex(ibl->GetTexture());
-                    out.ibl_multiplier = ibl->GetMultiplier();
+                    out.ibl_multiplier = 3.0f;//ibl->GetMultiplier();
                     probe_controller_->PrefilterEnvMap(out);
 
                     out.rebuild_deferred_pass = true;

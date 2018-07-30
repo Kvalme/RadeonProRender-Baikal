@@ -33,9 +33,25 @@ namespace Baikal
     RadeonRays::matrix PerspectiveProjFovyRhVulkan(float l, float r, float b, float t, float n, float f)
     {
         return matrix(2 * n / (r - l), 0, 0, 0,
+        0, 2 * n / (t - b), 0, (r + l) / (r - l),
+        0, (t + b) / (t - b), f / (n - f), -(f * n) / (f - n),
+        0, 0, -1, 0);
+    }
+    
+    // valid for reverse z buffer (n = f)
+    RadeonRays::matrix PerspectiveInfiniteReverseZProjFovyRhVulkan(float l, float r, float b, float t, float n, float f)
+    {
+        return matrix(2 * n / (r - l), 0, 0, 0,
             0, 2 * n / (t - b), 0, (r + l) / (r - l),
-            0, (t + b) / (t - b), f / (n - f), -(f * n) / (f - n),
+            0, (t + b) / (t - b), 0.f, f,
             0, 0, -1, 0);
+    }
+
+    RadeonRays::matrix PerspectiveInfiniteReverseZProjFovyRhVulkan(float fovy, float aspect, float n, float f)
+    {
+        float hH = tan(fovy) * n;
+        float hW = hH * aspect;
+        return PerspectiveInfiniteReverseZProjFovyRhVulkan(-hW, hW, -hH, hH, n, f);
     }
 
     RadeonRays::matrix PerspectiveProjFovyRhVulkan(float fovy, float aspect, float n, float f)
@@ -64,7 +80,16 @@ namespace Baikal
         // Nan-avoidance in perspective matrix
         z_range.x = std::max(z_range.x, std::numeric_limits<float>::epsilon());
 
-        return PerspectiveProjFovyRhVulkan(fovy, camera.GetAspectRatio(), z_range.x, z_range.y);
+        return PerspectiveInfiniteReverseZProjFovyRhVulkan(fovy, camera.GetAspectRatio(), z_range.x, z_range.y);
+    }
+
+    RadeonRays::matrix MakeProjectionMatrix(PerspectiveCamera const& camera, float near_plane, float far_plane)
+    {
+        const float focal_length = camera.GetFocalLength();
+        const float2 sensor_size = camera.GetSensorSize();
+        const float fovy = atan(sensor_size.y / (2.0f * focal_length));
+
+        return PerspectiveProjFovyRhVulkan(fovy, camera.GetAspectRatio(), near_plane, far_plane);
     }
 
     // From "Hacker's Delight"

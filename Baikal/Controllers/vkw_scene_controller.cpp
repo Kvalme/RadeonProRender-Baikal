@@ -590,7 +590,7 @@ namespace Baikal
                 {
                     Baikal::ImageBasedLight *ibl = static_cast<Baikal::ImageBasedLight *>(light.get());
                     out.env_map_idx = tex_collector.GetItemIndex(ibl->GetTexture());
-                    out.ibl_multiplier = 3.0f;//ibl->GetMultiplier();
+                    out.ibl_multiplier = ibl->GetMultiplier();
                     probe_controller_->PrefilterEnvMap(out);
 
                     out.rebuild_deferred_pass = true;

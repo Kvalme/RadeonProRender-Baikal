@@ -43,6 +43,7 @@ namespace Baikal
         , pipeline_manager_(pipeline_manager)
         , device_(device)
         , physical_device_(physical_device)
+        , default_material_(UberV2Material::Create())
         , shapes_changed_(false)
         , camera_changed_(false)
     {
@@ -71,7 +72,7 @@ namespace Baikal
         {
             throw std::runtime_error("VkwSceneController supports only perspective camera");
         }
-        
+
         const matrix proj = MakeProjectionMatrix(*camera);
         const matrix view = MakeViewMatrix(*camera);
         const matrix view_proj = proj * view;
@@ -410,6 +411,8 @@ namespace Baikal
 
             ++num_textures_written;
         }
+        out.rebuild_mrt_pass = true;
+        out.rebuild_deferred_pass = true;
     }
 
     void VkwSceneController::WriteMaterial(Material const& material, Collector& mat_collector, Collector& tex_collector, void* data) const
@@ -461,6 +464,13 @@ namespace Baikal
             }
             return  VkwScene::Material::Value();
         };
+
+        //Fill default values first
+        mat->diffuse_color.color = RadeonRays::float3(0.0f, 0.0f, 0.0f);
+        mat->reflection_roughness.color = RadeonRays::float3(1.0f, 1.0f, 1.0f);
+        mat->reflection_metalness.color = RadeonRays::float3(0.5f, 0.5f, 0.5f);
+        mat->reflection_ior.color = RadeonRays::float3(1.0f, 1.0f, 1.0f);
+        mat->transparency.color = RadeonRays::float3(0.0f, 0.0f, 0.0f);
 
         if ((mat->layers & UberV2Material::Layers::kDiffuseLayer) == UberV2Material::Layers::kDiffuseLayer)
         {

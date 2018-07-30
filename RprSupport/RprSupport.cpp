@@ -139,6 +139,8 @@ rpr_int rprxMaterialSetParameterU(rprx_context context, rprx_material material, 
         return RPR_ERROR_INVALID_PARAMETER;
 
     auto it = kRPRXInputStrings.find(parameter);
+    if (parameter == RPRX_UBER_MATERIAL_REFLECTION_ANISOTROPY_ROTATION)
+        return RPR_SUCCESS;
 
     return (it != kRPRXInputStrings.end()) ?
         rprMaterialNodeSetInputU((rpr_material_node)material, it->second.c_str(), value) :
@@ -181,7 +183,7 @@ rpr_int rprxMaterialSetParameterF(rprx_context context, rprx_material material, 
             if (x > 0.f) layers |= RPR_UBER_MATERIAL_LAYER_TRANSPARENCY;
             else layers &= ~RPR_UBER_MATERIAL_LAYER_TRANSPARENCY;
             status = rprMaterialNodeSetInputU_ext((rpr_material_node)material, RPR_UBER_MATERIAL_LAYERS, layers);
-            if (status != RPR_SUCCESS) return status;       
+            if (status != RPR_SUCCESS) return status;
     }
 
 

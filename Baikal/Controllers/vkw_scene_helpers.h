@@ -2,6 +2,7 @@
 
 #include "math/matrix.h"
 #include "math/float2.h"
+#include <cstdint>
 
 namespace Baikal
 {
@@ -15,5 +16,5 @@ namespace Baikal
     RadeonRays::matrix MakeViewMatrix(Camera const& camera);
     RadeonRays::matrix MakeProjectionMatrix(PerspectiveCamera const& camera);
     RadeonRays::matrix MakeProjectionMatrix(PerspectiveCamera const& camera, float near_plane, float far_plane);
-    RadeonRays::float2 Hammersley2D(uint64_t sample_idx, uint64_t num_samples);
+    RadeonRays::float2 Hammersley2D(std::uint64_t sample_idx, std::uint64_t num_samples);
 }

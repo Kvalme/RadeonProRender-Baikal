@@ -63,6 +63,7 @@ namespace BaikalRPR
         void LoadScene(AppSettings& settings);
     protected:
         void AddShape(std::string const& name, const rpr_shape shape);
+        rpr_shape CreateSphere() const;
         rpr_shape GetShape(std::string const& name) const;
         rpr_shape AddSphere(std::string const& name, std::uint32_t lat, std::uint32_t lon, float r, RadeonRays::float3 const& c);
         rpr_material_node AddDiffuseMaterial(std::string const& name, RadeonRays::float3 color);
@@ -73,5 +74,7 @@ namespace BaikalRPR
         rpr_camera m_camera;
         rpr_shape m_sphere;
         rpr_material_node m_material;
+        rpr_light m_ibl;
+        rpr_image m_img_ibl;
     };
 }

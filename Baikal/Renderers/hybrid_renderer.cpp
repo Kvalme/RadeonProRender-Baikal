@@ -287,10 +287,10 @@ namespace Baikal
         VkBuffer vb = fullscreen_quad_vb_.get();
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, offsets);
         vkCmdBindIndexBuffer(command_buffer, fullscreen_quad_ib_.get(), 0, VK_INDEX_TYPE_UINT32);
-        
+
         VkTonemapperPushConstants push_consts;
         push_consts.data = RadeonRays::float4(static_cast<float>(tonemap_output_),
-                                             static_cast<float>(luminance_downsampled_buffer_.GetNumMips() - 1), 
+                                             static_cast<float>(luminance_downsampled_buffer_.GetNumMips() - 1),
                                              0.f, 0.f);
 
         vkCmdPushConstants(command_buffer, deferred_pipeline_.layout.get(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(VkTonemapperPushConstants), &push_consts);
@@ -323,7 +323,7 @@ namespace Baikal
         uint32_t height = luminance_buffer_.attachments[0].height;
 
         VkViewport viewport = utils_.CreateViewport(static_cast<float>(width), static_cast<float>(height), 0.f, 1.0f);
-        
+
         VkRect2D scissor =
         {
             { 0, 0 },
@@ -354,7 +354,7 @@ namespace Baikal
         VkFormat format = luminance_buffer_.attachments[0].format;
 
         vkw::MemoryManager::TransitionImageLayout(command_buffer, image, luminance_buffer_.attachments[0].format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, sub_range);
-        
+
         // Blit from luminance framebuffer to luminance texture with linear filtering
         VkImageBlit image_blit = {};
         image_blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -371,9 +371,9 @@ namespace Baikal
         image_blit.dstOffsets[1].z = 1;
 
         vkw::MemoryManager::TransitionImageLayout(command_buffer, luminance_downsampled_buffer_.GetImage(), luminance_downsampled_buffer_.GetFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, sub_range);
-        
+
         vkCmdBlitImage(command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, luminance_downsampled_buffer_.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit, VK_FILTER_LINEAR);
-        
+
         // Generate mips for log luminance
         luminance_downsampled_buffer_.GenerateMips(command_buffer);
 
@@ -434,7 +434,7 @@ namespace Baikal
 
         vkw::MemoryManager::TransitionImageLayout(command_buffer, adapted_lum_buffer_.attachments[0].image.get(), luminance_downsampled_buffer_.GetFormat(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sub_range);
         vkw::MemoryManager::TransitionImageLayout(command_buffer, prev_lum_buffer_.attachments[0].image.get(), prev_lum_buffer_.attachments[0].format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sub_range);
-        
+
         calc_luminance_cmd_ = graphics_command_buffer_builder_->EndCommandBuffer();
     }
 
@@ -598,7 +598,7 @@ namespace Baikal
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.pSignalSemaphores = &render_finished;
-        submit_info.signalSemaphoreCount = 1;
+        submit_info.signalSemaphoreCount = 0;
         submit_info.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size());
         submit_info.pWaitSemaphores = wait_semaphores.data();
         submit_info.pWaitDstStageMask = stage_wait_bits.data();
@@ -747,8 +747,8 @@ namespace Baikal
             mrt_texture_samplers_.push_back(linear_samplers_repeat_[0].get());
         }
 
-        if (mrt_descriptor_sets.size() < scene.mesh_transforms.size())
-        {
+        /*if (mrt_descriptor_sets.size() < scene.mesh_transforms.size())
+        {*/
             mrt_descriptor_sets.clear();
             mrt_descriptor_sets.resize(scene.mesh_transforms.size());
 
@@ -762,7 +762,7 @@ namespace Baikal
                 mrt_descriptor_sets[idx].SetArgArray(4, mrt_texture_image_views_, mrt_texture_samplers_);
                 mrt_descriptor_sets[idx].CommitArgs();
             }
-        }
+        //}
 
         BuildGbufferCommandBuffer(scene);
     }
@@ -813,7 +813,7 @@ namespace Baikal
             UpdateGbufferPass(scene);
             scene.rebuild_mrt_pass = false;
         }
-        
+
         BuildCalcLuminanceCommandBuffer();
 
         UpdateJitterBuffer();
@@ -928,12 +928,12 @@ namespace Baikal
                                                            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                                                            indices);
 
-        dummy_buffer_ = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix), 
+        dummy_buffer_ = memory_manager_.CreateBuffer(sizeof(RadeonRays::matrix),
                                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
-        jitter_buffer_ = memory_manager_.CreateBuffer(sizeof(VkJitterBuffer), 
+        jitter_buffer_ = memory_manager_.CreateBuffer(sizeof(VkJitterBuffer),
                                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-        
+
         mrt_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/mrt.vert.spv", "../Baikal/Kernels/VK/mrt.frag.spv");
         deferred_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/deferred.frag.spv");
         edge_detect_shader_ = shader_manager_.CreateShader("../Baikal/Kernels/VK/deferred.vert.spv", "../Baikal/Kernels/VK/edge_detection.frag.spv");
@@ -1095,7 +1095,7 @@ namespace Baikal
         edge_detect_buffer_ = render_target_manager_.CreateRenderTarget(edge_detect_attachment);
 
         luminance_downsampled_buffer_.SetTexture(&memory_manager_, { width >> 2, height >> 2, 1 }, VK_FORMAT_R16_SFLOAT, true);
-        
+
         float num_mips = static_cast<float>(luminance_downsampled_buffer_.GetNumMips());
         linear_lum_sampler_clamp_ = utils_.CreateSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 0.f, num_mips);
 

@@ -1040,12 +1040,12 @@ namespace Baikal
         rasterization_state.pNext = nullptr;
         rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
         rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
-        rasterization_state.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterization_state.flags = 0;
         rasterization_state.depthClampEnable = VK_FALSE;
         rasterization_state.lineWidth = 1.0f;
 
-        VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {};
+        VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {?};
         depth_stencil_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depth_stencil_state.pNext = nullptr;
         depth_stencil_state.depthTestEnable = VK_TRUE;

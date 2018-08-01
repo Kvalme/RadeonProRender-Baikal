@@ -1045,7 +1045,7 @@ namespace Baikal
         rasterization_state.depthClampEnable = VK_FALSE;
         rasterization_state.lineWidth = 1.0f;
 
-        VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {?};
+        VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {};
         depth_stencil_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depth_stencil_state.pNext = nullptr;
         depth_stencil_state.depthTestEnable = VK_TRUE;

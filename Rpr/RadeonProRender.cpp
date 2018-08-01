@@ -529,19 +529,20 @@ rpr_int rprContextCreateMeshEx(rpr_context context,
                                                     rpr_int const ** texcoord_indices, rpr_int const * tidx_stride,
                                                     rpr_int const * num_face_vertices, size_t num_faces, rpr_shape * out_mesh)
 {
-    if (num_perVertexFlags == 0 && numberOfTexCoordLayers == 1)
+    //Temporary use 0 uv map even if more then 1 uv map present
+    /*if (num_perVertexFlags == 0 && numberOfTexCoordLayers > 1)
     {
-        //can use rprContextCreateMesh
-        return rprContextCreateMesh(context,
-                                vertices, num_vertices, vertex_stride,
-                                normals, num_normals, normal_stride,
-                                texcoords[0], num_texcoords[0], texcoord_stride[0],
-                                vertex_indices, vidx_stride,
-                                normal_indices, nidx_stride,
-                                texcoord_indices[0], tidx_stride[0],
-                                num_face_vertices, num_faces, out_mesh);
-    }
-    UNIMLEMENTED_FUNCTION
+        UNIMLEMENTED_FUNCTION
+    }*/
+    //can use rprContextCreateMesh
+    return rprContextCreateMesh(context,
+                            vertices, num_vertices, vertex_stride,
+                            normals, num_normals, normal_stride,
+                            texcoords[0], num_texcoords[0], texcoord_stride[0],
+                            vertex_indices, vidx_stride,
+                            normal_indices, nidx_stride,
+                            texcoord_indices[0], tidx_stride[0],
+                            num_face_vertices, num_faces, out_mesh);
 }
 
 rpr_int rprContextCreateMeshEx2(rpr_context context,
@@ -1043,11 +1044,11 @@ rpr_int rprShapeSetTransform(rpr_shape in_shape, rpr_bool transpose, rpr_float c
         m = m.transpose();
     }
 
-/*    RadeonRays::matrix rtol(-1.0f, 0.0f, 0.0f, 0.0f,
+    RadeonRays::matrix rtol(-1.0f, 0.0f, 0.0f, 0.0f,
                             0.0f, 1.0f, 0.0f, 0.0f,
                             0.0f, 0.0f, 1.0f, 0.0f,
                             0.0f, 0.0f, 0.0f, 1.0f);
-    m = rtol * m;*/
+    m = rtol * m;
 
     shape->SetTransform(m);
     return RPR_SUCCESS;
@@ -1182,11 +1183,11 @@ rpr_int rprLightSetTransform(rpr_light in_light, rpr_bool in_transpose, rpr_floa
         m = m.transpose();
     }
 
-/*    RadeonRays::matrix rtol(-1.0f, 0.0f, 0.0f, 0.0f,
+    RadeonRays::matrix rtol(-1.0f, 0.0f, 0.0f, 0.0f,
                             0.0f, 1.0f, 0.0f, 0.0f,
                             0.0f, 0.0f, 1.0f, 0.0f,
                             0.0f, 0.0f, 0.0f, 1.0f);
-    m = rtol * m;*/
+    m = rtol * m;
 
     light->SetTransform(m);
 

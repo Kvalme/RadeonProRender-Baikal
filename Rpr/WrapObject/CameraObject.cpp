@@ -63,9 +63,11 @@ void CameraObject::GetLookAt(RadeonRays::float3& eye,
 
 Baikal::Camera::Ptr CameraObject::GetCamera() 
 { 
+    float3 eye = m_eye;
+    eye.x = -eye.x;
     if (m_mode == RPR_CAMERA_MODE_PERSPECTIVE)
     {
-        Baikal::PerspectiveCamera::Ptr camera = PerspectiveCamera::Create(m_eye, m_at, -m_up);
+        Baikal::PerspectiveCamera::Ptr camera = PerspectiveCamera::Create(eye, m_at, -m_up);
         camera->SetSensorSize(m_camera_sensor_size);
         camera->SetDepthRange(m_camera_zcap);
         camera->SetFocalLength(m_camera_focal_length);
@@ -76,7 +78,7 @@ Baikal::Camera::Ptr CameraObject::GetCamera()
     }
     else if (m_mode == RPR_CAMERA_MODE_ORTHOGRAPHIC)
     {
-        Baikal::OrthographicCamera::Ptr camera = OrthographicCamera::Create(m_eye, m_at, m_up);
+        Baikal::OrthographicCamera::Ptr camera = OrthographicCamera::Create(eye, m_at, m_up);
         camera->SetSensorSize(m_camera_sensor_size);
         camera->SetDepthRange(m_camera_zcap);
         m_cam = camera;

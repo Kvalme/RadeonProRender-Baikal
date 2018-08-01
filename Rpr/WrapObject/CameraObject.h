@@ -89,7 +89,7 @@ private:
     RadeonRays::float3 m_at = { 0.f , 0.f , -1.f };
     RadeonRays::float3 m_up = { 0.f , 1.f , 0.f };
     RadeonRays::float2 m_camera_sensor_size = { 0.036f, 0.024f };  // default full frame sensor 36x24 mm
-    RadeonRays::float2 m_camera_zcap = { 100000.f, 1.f};
+    RadeonRays::float2 m_camera_zcap = { 100000.f, 0.01f};
     float m_camera_focal_length = 0.035f; // 35mm lens
     float m_camera_focus_distance = 1.f;
     float m_camera_aperture = 0.f;

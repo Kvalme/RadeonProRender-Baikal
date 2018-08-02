@@ -6,7 +6,7 @@ const int kArea = 0x5;
 
 const int kMaxTextures = 512;
 const int kMaxLights = 20;
-const int kMaxTransforms = 1024;
+const int kMaxTransforms = 2048;
 
 struct VkPointLight
 {

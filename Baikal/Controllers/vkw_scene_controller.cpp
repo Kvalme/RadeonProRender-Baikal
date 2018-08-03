@@ -192,7 +192,7 @@ namespace Baikal
                 index_buffer_.push_back(mesh->GetIndices()[idx] + num_vertices);
             }
             
-            uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
+            uint32_t buffer_idx = mesh_idx / kMaxTransforms;
 
             mesh_transforms_[buffer_idx].push_back(mesh->GetTransform());
 
@@ -296,7 +296,7 @@ namespace Baikal
             if (mesh == nullptr)
                 continue;
             
-            uint32_t buffer_idx = mesh_idx / (kMaxTransforms + 1);
+            uint32_t buffer_idx = mesh_idx / kMaxTransforms;
 
             mesh_transforms_[buffer_idx].push_back(mesh->GetTransform());
 
@@ -314,7 +314,6 @@ namespace Baikal
                 memory_manager_.WriteBuffer(out.mesh_transforms[buffer_idx].get(), 0u, sizeof(RadeonRays::matrix) * mesh_transforms_[buffer_idx].size(), mesh_transforms_[buffer_idx].data());
             }
 
-            mesh_transforms_[buffer_idx].push_back(mesh->GetTransform());
             mesh_idx++;
         }
 

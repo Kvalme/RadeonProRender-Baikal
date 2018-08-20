@@ -442,12 +442,9 @@ INLINE void DifferentialGeometry_CalculateScreenSpaceUVDerivatives(
                                                 GLOBAL aux_ray const* aux_ray_y
                                                 )
 {
-    if (aux_ray_x && aux_ray_y)
-    {
-        // Calculate differentials
-        DifferentialGeometry_CalculatePartialDerivatives(aux_ray_x, diffgeo, &diffgeo->dpdx, &diffgeo->duvdx);
-        DifferentialGeometry_CalculatePartialDerivatives(aux_ray_y, diffgeo, &diffgeo->dpdy, &diffgeo->duvdy);
-    }
+    // Calculate differentials
+    DifferentialGeometry_CalculatePartialDerivatives(aux_ray_x, diffgeo, &diffgeo->dpdx, &diffgeo->duvdx);
+    DifferentialGeometry_CalculatePartialDerivatives(aux_ray_y, diffgeo, &diffgeo->dpdy, &diffgeo->duvdy);
 
 }
 
